@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Lương</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <script src="../assets/app.js"></script>
+    <script>
+      requireAuth(["admin", "manager", "employee"]);
+    </script>
+
+    <div class="container py-4">
+      <h1 class="h4 mb-3">Bảng lương</h1>
+      <table class="table table-hover" id="tblLuong">
+        <thead>
+          <tr>
+            <th>Kỳ</th>
+            <th>Lương cơ bản</th>
+            <th>Thưởng</th>
+            <th>Khấu trừ</th>
+            <th>Thực nhận</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <script>
+      (async function () {
+        const user = currentUser();
+        let url = "/luong";
+        if (user.role === "employee") url = "/luong/me";
+
+        const res = await api.get(url + "?page=1&limit=50");
+        const items = res.items || res.rows || [];
+        const tbody = document.querySelector("#tblLuong tbody");
+        items.forEach((row) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+          <td>${row.thang || row.ky || ""}</td>
+          <td>${row.luong_co_ban ?? ""}</td>
+          <td>${row.thuong ?? ""}</td>
+          <td>${row.khau_tru ?? ""}</td>
+          <td class="fw-semibold">${row.thuc_nhan ?? ""}</td>`;
+          tbody.appendChild(tr);
+        });
+      })();
+    </script>
+  </body>
+</html>
