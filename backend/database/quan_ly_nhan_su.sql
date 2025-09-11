@@ -33,7 +33,7 @@ CREATE TABLE `cham_cong` (
   KEY `fk_cc_nv` (`nhan_vien_id`),
   CONSTRAINT `cham_cong_ibfk_1` FOREIGN KEY (`nhan_vien_id`) REFERENCES `nhan_vien` (`id`),
   CONSTRAINT `fk_cc_nv` FOREIGN KEY (`nhan_vien_id`) REFERENCES `nhan_vien` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -42,7 +42,7 @@ CREATE TABLE `cham_cong` (
 
 LOCK TABLES `cham_cong` WRITE;
 /*!40000 ALTER TABLE `cham_cong` DISABLE KEYS */;
-INSERT INTO `cham_cong` VALUES (1,1,'2025-07-01','08:00:00','17:00:00','Đi làm'),(2,1,'2025-07-02','08:10:00','17:15:00','Đi làm'),(3,2,'2025-07-01',NULL,NULL,'Nghỉ phép'),(4,2,'2025-07-02','08:10:00','17:15:00','Đi làm'),(5,2,'2025-07-03','08:05:00','17:00:00','Đi làm'),(9,5,'2025-07-01','08:30:00','17:30:00','Đi làm');
+INSERT INTO `cham_cong` VALUES (1,1,'2025-07-01','08:00:00','17:00:00','Đi làm'),(2,1,'2025-07-02','08:10:00','17:15:00','Đi làm'),(3,2,'2025-07-01',NULL,NULL,'Nghỉ phép'),(4,2,'2025-07-02','08:10:00','17:15:00','Đi làm'),(5,2,'2025-07-03','08:05:00','17:00:00','Đi làm'),(9,5,'2025-07-01','08:30:00','17:30:00','Đi làm'),(10,1,'2025-08-27','08:00:00','17:00:00','Đi làm');
 /*!40000 ALTER TABLE `cham_cong` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -122,7 +122,7 @@ CREATE TABLE `lich_su_tra_luong` (
   KEY `fk_ls_nv` (`nhan_vien_id`),
   CONSTRAINT `fk_ls_nv` FOREIGN KEY (`nhan_vien_id`) REFERENCES `nhan_vien` (`id`) ON DELETE CASCADE,
   CONSTRAINT `lich_su_tra_luong_ibfk_1` FOREIGN KEY (`nhan_vien_id`) REFERENCES `nhan_vien` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -153,10 +153,10 @@ CREATE TABLE `luong` (
   `nam` int DEFAULT NULL,
   `ngay_tinh` date DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `fk_luong_nv` (`nhan_vien_id`),
+  KEY `idx_luong_nhanvien` (`nhan_vien_id`),
   CONSTRAINT `fk_luong_nv` FOREIGN KEY (`nhan_vien_id`) REFERENCES `nhan_vien` (`id`) ON DELETE CASCADE,
   CONSTRAINT `luong_ibfk_1` FOREIGN KEY (`nhan_vien_id`) REFERENCES `nhan_vien` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -165,7 +165,7 @@ CREATE TABLE `luong` (
 
 LOCK TABLES `luong` WRITE;
 /*!40000 ALTER TABLE `luong` DISABLE KEYS */;
-INSERT INTO `luong` VALUES (1,1,8000000.00,500000.00,1000000.00,200000.00,7,2025,'2025-07-31'),(2,2,12000000.00,0.00,1500000.00,300000.00,7,2025,'2025-07-31'),(4,4,20000000.00,1000000.00,1500000.00,400000.00,7,2025,'2025-07-31'),(5,5,9000000.00,0.00,500000.00,100000.00,7,2025,'2025-07-31');
+INSERT INTO `luong` VALUES (1,1,8000000.00,500000.00,1000000.00,200000.00,7,2025,'2025-07-31'),(2,2,12000000.00,0.00,1500000.00,300000.00,7,2025,'2025-07-31'),(4,4,20000000.00,1000000.00,1500000.00,400000.00,7,2025,'2025-07-31'),(5,5,9000000.00,0.00,500000.00,100000.00,7,2025,'2025-07-31'),(7,1,8000000.00,500000.00,1000000.00,200000.00,8,2025,NULL);
 /*!40000 ALTER TABLE `luong` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -189,8 +189,8 @@ CREATE TABLE `nhan_vien` (
   `ngay_vao_lam` date DEFAULT NULL,
   `trang_thai` varchar(50) DEFAULT 'hoat_dong',
   PRIMARY KEY (`id`),
-  KEY `fk_nv_phongban` (`phong_ban_id`),
   KEY `fk_nv_chucvu` (`chuc_vu_id`),
+  KEY `idx_nhanvien_phongban` (`phong_ban_id`),
   CONSTRAINT `fk_nv_chucvu` FOREIGN KEY (`chuc_vu_id`) REFERENCES `chuc_vu` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_nv_phongban` FOREIGN KEY (`phong_ban_id`) REFERENCES `phong_ban` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -248,7 +248,10 @@ DROP TABLE IF EXISTS `phong_ban`;
 CREATE TABLE `phong_ban` (
   `id` int NOT NULL AUTO_INCREMENT,
   `ten_phong_ban` varchar(100) NOT NULL,
-  PRIMARY KEY (`id`)
+  `manager_taikhoan_id` int DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_phongban_manager` (`manager_taikhoan_id`),
+  CONSTRAINT `fk_phongban_manager` FOREIGN KEY (`manager_taikhoan_id`) REFERENCES `tai_khoan` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -258,7 +261,7 @@ CREATE TABLE `phong_ban` (
 
 LOCK TABLES `phong_ban` WRITE;
 /*!40000 ALTER TABLE `phong_ban` DISABLE KEYS */;
-INSERT INTO `phong_ban` VALUES (2,'Phòng Nhân Sự'),(3,'Phòng Kỹ Thuật'),(4,'Phòng Kỹ Thuật'),(5,'Phòng Hành Chính'),(6,'Kinh doanh'),(7,'Kinh doanh'),(9,'Kinh doanh');
+INSERT INTO `phong_ban` VALUES (2,'Phòng Nhân Sự',NULL),(3,'Phòng Kỹ Thuật',NULL),(4,'Phòng Kỹ Thuật',11),(5,'Phòng Hành Chính',NULL),(6,'Kinh doanh',NULL),(7,'Kinh doanh',NULL),(9,'Kinh doanh',NULL);
 /*!40000 ALTER TABLE `phong_ban` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -274,13 +277,14 @@ CREATE TABLE `tai_khoan` (
   `nhan_vien_id` int DEFAULT NULL,
   `ten_dang_nhap` varchar(50) NOT NULL,
   `mat_khau` varchar(255) NOT NULL,
-  `quyen` enum('admin','nhanvien') DEFAULT 'nhanvien',
+  `quyen` enum('admin','manager','nhanvien') NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `ten_dang_nhap` (`ten_dang_nhap`),
-  KEY `fk_tk_nv` (`nhan_vien_id`),
+  UNIQUE KEY `uq_taikhoan_username` (`ten_dang_nhap`),
+  KEY `idx_taikhoan_nhanvien` (`nhan_vien_id`),
   CONSTRAINT `fk_tk_nv` FOREIGN KEY (`nhan_vien_id`) REFERENCES `nhan_vien` (`id`) ON DELETE SET NULL,
   CONSTRAINT `tai_khoan_ibfk_1` FOREIGN KEY (`nhan_vien_id`) REFERENCES `nhan_vien` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -289,7 +293,7 @@ CREATE TABLE `tai_khoan` (
 
 LOCK TABLES `tai_khoan` WRITE;
 /*!40000 ALTER TABLE `tai_khoan` DISABLE KEYS */;
-INSERT INTO `tai_khoan` VALUES (1,1,'nva','123456','nhanvien'),(2,2,'ttb','123456','admin'),(3,1,'a.nguyen','User@123','nhanvien'),(4,2,'b.tran','User@123','nhanvien'),(5,5,'e.do','User@123','nhanvien');
+INSERT INTO `tai_khoan` VALUES (1,1,'nva','123456','nhanvien'),(2,2,'ttb','123456','admin'),(3,1,'a.nguyen','User@123','nhanvien'),(4,2,'b.tran','User@123','nhanvien'),(5,5,'e.do','User@123','nhanvien'),(10,NULL,'admin','$2b$10$vAr409hc54QzoWgGF9dmdegZ0FCQkx938AwK2UVTjSiOJkLgoxowW','admin'),(11,NULL,'manager','<HASH_MANAGER>','manager'),(12,NULL,'employee','<HASH_EMP>','nhanvien'),(13,NULL,'admin2','$2b$10$iuz2dr./nyoqfllbWW8fcOPCM8KvzJj4gEI6SP7RYB6mUcu1X5f92','admin');
 /*!40000 ALTER TABLE `tai_khoan` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -302,4 +306,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-08-26 14:48:14
+-- Dump completed on 2025-09-11 15:14:40
