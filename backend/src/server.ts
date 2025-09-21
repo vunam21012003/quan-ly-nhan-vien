@@ -4,6 +4,7 @@ import express from "express";
 import cors from "cors";
 import morgan from "morgan";
 import helmet from "helmet";
+import path from "path";
 
 import phongBanRoutes from "./routes/phongBanRoutes";
 import chucvuRoutes from "./routes/chucvuRoutes";
@@ -24,9 +25,18 @@ const app = express();
 
 // Middlewares
 app.use(helmet());
-app.use(cors({ origin: true })); // cho phép FE localhost/IP LAN
+app.use(cors({ origin: true }));
 app.use(express.json({ limit: "10mb" }));
 app.use(morgan("dev"));
+
+// 👉 Serve static HTML/CSS/JS from frontend/public
+const publicDir = path.join(__dirname, "..", "..", "frontend", "public");
+app.use(express.static(publicDir));
+
+// 👉 Trang mặc định khi vào /
+app.get("/", (_req, res) => {
+  res.sendFile(path.join(publicDir, "index.html"));
+});
 
 // Health check
 app.get("/health", (_req, res) => res.json({ ok: true }));
@@ -58,25 +68,21 @@ app.get("/__debug/db", async (_req, res) => {
 // Auth
 app.use("/auth", authRoutes);
 
-// Public
+// Public routes
 app.use("/phong-ban", phongBanRoutes);
 app.use("/chuc-vu", chucvuRoutes);
 app.use("/nhan-vien", nhanVienRoutes);
 
-// Protected
+// Protected routes
 app.use("/cham-cong", requireAuth, chamCongRoutes);
 app.use("/hop-dong", requireAuth, hopDongRoutes);
-
-// Chỉ yêu cầu đăng nhập ở cấp /luong;
-// role chi tiết đặt trong luongRoutes
 app.use("/luong", requireAuth, luongRoutes);
-
 app.use("/lich-su-tra-luong", requireAuth, requireRole(["admin", "manager"]), lichSuTraLuongRoutes);
 app.use("/bao-cao-luong", requireAuth, requireRole(["admin", "manager"]), baoCaoLuongRoutes);
 app.use("/phan-tich-cong", requireAuth, requireRole(["admin", "manager"]), phanTichCongRoutes);
 app.use("/tai-khoan", requireAuth, requireRole(["admin"]), taiKhoanRoutes);
 
-// 404
+// 404 fallback
 app.use((_req, res) => res.status(404).json({ message: "Endpoint không tồn tại" }));
 
 // Error handler
@@ -85,7 +91,7 @@ app.use((err: any, _req: any, res: any, _next: any) => {
   res.status(err?.status || 500).json({ message: err?.message || "Lỗi máy chủ" });
 });
 
-// Chạy cổng 8001 (không đụng frontend 3000)
+// Start server
 const PORT = Number(process.env.PORT || 8001);
 app.listen(PORT, () => console.log(`HR server listening on http://localhost:${PORT}`));
 

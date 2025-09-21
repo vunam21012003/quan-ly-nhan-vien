@@ -9,7 +9,9 @@
     "start": "node dist/bundle.js",
     "lint": "eslint \"src/**/*.{js,ts}\"",
     "lint:fix": "eslint \"src/**/*.{js,ts}\" --fix",
-    "format": "prettier --write \"src/**/*.{js,ts,json,md}\""
+    "format": "prettier --write \"src/**/*.{js,ts,json,md}\"",
+    "fix:passwords": "node scripts/fix-passwords.js",
+    "reset:password": "node scripts/reset-one-password.js"
   },
   "keywords": [],
   "author": "",

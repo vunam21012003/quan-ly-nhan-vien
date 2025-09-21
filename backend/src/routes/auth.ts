@@ -35,7 +35,7 @@ router.post("/register", async (req: Request, res: Response) => {
     }
 
     const dbRole = toDbRole(role);
-    const hash = await bcrypt.hash(password, 10);
+    const hash = await bcrypt.hash(String(password).trim(), 10);
 
     const sql = `
       INSERT INTO tai_khoan (ten_dang_nhap, mat_khau, quyen, nhan_vien_id)
@@ -72,7 +72,6 @@ router.post("/login", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "username, password là bắt buộc" });
     }
 
-    // debug: xem đang dùng DB nào
     if (process.env.DEBUG_LOGIN === "1") {
       const [dbRows]: any = await pool.query("SELECT DATABASE() AS dbname");
       console.log("[DEBUG] DATABASE():", dbRows?.[0]?.dbname);
@@ -102,9 +101,12 @@ router.post("/login", async (req: Request, res: Response) => {
     }
 
     const ok = await bcrypt.compare(pass, hash);
+
     if (process.env.DEBUG_LOGIN === "1") {
       console.log("[DEBUG] bcrypt.compare:", ok);
     }
+
+    // ❗ Chỉ trả 401 khi SO SÁNH SAI
     if (!ok) {
       return res.status(401).json({ error: "Sai tài khoản hoặc mật khẩu" });
     }
