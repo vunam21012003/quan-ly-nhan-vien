@@ -10,9 +10,9 @@
     />
   </head>
   <body>
-    <script src="../assets/app.js"></script>
+    <script src="../assets/js/app.js"></script>
     <script>
-      requireAuth(["admin", "manager", "employee"]);
+      requireAuth(['admin', 'manager', 'employee']);
     </script>
 
     <div class="container py-4">
@@ -34,20 +34,20 @@
     <script>
       (async function () {
         const user = currentUser();
-        let url = "/luong";
-        if (user.role === "employee") url = "/luong/me";
+        let url = '/luong';
+        if (user.role === 'employee') url = '/luong/me';
 
-        const res = await api.get(url + "?page=1&limit=50");
+        const res = await api.get(url + '?page=1&limit=50');
         const items = res.items || res.rows || [];
-        const tbody = document.querySelector("#tblLuong tbody");
+        const tbody = document.querySelector('#tblLuong tbody');
         items.forEach((row) => {
-          const tr = document.createElement("tr");
+          const tr = document.createElement('tr');
           tr.innerHTML = `
-          <td>${row.thang || row.ky || ""}</td>
-          <td>${row.luong_co_ban ?? ""}</td>
-          <td>${row.thuong ?? ""}</td>
-          <td>${row.khau_tru ?? ""}</td>
-          <td class="fw-semibold">${row.thuc_nhan ?? ""}</td>`;
+          <td>${row.thang || row.ky || ''}</td>
+          <td>${row.luong_co_ban ?? ''}</td>
+          <td>${row.thuong ?? ''}</td>
+          <td>${row.khau_tru ?? ''}</td>
+          <td class="fw-semibold">${row.thuc_nhan ?? ''}</td>`;
           tbody.appendChild(tr);
         });
       })();
