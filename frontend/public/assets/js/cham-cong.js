@@ -22,7 +22,8 @@ const esc = (s) =>
           "'": '&#039;',
         }[m])
     );
-const money = (v) => (v == null ? 0 : Number(v)).toLocaleString('vi-VN');
+const fmtDate = (s) => (s ? ('' + s).slice(0, 10) : '');
+const fmtTime = (s) => (s ? ('' + s).slice(0, 8) : '');
 
 function unwrap(r) {
   const d = r?.data ?? r;
@@ -61,11 +62,10 @@ function rowHtml(x) {
   return `<tr>
     <td>${esc(x.id)}</td>
     <td>${esc(nv)}</td>
-    <td>${esc(x.thang)}/${esc(x.nam)}</td>
-    <td>${money(x.luong_co_ban)}</td>
-    <td>${money(x.phu_cap)}</td>
-    <td>${money(x.thuong)}</td>
-    <td>${money(x.khoan_khac)}</td>
+    <td>${esc(fmtDate(x.ngay))}</td>
+    <td>${esc(fmtTime(x.check_in) || '')}</td>
+    <td>${esc(fmtTime(x.check_out) || '')}</td>
+    <td>${esc(x.ghi_chu || '')}</td>
     <td>
       <button class="page-btn" data-act="edit" data-id="${x.id}">Sửa</button>
       <button class="page-btn" data-act="del"  data-id="${x.id}">Xoá</button>
@@ -78,36 +78,32 @@ async function fetchList() {
     page: String(st.page),
     limit: String(st.limit),
   });
-  const thang = $('#thang').value;
-  if (thang) qs.set('thang', thang);
-  const nam = $('#nam').value;
-  if (nam) qs.set('nam', nam);
-  const pbId = $('#pbId').value.trim();
-  if (pbId) qs.set('phong_ban_id', pbId);
-  const resp = await api(`/luong?${qs}`).catch(() => ({ data: [] }));
+  const nvId = $('#nvId').value.trim();
+  if (nvId) qs.set('nhan_vien_id', nvId);
+  const from = $('#from').value;
+  if (from) qs.set('from', from);
+  const to = $('#to').value;
+  if (to) qs.set('to', to);
+  const resp = await api(`/cham-cong?${qs}`).catch(() => ({ data: [] }));
   const { items, total } = unwrap(resp);
   st.items = items;
   st.total = total || items.length;
   const tbody = $('#tbody');
   tbody.innerHTML = items.length
     ? items.map(rowHtml).join('')
-    : `<tr><td colspan="8" class="text-muted">Không có dữ liệu</td></tr>`;
+    : `<tr><td colspan="7" class="text-muted">Không có dữ liệu</td></tr>`;
   pageInfo();
 }
 
 function openModal(row = null) {
   st.editingId = row?.id ?? null;
   $('#modal-title').textContent = row
-    ? `Sửa bản lương #${row.id}`
-    : 'Thêm bản lương';
+    ? `Sửa chấm công #${row.id}`
+    : 'Thêm chấm công';
   $('#m-nvId').value = row?.nhan_vien_id ?? '';
-  $('#m-thang').value = row?.thang ?? '';
-  $('#m-nam').value = row?.nam ?? new Date().getFullYear();
-  $('#m-pbId').value = row?.phong_ban_id ?? '';
-  $('#m-lcb').value = row?.luong_co_ban ?? '';
-  $('#m-pc').value = row?.phu_cap ?? '';
-  $('#m-thuong').value = row?.thuong ?? '';
-  $('#m-khac').value = row?.khoan_khac ?? '';
+  $('#m-ngay').value = row?.ngay ? fmtDate(row.ngay) : '';
+  $('#m-in').value = row?.check_in ? fmtTime(row.check_in) : '';
+  $('#m-out').value = row?.check_out ? fmtTime(row.check_out) : '';
   $('#m-note').value = row?.ghi_chu ?? '';
   $('#modal-error').hidden = true;
   $('#modal').showModal();
@@ -115,33 +111,29 @@ function openModal(row = null) {
 function closeModal() {
   $('#modal').close();
 }
-function showErr(m) {
+function showErr(msg) {
   const el = $('#modal-error');
   el.hidden = false;
-  el.textContent = m;
+  el.textContent = msg;
 }
 
 async function onSave(e) {
   e.preventDefault();
   const payload = {
     nhan_vien_id: Number($('#m-nvId').value),
-    thang: Number($('#m-thang').value),
-    nam: Number($('#m-nam').value),
-    phong_ban_id: $('#m-pbId').value ? Number($('#m-pbId').value) : null,
-    luong_co_ban: Number($('#m-lcb').value || 0),
-    phu_cap: Number($('#m-pc').value || 0),
-    thuong: Number($('#m-thuong').value || 0),
-    khoan_khac: Number($('#m-khac').value || 0),
+    ngay: $('#m-ngay').value,
+    check_in: $('#m-in').value || null,
+    check_out: $('#m-out').value || null,
     ghi_chu: $('#m-note').value.trim() || null,
   };
-  if (!payload.nhan_vien_id || !payload.thang || !payload.nam) {
-    showErr('Nhập đủ Nhân viên ID, Tháng, Năm.');
+  if (!payload.nhan_vien_id || !payload.ngay) {
+    showErr('Vui lòng nhập Nhân viên ID và Ngày.');
     return;
   }
   try {
     if (st.editingId)
-      await api(`/luong/${st.editingId}`, { method: 'PUT', body: payload });
-    else await api('/luong', { method: 'POST', body: payload });
+      await api(`/cham-cong/${st.editingId}`, { method: 'PUT', body: payload });
+    else await api('/cham-cong', { method: 'POST', body: payload });
     closeModal();
     await fetchList();
   } catch (err) {
@@ -180,9 +172,9 @@ function bind() {
       openModal(row);
     }
     if (act === 'del') {
-      if (!confirm(`Xoá bản lương #${id}?`)) return;
+      if (!confirm(`Xoá chấm công #${id}?`)) return;
       try {
-        await api(`/luong/${id}`, { method: 'DELETE' });
+        await api(`/cham-cong/${id}`, { method: 'DELETE' });
         await fetchList();
       } catch (err) {
         alert(err?.message || 'Không thể xoá');

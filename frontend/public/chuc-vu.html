@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chức vụ - Quản lý nhân viên</title>
+    <link rel="stylesheet" href="./assets/css/styles.css" />
+  </head>
+  <body class="bg">
+    <header class="navbar">
+      <div class="container">
+        <div class="nav-brand">Quản lý nhân viên</div>
+        <div class="nav-right">
+          <a class="btn" href="./nhan-vien.html">Nhân viên</a>
+          <a class="btn" href="./phong-ban.html">Phòng ban</a>
+          <span id="user-badge" class="badge badge-muted">Đang tải user…</span>
+          <button id="logout-btn" class="btn">Đăng xuất</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <div class="page-header">
+        <h1 class="page-title">Chức vụ</h1>
+        <div class="toolbar">
+          <input id="cv-search" type="search" placeholder="Tìm theo tên…" />
+          <button id="cv-btn-search" class="btn">Tìm</button>
+          <button id="cv-btn-refresh" class="btn">Tải lại</button>
+          <button id="cv-btn-create" class="btn btn-primary">
+            Thêm chức vụ
+          </button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width: 80px">ID</th>
+              <th>Tên</th>
+              <th>Mô tả</th>
+              <th style="width: 150px">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="cv-tbody">
+            <tr>
+              <td colspan="4" class="text-muted">Đang tải…</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+
+    <!-- Modal -->
+    <dialog id="cv-modal">
+      <form id="cv-form" method="dialog" class="form" style="padding: 10px 2px">
+        <h3 id="cv-modal-title" style="margin: 0">Thêm chức vụ</h3>
+        <div class="form-group">
+          <label for="cv-ten">Tên</label>
+          <input id="cv-ten" required />
+        </div>
+        <div class="form-group">
+          <label for="cv-mo_ta">Mô tả</label>
+          <textarea id="cv-mo_ta" placeholder="Tuỳ chọn"></textarea>
+        </div>
+        <div class="alert alert-error" id="cv-error" hidden></div>
+        <div style="display: flex; gap: 8px; justify-content: flex-end">
+          <button id="cv-cancel" type="button" class="btn">Hủy</button>
+          <button id="cv-save" type="submit" class="btn btn-primary">
+            Lưu
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <footer class="footer">
+      <div class="container">
+        <small>© <span id="y"></span> HR System</small>
+      </div>
+    </footer>
+
+    <script type="module" src="./assets/js/chuc-vu.js"></script>
+  </body>
+</html>

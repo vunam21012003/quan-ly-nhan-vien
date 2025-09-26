@@ -3,16 +3,15 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Nhân viên - Quản lý nhân viên</title>
-    <link rel="icon" href="./assets/images/favicon.png" />
+    <title>Chấm công - Quản lý nhân viên</title>
     <link rel="stylesheet" href="./assets/css/styles.css" />
-    <link rel="stylesheet" href="./assets/css/nhan-vien.css" />
   </head>
   <body class="bg">
     <header class="navbar">
       <div class="container">
         <div class="nav-brand">Quản lý nhân viên</div>
         <div class="nav-right">
+          <a class="btn" href="./nhan-vien.html">Nhân viên</a>
           <a class="btn" href="./phong-ban.html">Phòng ban</a>
           <a class="btn" href="./chuc-vu.html">Chức vụ</a>
           <span id="user-badge" class="badge badge-muted">Đang tải user…</span>
@@ -23,33 +22,29 @@
 
     <main class="container">
       <div class="page-header">
-        <h1 class="page-title">Nhân viên</h1>
+        <h1 class="page-title">Chấm công</h1>
         <div class="toolbar">
-          <div class="form-group">
-            <input
-              id="search"
-              type="search"
-              placeholder="Tìm theo tên/email…"
-            />
-          </div>
-          <button id="btn-search" class="btn">Tìm</button>
+          <input id="nvId" type="number" placeholder="Nhân viên ID" />
+          <input id="from" type="date" />
+          <input id="to" type="date" />
+          <button id="btn-search" class="btn">Lọc</button>
           <button id="btn-refresh" class="btn">Tải lại</button>
           <button id="btn-create" class="btn btn-primary">
-            Thêm nhân viên
+            Thêm chấm công
           </button>
         </div>
       </div>
 
       <div class="table-wrap">
-        <table class="table" id="table">
+        <table class="table">
           <thead>
             <tr>
               <th style="width: 70px">ID</th>
-              <th>Họ tên</th>
-              <th>Email</th>
-              <th>Phòng ban</th>
-              <th>Chức vụ</th>
-              <th>Trạng thái</th>
+              <th>Nhân viên</th>
+              <th>Ngày</th>
+              <th>Check-in</th>
+              <th>Check-out</th>
+              <th>Ghi chú</th>
               <th style="width: 150px">Thao tác</th>
             </tr>
           </thead>
@@ -71,45 +66,29 @@
     <!-- Modal tạo/sửa -->
     <dialog id="modal" style="max-width: 620px">
       <form id="form" method="dialog" class="form" style="padding: 10px 2px">
-        <h3 id="modal-title" style="margin: 0">Thêm nhân viên</h3>
+        <h3 id="modal-title" style="margin: 0">Thêm chấm công</h3>
         <div class="form-group">
-          <label for="ho_ten">Họ tên</label>
-          <input id="ho_ten" name="ho_ten" required />
+          <label for="m-nvId">Nhân viên ID</label>
+          <input id="m-nvId" type="number" required />
         </div>
         <div class="form-group">
-          <label for="email">Email</label>
-          <input id="email" name="email" type="email" />
+          <label for="m-ngay">Ngày</label>
+          <input id="m-ngay" type="date" required />
         </div>
         <div class="form-group">
-          <label for="so_dien_thoai">Số điện thoại</label>
-          <input id="so_dien_thoai" name="so_dien_thoai" />
+          <label for="m-in">Check-in</label>
+          <input id="m-in" type="time" />
         </div>
         <div class="form-group">
-          <label for="phong_ban_id">Phòng ban</label>
-          <select id="phong_ban_id" name="phong_ban_id">
-            <option value="">-- Chọn --</option>
-          </select>
+          <label for="m-out">Check-out</label>
+          <input id="m-out" type="time" />
         </div>
         <div class="form-group">
-          <label for="chuc_vu_id">Chức vụ</label>
-          <select id="chuc_vu_id" name="chuc_vu_id">
-            <option value="">-- Chọn --</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="ngay_vao_lam">Ngày vào làm</label>
-          <input id="ngay_vao_lam" name="ngay_vao_lam" type="date" />
-        </div>
-        <div class="form-group">
-          <label for="trang_thai">Trạng thái</label>
-          <select id="trang_thai" name="trang_thai">
-            <option value="dang_lam">Đang làm</option>
-            <option value="tam_nghi">Tạm nghỉ</option>
-            <option value="da_nghi">Đã nghỉ</option>
-          </select>
+          <label for="m-note">Ghi chú</label>
+          <input id="m-note" />
         </div>
 
-        <div class="alert alert-error" id="modal-error" hidden></div>
+        <div id="modal-error" class="alert alert-error" hidden></div>
 
         <div style="display: flex; gap: 8px; justify-content: flex-end">
           <button id="btn-cancel" type="button" class="btn">Hủy</button>
@@ -126,6 +105,6 @@
       </div>
     </footer>
 
-    <script type="module" src="./assets/js/nhan-vien.js"></script>
+    <script type="module" src="./assets/js/cham-cong.js"></script>
   </body>
 </html>

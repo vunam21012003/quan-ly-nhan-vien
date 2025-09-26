@@ -1,21 +1,49 @@
-body {
-  background-color: #f8f9fa;
-}
-
-h2 {
-  color: #2c3e50;
-}
-
-.modal {
-  display: none;
-  background-color: rgba(0, 0, 0, 0.5);
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  justify-content: center;
+/* Trang Nhân viên */
+.page-header {
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 18px 0;
+}
+.page-title {
+  margin: 0;
+  font-size: 20px;
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.toolbar .form-group {
+  margin: 0;
+}
+.toolbar input,
+.toolbar select {
+  height: 36px;
+  border-radius: 8px;
+}
+.table-wrap {
+  overflow: auto;
 }
 
-.modal.show {
-  display: flex !important;
+/* Phân trang đơn giản */
+.pagination {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+.page-btn {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.page-btn[disabled] {
+  opacity: 0.5;
+  cursor: default;
 }

@@ -1,6 +1,252 @@
-.card {
-  border-radius: 14px;
+/* ========== Reset nhẹ & biến màu ==========
+   Có thể mở rộng thêm nếu cần */
+:root {
+  --bg: #f7f8fa;
+  --text: #111827;
+  --muted: #6b7280;
+  --primary: #274ded;
+  --primary-600: #1f3fbe;
+  --ok: #16a34a;
+  --warn: #f59e0b;
+  --error: #ef4444;
+  --card: #ffffff;
+  --border: #e5e7eb;
 }
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  height: 100%;
+}
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
+    'Apple Color Emoji', 'Segoe UI Emoji';
+  color: var(--text);
+  background: var(--bg);
+}
+
+/* ===== Layout ===== */
+.container {
+  width: 100%;
+  max-width: 1024px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.bg {
+  background: linear-gradient(180deg, #f9fafb, #eef2ff);
+}
+
+/* ===== Navbar ===== */
 .navbar {
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); /* giữ theo bản cũ */
+}
+.navbar .container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+}
+.nav-brand {
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ===== Card ===== */
+.card {
+  background: var(--card);
+  border-radius: 14px; /* giữ theo bản cũ */
+  border: 1px solid var(--border);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+}
+
+/* ===== Auth layout ===== */
+.auth-wrap {
+  display: grid;
+  place-items: center;
+  min-height: calc(100vh - 56px - 60px); /* trừ navbar + footer */
+  padding: 24px 0;
+}
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 24px;
+}
+.auth-title {
+  margin: 0 0 6px 0;
+  font-size: 22px;
+}
+.auth-subtitle {
+  margin: 0 0 20px 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* ===== Form ===== */
+.form {
+  display: grid;
+  gap: 14px;
+}
+.form-group {
+  display: grid;
+  gap: 6px;
+}
+label {
+  font-size: 14px;
+  color: var(--text);
+}
+input,
+select,
+textarea {
+  width: 100%;
+  height: 42px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #fff;
+  outline: none;
+  font-size: 14px;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(39, 77, 237, 0.1);
+}
+textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+/* ===== Buttons ===== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+}
+.btn-block {
+  width: 100%;
+}
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+}
+.btn-primary:hover {
+  background: var(--primary-600);
+}
+
+/* ===== Badges ===== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  background: #fff;
+}
+.badge-muted {
+  color: var(--muted);
+}
+.badge-ok {
+  color: var(--ok);
+  border-color: rgba(22, 163, 74, 0.25);
+  background: #f0fdf4;
+}
+.badge-warn {
+  color: var(--warn);
+  border-color: rgba(245, 158, 11, 0.25);
+  background: #fffbeb;
+}
+.badge-error {
+  color: var(--error);
+  border-color: rgba(239, 68, 68, 0.25);
+  background: #fef2f2;
+}
+
+/* ===== Alerts ===== */
+.alert {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  font-size: 14px;
+}
+.alert-error {
+  color: var(--error);
+  background: #fef2f2;
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+/* ===== Footer ===== */
+.footer {
+  height: 60px;
+  display: grid;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  background: #fff;
+}
+.footer small {
+  color: var(--muted);
+}
+
+/* ===== Tables (dùng cho các trang danh sách) ===== */
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.table th,
+.table td {
+  text-align: left;
+  padding: 12px 14px;
+  font-size: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.table thead th {
+  background: #f9fafb;
+  font-weight: 700;
+}
+.table tbody tr:hover {
+  background: #fafafa;
+}
+
+/* ===== Utilities ===== */
+.hidden {
+  display: none !important;
+}
+.text-muted {
+  color: var(--muted);
+}
+.mt-2 {
+  margin-top: 8px;
+}
+.mt-3 {
+  margin-top: 12px;
+}
+.mt-4 {
+  margin-top: 16px;
 }

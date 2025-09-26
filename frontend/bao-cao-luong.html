@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Báo cáo lương - Quản lý nhân viên</title>
+    <link rel="stylesheet" href="./assets/css/styles.css" />
+    <style>
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+        margin-top: 12px;
+      }
+      .card-kpi {
+        padding: 16px;
+      }
+      .kpi-title {
+        font-size: 12px;
+        color: var(--muted);
+        margin: 0;
+      }
+      .kpi-value {
+        font-size: 22px;
+        margin: 6px 0 0 0;
+      }
+      .bar {
+        height: 10px;
+        background: #eef2ff;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .bar > div {
+        height: 100%;
+        width: 0%;
+        background: var(--primary);
+        transition: width 0.3s ease;
+      }
+    </style>
+  </head>
+  <body class="bg">
+    <header class="navbar">
+      <div class="container">
+        <div class="nav-brand">Quản lý nhân viên</div>
+        <div class="nav-right">
+          <a class="btn" href="./nhan-vien.html">Nhân viên</a>
+          <a class="btn" href="./luong.html">Lương</a>
+          <span id="user-badge" class="badge badge-muted">Đang tải user…</span>
+          <button id="logout-btn" class="btn">Đăng xuất</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <div class="page-header">
+        <h1 class="page-title">Báo cáo lương</h1>
+        <div class="toolbar">
+          <select id="thang">
+            <option value="">Tháng</option>
+            <script>
+              for (let i = 1; i <= 12; i++) {
+                document.write(`<option value="${i}">${i}</option>`);
+              }
+            </script>
+          </select>
+          <input id="nam" type="number" placeholder="Năm (vd: 2025)" />
+          <button id="btn-run" class="btn btn-primary">Xem báo cáo</button>
+        </div>
+      </div>
+
+      <div class="cards" id="cards">
+        <!-- KPIs render here -->
+      </div>
+
+      <div class="table-wrap" style="margin-top: 12px">
+        <table class="table" id="tbl">
+          <thead>
+            <tr>
+              <th style="width: 70px">NV ID</th>
+              <th>Họ tên</th>
+              <th>Lương cơ bản</th>
+              <th>Phụ cấp</th>
+              <th>Thưởng</th>
+              <th>Khác</th>
+              <th>Tổng</th>
+              <th style="width: 120px">Chi tiết</th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr>
+              <td colspan="8" class="text-muted">
+                Chọn tháng/năm để xem báo cáo
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+
+    <!-- Modal chi tiết -->
+    <dialog id="modal" style="max-width: 720px">
+      <div style="padding: 10px 2px">
+        <h3 id="m-title" style="margin: 0 0 8px 0">Chi tiết lương</h3>
+        <div id="m-body" class="text-muted">Đang tải…</div>
+        <div style="display: flex; justify-content: flex-end; margin-top: 12px">
+          <button id="m-close" class="btn">Đóng</button>
+        </div>
+      </div>
+    </dialog>
+
+    <footer class="footer">
+      <div class="container">
+        <small>© <span id="y"></span> HR System</small>
+      </div>
+    </footer>
+
+    <script type="module" src="./assets/js/bao-cao-luong.js"></script>
+  </body>
+</html>

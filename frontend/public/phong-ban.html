@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Phòng ban - Quản lý nhân viên</title>
+    <link rel="stylesheet" href="./assets/css/styles.css" />
+  </head>
+  <body class="bg">
+    <header class="navbar">
+      <div class="container">
+        <div class="nav-brand">Quản lý nhân viên</div>
+        <div class="nav-right">
+          <a class="btn" href="./nhan-vien.html">Nhân viên</a>
+          <a class="btn" href="./chuc-vu.html">Chức vụ</a>
+          <span id="user-badge" class="badge badge-muted">Đang tải user…</span>
+          <button id="logout-btn" class="btn">Đăng xuất</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <div class="page-header">
+        <h1 class="page-title">Phòng ban</h1>
+        <div class="toolbar">
+          <input id="pb-search" type="search" placeholder="Tìm theo tên…" />
+          <button id="pb-btn-search" class="btn">Tìm</button>
+          <button id="pb-btn-refresh" class="btn">Tải lại</button>
+          <button id="pb-btn-create" class="btn btn-primary">
+            Thêm phòng ban
+          </button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width: 80px">ID</th>
+              <th>Tên</th>
+              <th>Mô tả</th>
+              <th style="width: 150px">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="pb-tbody">
+            <tr>
+              <td colspan="4" class="text-muted">Đang tải…</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+
+    <!-- Modal -->
+    <dialog id="pb-modal">
+      <form id="pb-form" method="dialog" class="form" style="padding: 10px 2px">
+        <h3 id="pb-modal-title" style="margin: 0">Thêm phòng ban</h3>
+        <div class="form-group">
+          <label for="pb-ten">Tên</label>
+          <input id="pb-ten" required />
+        </div>
+        <div class="form-group">
+          <label for="pb-mo_ta">Mô tả</label>
+          <textarea id="pb-mo_ta" placeholder="Tuỳ chọn"></textarea>
+        </div>
+        <div class="alert alert-error" id="pb-error" hidden></div>
+        <div style="display: flex; gap: 8px; justify-content: flex-end">
+          <button id="pb-cancel" type="button" class="btn">Hủy</button>
+          <button id="pb-save" type="submit" class="btn btn-primary">
+            Lưu
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <footer class="footer">
+      <div class="container">
+        <small>© <span id="y"></span> HR System</small>
+      </div>
+    </footer>
+
+    <script type="module" src="./assets/js/phong-ban.js"></script>
+  </body>
+</html>
