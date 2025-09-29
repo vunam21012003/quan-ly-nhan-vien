@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Quản lý Hợp đồng lao động</title>
+    <link rel="stylesheet" href="hop-dong.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>Quản lý Hợp đồng lao động</h1>
+
+      <button id="btnAdd">➕ Thêm hợp đồng</button>
+
+      <table id="contractsTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nhân viên</th>
+            <th>Loại hợp đồng</th>
+            <th>Ngày bắt đầu</th>
+            <th>Ngày kết thúc</th>
+            <th>Lương cơ bản</th>
+            <th>Trạng thái</th>
+            <th>Hành động</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <!-- Modal thêm/sửa -->
+    <div id="contractModal" class="modal">
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2 id="modalTitle">Thêm hợp đồng</h2>
+        <form id="contractForm">
+          <input type="hidden" id="contractId" />
+
+          <label>Nhân viên ID:</label>
+          <input type="text" id="nhan_vien_id" required />
+
+          <label>Loại hợp đồng:</label>
+          <input type="text" id="loai_hop_dong" required />
+
+          <label>Ngày bắt đầu:</label>
+          <input type="date" id="ngay_bat_dau" required />
+
+          <label>Ngày kết thúc:</label>
+          <input type="date" id="ngay_ket_thuc" required />
+
+          <label>Lương cơ bản:</label>
+          <input type="number" id="luong_co_ban" required />
+
+          <label>Trạng thái:</label>
+          <select id="trang_thai">
+            <option value="con_hieu_luc">Còn hiệu lực</option>
+            <option value="het_han">Hết hạn</option>
+            <option value="da_cham_dut">Đã chấm dứt</option>
+          </select>
+
+          <button type="submit">Lưu</button>
+        </form>
+      </div>
+    </div>
+
+    <script src="hop-dong.js"></script>
+  </body>
+</html>
