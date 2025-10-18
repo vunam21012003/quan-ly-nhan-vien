@@ -1,6 +1,7 @@
 import { Request } from "express";
 import { pool } from "../db";
 
+// ================== XÁC ĐỊNH PHẠM VI NGƯỜI DÙNG ==================
 async function getUserScope(req: Request) {
   const user = (req as any).user;
   const [[me]]: any = await pool.query(
@@ -20,6 +21,7 @@ async function getUserScope(req: Request) {
   return { employeeId, managedDepartmentIds, role: user.role };
 }
 
+// ================== LẤY DANH SÁCH NHÂN VIÊN ==================
 export const getAll = async (req: Request) => {
   const user = (req as any).user;
   const { employeeId, managedDepartmentIds } = await getUserScope(req);
@@ -78,6 +80,7 @@ export const getAll = async (req: Request) => {
   return { items: rows, total: countRow?.total || 0, page, limit };
 };
 
+// ================== LẤY NHÂN VIÊN THEO ID ==================
 export const getById = async (req: Request) => {
   const id = Number(req.params.id);
   const { employeeId, managedDepartmentIds, role } = await getUserScope(req);
@@ -112,6 +115,7 @@ export const getById = async (req: Request) => {
   return row || null;
 };
 
+// ================== TẠO NHÂN VIÊN ==================
 export const create = async (body: any) => {
   const {
     ho_ten,
@@ -124,23 +128,21 @@ export const create = async (body: any) => {
     chuc_vu_id,
     ngay_vao_lam,
     trang_thai,
+    he_so_luong, // 🆕 Thêm trường mới
   } = body || {};
 
   if (!ho_ten) return { error: "ho_ten là bắt buộc" };
-  if (!gioi_tinh || !["Nam", "Nữ"].includes(gioi_tinh)) {
-    return { error: "gioi_tinh phải là 'Nam' hoặc 'Nữ'" };
-  }
 
   const [r]: any = await pool.query(
     `
     INSERT INTO nhan_vien
       (ho_ten, gioi_tinh, ngay_sinh, dia_chi, so_dien_thoai, email,
-       phong_ban_id, chuc_vu_id, ngay_vao_lam, trang_thai)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       phong_ban_id, chuc_vu_id, ngay_vao_lam, trang_thai, he_so_luong)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `,
     [
       ho_ten,
-      gioi_tinh,
+      gioi_tinh || null,
       ngay_sinh || null,
       dia_chi || null,
       so_dien_thoai || null,
@@ -148,13 +150,15 @@ export const create = async (body: any) => {
       phong_ban_id || null,
       chuc_vu_id || null,
       ngay_vao_lam || null,
-      trang_thai || "hoat_dong",
+      trang_thai || "dang_lam",
+      he_so_luong || 1.0,
     ]
   );
 
   return { id: r.insertId };
 };
 
+// ================== CẬP NHẬT NHÂN VIÊN ==================
 export const update = async (id: number, body: any) => {
   const {
     ho_ten,
@@ -167,17 +171,14 @@ export const update = async (id: number, body: any) => {
     chuc_vu_id,
     ngay_vao_lam,
     trang_thai,
+    he_so_luong, // 🆕
   } = body || {};
-
-  if (gioi_tinh && !["Nam", "Nữ"].includes(gioi_tinh)) {
-    return { error: "gioi_tinh phải là 'Nam' hoặc 'Nữ'" };
-  }
 
   const [r]: any = await pool.query(
     `
     UPDATE nhan_vien SET
       ho_ten=?, gioi_tinh=?, ngay_sinh=?, dia_chi=?, so_dien_thoai=?, email=?,
-      phong_ban_id=?, chuc_vu_id=?, ngay_vao_lam=?, trang_thai=?
+      phong_ban_id=?, chuc_vu_id=?, ngay_vao_lam=?, trang_thai=?, he_so_luong=?
     WHERE id=?
   `,
     [
@@ -191,6 +192,7 @@ export const update = async (id: number, body: any) => {
       chuc_vu_id || null,
       ngay_vao_lam || null,
       trang_thai || null,
+      he_so_luong || 1.0,
       id,
     ]
   );
@@ -199,6 +201,7 @@ export const update = async (id: number, body: any) => {
   return { ok: true };
 };
 
+// ================== CẬP NHẬT MỘT PHẦN ==================
 export const partialUpdate = async (id: number, body: any) => {
   const allowed: Record<string, string> = {
     ho_ten: "ho_ten",
@@ -211,6 +214,7 @@ export const partialUpdate = async (id: number, body: any) => {
     chuc_vu_id: "chuc_vu_id",
     ngay_vao_lam: "ngay_vao_lam",
     trang_thai: "trang_thai",
+    he_so_luong: "he_so_luong", // 🆕 thêm vào danh sách allowed
   };
 
   const sets: string[] = [];
@@ -218,14 +222,8 @@ export const partialUpdate = async (id: number, body: any) => {
 
   for (const k in body) {
     if (!(k in allowed)) continue;
-    const val = body[k];
-
-    if (k === "gioi_tinh" && !["Nam", "Nữ"].includes(val)) {
-      return { error: "gioi_tinh phải là 'Nam' hoặc 'Nữ'" };
-    }
-
     sets.push(`${allowed[k]} = ?`);
-    params.push(val);
+    params.push(body[k]);
   }
 
   if (!sets.length) return { error: "Không có trường nào để cập nhật" };
@@ -238,6 +236,7 @@ export const partialUpdate = async (id: number, body: any) => {
   return { changed: r.changedRows || sets.length };
 };
 
+// ================== XÓA NHÂN VIÊN ==================
 export const remove = async (id: number, force = false) => {
   if (!Number.isFinite(id) || id <= 0) return { error: "ID không hợp lệ" };
 

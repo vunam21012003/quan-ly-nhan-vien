@@ -11,4 +11,10 @@ router.post("/", requireAuth, requireRole(["admin"]), controller.create);
 router.put("/:id", requireAuth, requireRole(["admin"]), controller.update);
 router.delete("/:id", requireAuth, requireRole(["admin"]), controller.remove);
 
+// ✅ Tính lương theo tháng
+router.post("/tinh-thang", requireAuth, requireRole(["admin"]), controller.calcSalary);
+
+// ✅ Thêm route chia thưởng toàn hệ thống
+router.post("/chia-thuong", requireAuth, requireRole(["admin"]), controller.chiaThuong);
+
 export default router;

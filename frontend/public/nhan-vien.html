@@ -9,17 +9,8 @@
     <link rel="stylesheet" href="./assets/css/nhan-vien.css" />
   </head>
   <body class="bg">
-    <header class="navbar">
-      <div class="container">
-        <div class="nav-brand">Quản lý nhân viên</div>
-        <div class="nav-right">
-          <a class="btn" href="./phong-ban.html">Phòng ban</a>
-          <a class="btn" href="./chuc-vu.html">Chức vụ</a>
-          <span id="user-badge" class="badge badge-muted">Đang tải user…</span>
-          <button id="logout-btn" class="btn">Đăng xuất</button>
-        </div>
-      </div>
-    </header>
+    <!-- Menu -->
+    <div id="menuContainer"></div>
 
     <main class="container">
       <div class="page-header">
@@ -47,15 +38,17 @@
               <th style="width: 70px">ID</th>
               <th>Họ tên</th>
               <th>Email</th>
+              <th>Giới tính</th>
               <th>Phòng ban</th>
               <th>Chức vụ</th>
+              <th>Hệ số lương</th>
               <th>Trạng thái</th>
               <th style="width: 150px">Thao tác</th>
             </tr>
           </thead>
           <tbody id="tbody">
             <tr>
-              <td colspan="7" class="text-muted">Đang tải…</td>
+              <td colspan="8" class="text-muted">Đang tải…</td>
             </tr>
           </tbody>
         </table>
@@ -68,7 +61,7 @@
       </div>
     </main>
 
-    <!-- Modal tạo/sửa -->
+    <!-- Modal -->
     <dialog id="modal" style="max-width: 620px">
       <form id="form" method="dialog" class="form" style="padding: 10px 2px">
         <h3 id="modal-title" style="margin: 0">Thêm nhân viên</h3>
@@ -83,6 +76,15 @@
         <div class="form-group">
           <label for="so_dien_thoai">Số điện thoại</label>
           <input id="so_dien_thoai" name="so_dien_thoai" />
+        </div>
+        <div class="form-group">
+          <label for="gioi_tinh">Giới tính</label>
+          <select id="gioi_tinh" name="gioi_tinh">
+            <option value="">-- Chọn --</option>
+            <option value="Nam">Nam</option>
+            <option value="Nữ">Nữ</option>
+            <option value="Khác">Khác</option>
+          </select>
         </div>
         <div class="form-group">
           <label for="phong_ban_id">Phòng ban</label>
@@ -101,6 +103,19 @@
           <input id="ngay_vao_lam" name="ngay_vao_lam" type="date" />
         </div>
         <div class="form-group">
+          <label for="he_so_luong">Hệ số lương:</label>
+          <input
+            type="number"
+            id="he_so_luong"
+            step="0.01"
+            min="0"
+            class="form-control"
+            placeholder="Nhập hệ số lương (VD: 2.5)"
+            required
+          />
+        </div>
+
+        <div class="form-group">
           <label for="trang_thai">Trạng thái</label>
           <select id="trang_thai" name="trang_thai">
             <option value="dang_lam">Đang làm</option>
@@ -110,7 +125,6 @@
         </div>
 
         <div class="alert alert-error" id="modal-error" hidden></div>
-
         <div style="display: flex; gap: 8px; justify-content: flex-end">
           <button id="btn-cancel" type="button" class="btn">Hủy</button>
           <button id="btn-save" type="submit" class="btn btn-primary">
@@ -126,6 +140,8 @@
       </div>
     </footer>
 
+    <script src="./assets/js/danh-sach.js"></script>
     <script type="module" src="./assets/js/nhan-vien.js"></script>
+    <script type="module" src="./assets/js/navbar.js"></script>
   </body>
 </html>

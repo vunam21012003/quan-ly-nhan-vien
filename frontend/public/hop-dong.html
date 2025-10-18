@@ -2,67 +2,133 @@
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
-    <title>Quản lý Hợp đồng lao động</title>
-    <link rel="stylesheet" href="hop-dong.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hợp đồng lao động - Quản lý nhân viên</title>
+    <link rel="stylesheet" href="./assets/css/styles.css" />
+    <link rel="stylesheet" href="./assets/css/hop-dong.css" />
   </head>
-  <body>
-    <div class="container">
-      <h1>Quản lý Hợp đồng lao động</h1>
+  <body class="bg">
+    <div id="menuContainer"></div>
 
-      <button id="btnAdd">➕ Thêm hợp đồng</button>
+    <main class="container wide">
+      <div class="page-header">
+        <h1 class="page-title">Hợp đồng lao động</h1>
+        <div class="toolbar">
+          <button id="btnAdd" class="btn btn-primary hidden">
+            ➕ Thêm hợp đồng
+          </button>
+        </div>
+      </div>
 
-      <table id="contractsTable">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Nhân viên</th>
-            <th>Loại hợp đồng</th>
-            <th>Ngày bắt đầu</th>
-            <th>Ngày kết thúc</th>
-            <th>Lương cơ bản</th>
-            <th>Trạng thái</th>
-            <th>Hành động</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
+      <div class="table-wrap">
+        <table id="contractsTable" class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nhân viên</th>
+              <th>Số HĐ</th>
+              <th>Loại hợp đồng</th>
+              <th>Ngày ký</th>
+              <th>Ngày bắt đầu</th>
+              <th>Ngày kết thúc</th>
+              <th>Lương thỏa thuận</th>
+              <th>Phụ cấp</th>
+              <th>Trạng thái</th>
+              <th>Ghi chú</th>
+              <th>Tài liệu</th>
+              <th id="actionsCol">Hành động</th>
+            </tr>
+          </thead>
+          <tbody id="contractsBody"></tbody>
+        </table>
+      </div>
+    </main>
 
-    <!-- Modal thêm/sửa -->
-    <div id="contractModal" class="modal">
-      <div class="modal-content">
-        <span class="close">&times;</span>
-        <h2 id="modalTitle">Thêm hợp đồng</h2>
-        <form id="contractForm">
-          <input type="hidden" id="contractId" />
+    <!-- Modal -->
+    <dialog id="contractModal" style="max-width: 620px">
+      <form
+        id="contractForm"
+        method="dialog"
+        class="form"
+        style="padding: 10px 2px"
+      >
+        <h3 id="modalTitle" style="margin: 0">Thêm hợp đồng</h3>
+        <input type="hidden" id="contractId" />
 
-          <label>Nhân viên ID:</label>
-          <input type="text" id="nhan_vien_id" required />
+        <!-- Chỉ admin mới nhập -->
+        <div class="form-group admin-only">
+          <label for="nhan_vien_id">Nhân viên ID</label>
+          <input type="text" id="nhan_vien_id" />
+        </div>
+        <div class="form-group admin-only">
+          <label for="so_hop_dong">Số hợp đồng</label>
+          <input type="text" id="so_hop_dong" />
+        </div>
+        <div class="form-group admin-only">
+          <label for="loai_hop_dong">Loại hợp đồng</label>
+          <input type="text" id="loai_hop_dong" />
+        </div>
+        <div class="form-group admin-only">
+          <label for="ngay_ky">Ngày ký</label>
+          <input type="date" id="ngay_ky" />
+        </div>
+        <div class="form-group admin-only">
+          <label for="ngay_bat_dau">Ngày bắt đầu</label>
+          <input type="date" id="ngay_bat_dau" />
+        </div>
+        <div class="form-group admin-only">
+          <label for="ngay_ket_thuc">Ngày kết thúc</label>
+          <input type="date" id="ngay_ket_thuc" />
+        </div>
+        <div class="form-group admin-only">
+          <label for="luong_thoa_thuan">Lương thỏa thuận</label>
+          <input type="number" id="luong_thoa_thuan" />
+        </div>
 
-          <label>Loại hợp đồng:</label>
-          <input type="text" id="loai_hop_dong" required />
+        <!-- Admin + Manager -->
+        <div class="form-group">
+          <label for="phu_cap">Phụ cấp</label>
+          <input type="number" id="phu_cap" />
+        </div>
+        <div class="form-group">
+          <label for="file_hop_dong">Tệp hợp đồng</label>
+          <input
+            type="file"
+            id="file_hop_dong"
+            accept=".pdf,.doc,.docx,.jpg,.png"
+          />
+        </div>
 
-          <label>Ngày bắt đầu:</label>
-          <input type="date" id="ngay_bat_dau" required />
-
-          <label>Ngày kết thúc:</label>
-          <input type="date" id="ngay_ket_thuc" required />
-
-          <label>Lương cơ bản:</label>
-          <input type="number" id="luong_co_ban" required />
-
-          <label>Trạng thái:</label>
+        <div class="form-group">
+          <label for="trang_thai">Trạng thái</label>
           <select id="trang_thai">
             <option value="con_hieu_luc">Còn hiệu lực</option>
             <option value="het_han">Hết hạn</option>
             <option value="da_cham_dut">Đã chấm dứt</option>
           </select>
+        </div>
+        <div class="form-group">
+          <label for="ghi_chu">Ghi chú</label>
+          <textarea id="ghi_chu"></textarea>
+        </div>
 
-          <button type="submit">Lưu</button>
-        </form>
+        <div style="display: flex; gap: 8px; justify-content: flex-end">
+          <button type="button" id="btnCancel" class="btn">Hủy</button>
+          <button type="submit" id="btnSave" class="btn btn-primary">
+            Lưu
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <footer class="footer">
+      <div class="container">
+        <small>© <span id="y"></span> HR System</small>
       </div>
-    </div>
+    </footer>
 
-    <script src="hop-dong.js"></script>
+    <script src="./assets/js/danh-sach.js"></script>
+    <script type="module" src="./assets/js/hop-dong.js"></script>
+    <script type="module" src="./assets/js/navbar.js"></script>
   </body>
 </html>

@@ -1,26 +1,62 @@
 import { pool } from "../db";
 
-export const getAll = async () => {
-  const [rows] = await pool.query(`SELECT id, ten_phong_ban FROM phong_ban ORDER BY id DESC`);
-  return rows;
+// Lấy danh sách phòng ban có phân trang + tìm kiếm
+export const getAll = async (search: string, page: number, limit: number) => {
+  const offset = (page - 1) * limit;
+
+  let where = "";
+  const params: any[] = [];
+  if (search) {
+    where = "WHERE pb.ten_phong_ban LIKE ?";
+    params.push(`%${search}%`);
+  }
+
+  // Lấy dữ liệu trang hiện tại
+  const [rows]: any = await pool.query(
+    `SELECT 
+        pb.id, 
+        pb.ten_phong_ban AS ten, 
+        pb.mo_ta, 
+        pb.manager_taikhoan_id,
+        nv.ho_ten AS manager_name
+     FROM phong_ban pb
+     LEFT JOIN tai_khoan tk ON pb.manager_taikhoan_id = tk.id
+     LEFT JOIN nhan_vien nv ON tk.nhan_vien_id = nv.id
+     ${where}
+     ORDER BY pb.id DESC
+     LIMIT ? OFFSET ?`,
+    [...params, limit, offset]
+  );
+
+  // Đếm tổng số bản ghi
+  const [[{ total }]]: any = await pool.query(
+    `SELECT COUNT(*) as total FROM phong_ban pb ${where}`,
+    params
+  );
+
+  return { items: rows, total };
 };
 
-export const create = async (ten_phong_ban: string) => {
-  const [r]: any = await pool.query(`INSERT INTO phong_ban (ten_phong_ban) VALUES (?)`, [
-    ten_phong_ban,
-  ]);
+// Tạo mới phòng ban
+export const create = async (ten: string, mo_ta?: string, managerId?: number) => {
+  const [r]: any = await pool.query(
+    `INSERT INTO phong_ban (ten_phong_ban, mo_ta, manager_taikhoan_id) VALUES (?, ?, ?)`,
+    [ten, mo_ta || null, managerId || null]
+  );
   return { id: r.insertId };
 };
 
-export const update = async (id: number, ten_phong_ban: string) => {
-  const [r]: any = await pool.query(`UPDATE phong_ban SET ten_phong_ban = ? WHERE id = ?`, [
-    ten_phong_ban || null,
-    id,
-  ]);
+// Cập nhật phòng ban
+export const update = async (id: number, ten: string, mo_ta?: string, managerId?: number) => {
+  const [r]: any = await pool.query(
+    `UPDATE phong_ban SET ten_phong_ban=?, mo_ta=?, manager_taikhoan_id=? WHERE id=?`,
+    [ten || null, mo_ta || null, managerId || null, id]
+  );
   return { ok: r.affectedRows > 0 };
 };
 
+// Xoá phòng ban
 export const remove = async (id: number) => {
-  const [r]: any = await pool.query(`DELETE FROM phong_ban WHERE id = ?`, [id]);
+  const [r]: any = await pool.query(`DELETE FROM phong_ban WHERE id=?`, [id]);
   return { ok: r.affectedRows > 0 };
 };

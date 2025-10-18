@@ -39,17 +39,7 @@
     </style>
   </head>
   <body class="bg">
-    <header class="navbar">
-      <div class="container">
-        <div class="nav-brand">Quản lý nhân viên</div>
-        <div class="nav-right">
-          <a class="btn" href="./nhan-vien.html">Nhân viên</a>
-          <a class="btn" href="./luong.html">Lương</a>
-          <span id="user-badge" class="badge badge-muted">Đang tải user…</span>
-          <button id="logout-btn" class="btn">Đăng xuất</button>
-        </div>
-      </div>
-    </header>
+    <div id="menuContainer"></div>
 
     <main class="container">
       <div class="page-header">
@@ -114,6 +104,8 @@
       </div>
     </footer>
 
+    <script src="./assets/js/danh-sach.js"></script>
     <script type="module" src="./assets/js/bao-cao-luong.js"></script>
+    <script type="module" src="./assets/js/navbar.js"></script>
   </body>
 </html>

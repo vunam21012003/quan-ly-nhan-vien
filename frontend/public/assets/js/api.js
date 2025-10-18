@@ -30,15 +30,29 @@ export function clearAuth() {
 }
 
 // ==== Wrapper fetch chuẩn hoá ====
-export async function api(path, { method = 'GET', body, headers } = {}) {
+// Hỗ trợ JSON và FormData
+export async function api(
+  path,
+  { method = 'GET', body, headers, formData = false } = {}
+) {
+  const finalHeaders = {
+    ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
+    ...headers,
+  };
+
+  // Nếu không phải FormData thì mới set Content-Type JSON
+  if (!formData) {
+    finalHeaders['Content-Type'] = 'application/json';
+  }
+
   const res = await fetch(API_BASE + path, {
     method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
-      ...headers,
-    },
-    body: body ? JSON.stringify(body) : undefined,
+    headers: finalHeaders,
+    body: body
+      ? formData
+        ? body // FormData giữ nguyên
+        : JSON.stringify(body)
+      : undefined,
   });
 
   // Cố gắng parse JSON, nếu lỗi giữ object rỗng
@@ -50,7 +64,6 @@ export async function api(path, { method = 'GET', body, headers } = {}) {
   if (!res.ok) {
     const msg = data?.error || data?.message || `HTTP ${res.status}`;
     const err = new Error(msg);
-    // đính kèm status để phía trên hiển thị hợp lý
     err.status = res.status;
     throw err;
   }
@@ -68,7 +81,14 @@ export async function healthCheck() {
   }
 }
 
-// ==== Tiện ích cho trang khác (sau này) ====
-export function requireAuthOrRedirect(to = './dangnhap.html') {
+// ==== Tiện ích cho trang khác ====
+// Nếu chưa đăng nhập thì redirect
+export function requireAuthOrRedirect(to = './dang-nhap.html') {
   if (!getToken()) location.href = to;
+}
+
+// ==== Logout tiện ích ====
+// Xoá token và user, redirect về login
+export function logout() {
+  clearAuth();
 }

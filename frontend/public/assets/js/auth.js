@@ -80,12 +80,12 @@ async function init() {
       setToken(token);
       saveUser(user);
 
-      // Điều hướng theo role (nếu chưa có trang, tạm về 403)
+      // Điều hướng theo role
       const role = mapRole(user);
       if (role === 'admin' || role === 'manager') {
         window.location.href = './nhan-vien.html';
       } else if (role === 'employee') {
-        window.location.href = './403.html';
+        window.location.href = './trang-chinh.html';
       } else {
         // không rõ role → cho về 403 để an toàn
         window.location.href = './403.html';

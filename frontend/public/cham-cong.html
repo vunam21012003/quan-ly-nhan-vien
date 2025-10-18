@@ -7,24 +7,26 @@
     <link rel="stylesheet" href="./assets/css/styles.css" />
   </head>
   <body class="bg">
-    <header class="navbar">
-      <div class="container">
-        <div class="nav-brand">Quản lý nhân viên</div>
-        <div class="nav-right">
-          <a class="btn" href="./nhan-vien.html">Nhân viên</a>
-          <a class="btn" href="./phong-ban.html">Phòng ban</a>
-          <a class="btn" href="./chuc-vu.html">Chức vụ</a>
-          <span id="user-badge" class="badge badge-muted">Đang tải user…</span>
-          <button id="logout-btn" class="btn">Đăng xuất</button>
-        </div>
-      </div>
-    </header>
+    <div id="menuContainer"></div>
 
     <main class="container">
       <div class="page-header">
         <h1 class="page-title">Chấm công</h1>
         <div class="toolbar">
           <input id="nvId" type="number" placeholder="Nhân viên ID" />
+          <input id="nvName" type="text" placeholder="Tên nhân viên" />
+          <select id="statusFilter">
+            <option value="">-- Tất cả trạng thái --</option>
+            <option value="di_lam">Đi làm</option>
+            <option value="di_muon">Đi muộn</option>
+            <option value="di_muon_co_phep">Đi muộn có phép</option>
+            <option value="ve_som">Về sớm</option>
+            <option value="ve_som_co_phep">Về sớm có phép</option>
+            <option value="di_muon_ve_som">Đi muộn + về sớm</option>
+            <option value="nghi_phep">Nghỉ phép</option>
+            <option value="nghi_khong_phep">Nghỉ không phép</option>
+            <option value="ngay_le">Ngày lễ</option>
+          </select>
           <input id="from" type="date" />
           <input id="to" type="date" />
           <button id="btn-search" class="btn">Lọc</button>
@@ -32,60 +34,130 @@
           <button id="btn-create" class="btn btn-primary">
             Thêm chấm công
           </button>
+          <label class="btn">
+            📤 Upload Excel
+            <input type="file" id="fileExcel" accept=".xlsx,.xls" hidden />
+          </label>
         </div>
       </div>
 
+      <!-- BẢNG CHẤM CÔNG -->
       <div class="table-wrap">
         <table class="table">
           <thead>
             <tr>
-              <th style="width: 70px">ID</th>
+              <th>ID</th>
               <th>Nhân viên</th>
               <th>Ngày</th>
               <th>Check-in</th>
               <th>Check-out</th>
+              <th>Trạng thái</th>
               <th>Ghi chú</th>
-              <th style="width: 150px">Thao tác</th>
+              <th>Thao tác</th>
             </tr>
           </thead>
           <tbody id="tbody">
             <tr>
-              <td colspan="7" class="text-muted">Đang tải…</td>
+              <td colspan="9" class="text-muted">Đang tải…</td>
             </tr>
           </tbody>
         </table>
       </div>
 
+      <!-- PHÂN TRANG -->
       <div class="pagination">
         <button id="prev" class="page-btn">«</button>
         <span id="pageInfo" class="text-muted">Trang 1/1</span>
         <button id="next" class="page-btn">»</button>
       </div>
+
+      <hr />
+
+      <!-- DANH SÁCH NGÀY LỄ -->
+      <section>
+        <h2>🎉 Danh sách ngày lễ</h2>
+        <div style="margin-bottom: 10px">
+          <input id="le-ngay" type="date" />
+          <input id="le-ten" placeholder="Tên ngày lễ" />
+          <select id="le-loai">
+            <option value="le">Lễ</option>
+            <option value="tet">Tết</option>
+            <input
+              id="le-he-so"
+              type="number"
+              step="0.1"
+              placeholder="Hệ số (VD: 3)"
+              style="width: 120px"
+            />
+            <input
+              id="le-so-ngay-nghi"
+              type="number"
+              step="1"
+              placeholder="Số ngày nghỉ"
+              style="width: 120px"
+            />
+            <option value="lam_bu">Làm bù</option>
+          </select>
+          <button id="btn-add-le" class="btn btn-primary">Thêm</button>
+        </div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Ngày</th>
+              <th>Tên</th>
+              <th>Loại</th>
+              <th>Hệ số</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-le"></tbody>
+        </table>
+      </section>
     </main>
 
-    <!-- Modal tạo/sửa -->
+    <!-- MODAL THÊM/SỬA -->
     <dialog id="modal" style="max-width: 620px">
       <form id="form" method="dialog" class="form" style="padding: 10px 2px">
         <h3 id="modal-title" style="margin: 0">Thêm chấm công</h3>
+
         <div class="form-group">
           <label for="m-nvId">Nhân viên ID</label>
           <input id="m-nvId" type="number" required />
         </div>
+
         <div class="form-group">
           <label for="m-ngay">Ngày</label>
           <input id="m-ngay" type="date" required />
         </div>
+
         <div class="form-group">
           <label for="m-in">Check-in</label>
           <input id="m-in" type="time" />
         </div>
+
         <div class="form-group">
           <label for="m-out">Check-out</label>
           <input id="m-out" type="time" />
         </div>
+
         <div class="form-group">
           <label for="m-note">Ghi chú</label>
           <input id="m-note" />
+        </div>
+
+        <div class="form-group">
+          <label for="m-status">Trạng thái</label>
+          <select id="m-status" class="form-control">
+            <option value="di_lam">Đi làm</option>
+            <option value="di_muon">Đi muộn</option>
+            <option value="di_muon_co_phep">Đi muộn có phép</option>
+            <option value="ve_som">Về sớm</option>
+            <option value="ve_som_co_phep">Về sớm có phép</option>
+            <option value="di_muon_ve_som">Đi muộn + về sớm</option>
+            <option value="nghi_phep">Nghỉ phép</option>
+            <option value="nghi_khong_phep">Nghỉ không phép</option>
+            <option value="ngay_le">Ngày lễ</option>
+          </select>
         </div>
 
         <div id="modal-error" class="alert alert-error" hidden></div>
@@ -105,6 +177,7 @@
       </div>
     </footer>
 
+    <script src="./assets/js/danh-sach.js"></script>
     <script type="module" src="./assets/js/cham-cong.js"></script>
   </body>
 </html>

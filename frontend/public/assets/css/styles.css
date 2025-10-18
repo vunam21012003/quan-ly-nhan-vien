@@ -250,3 +250,9 @@ textarea {
 .mt-4 {
   margin-top: 16px;
 }
+
+/* ===== Navbar Active ===== */
+.navbar .btn.active {
+  background: var(--primary);
+  color: #fff;
+}

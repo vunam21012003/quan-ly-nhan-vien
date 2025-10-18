@@ -7,17 +7,7 @@
     <link rel="stylesheet" href="./assets/css/styles.css" />
   </head>
   <body class="bg">
-    <header class="navbar">
-      <div class="container">
-        <div class="nav-brand">Quản lý nhân viên</div>
-        <div class="nav-right">
-          <a class="btn" href="./nhan-vien.html">Nhân viên</a>
-          <a class="btn" href="./chuc-vu.html">Chức vụ</a>
-          <span id="user-badge" class="badge badge-muted">Đang tải user…</span>
-          <button id="logout-btn" class="btn">Đăng xuất</button>
-        </div>
-      </div>
-    </header>
+    <div id="menuContainer"></div>
 
     <main class="container">
       <div class="page-header">
@@ -39,9 +29,11 @@
               <th style="width: 80px">ID</th>
               <th>Tên</th>
               <th>Mô tả</th>
+              <th>Quản lý</th>
               <th style="width: 150px">Thao tác</th>
             </tr>
           </thead>
+
           <tbody id="pb-tbody">
             <tr>
               <td colspan="4" class="text-muted">Đang tải…</td>
@@ -63,6 +55,16 @@
           <label for="pb-mo_ta">Mô tả</label>
           <textarea id="pb-mo_ta" placeholder="Tuỳ chọn"></textarea>
         </div>
+        <div class="form-group">
+          <label for="pb-manager">Trưởng phòng</label>
+          <input
+            id="pb-manager"
+            list="pb-manager-list"
+            placeholder="Gõ để tìm nhân viên…"
+          />
+          <datalist id="pb-manager-list"></datalist>
+        </div>
+
         <div class="alert alert-error" id="pb-error" hidden></div>
         <div style="display: flex; gap: 8px; justify-content: flex-end">
           <button id="pb-cancel" type="button" class="btn">Hủy</button>
@@ -79,6 +81,8 @@
       </div>
     </footer>
 
+    <script src="./assets/js/danh-sach.js"></script>
     <script type="module" src="./assets/js/phong-ban.js"></script>
+    <script type="module" src="./assets/js/navbar.js"></script>
   </body>
 </html>

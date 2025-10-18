@@ -1,64 +1,18 @@
-<!DOCTYPE html>
-<html lang="vi">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Danh sách quản lý</title>
-    <link rel="stylesheet" href="assets/styles.css" />
-    <style>
-      body {
-        margin: 0;
-        display: flex;
-        font-family: Arial, sans-serif;
-      }
-      /* Sidebar */
-      .sidebar {
-        width: 220px;
-        background: #1e293b;
-        color: #fff;
-        height: 100vh;
-        position: fixed;
-        top: 0;
-        left: 0;
-        padding-top: 20px;
-      }
-      .sidebar h2 {
-        text-align: center;
-        margin-bottom: 30px;
-      }
-      .sidebar a {
-        display: block;
-        color: #cbd5e1;
-        padding: 12px 20px;
-        text-decoration: none;
-        transition: background 0.3s;
-      }
-      .sidebar a:hover {
-        background: #334155;
-        color: #fff;
-      }
-      /* Nội dung chính */
-      .content {
-        margin-left: 220px;
-        padding: 20px;
-        flex: 1;
-      }
-    </style>
-  </head>
-  <body>
-    <!-- Menu bên trái -->
-    <div class="sidebar">
-      <h2>Menu</h2>
-      <a href="danhsach.html">📋 Danh sách</a>
-      <a href="nhan-vien.html">👨‍💼 Nhân viên</a>
-      <a href="phong-ban.html">🏢 Phòng ban</a>
-      <a href="luong.html">💰 Lương</a>
-      <a href="cham-cong.html">🕒 Chấm công</a>
-    </div>
+<header class="navbar">
+  <div class="container">
+    <div class="nav-brand">Quản lý nhân viên</div>
+    <div class="nav-right" id="nav-links">
+      <!-- Các menu mặc định -->
+      <a class="btn" href="./trang-chinh.html">Trang chính</a>
+      <a class="btn" href="./nhan-vien.html">Nhân viên</a>
+      <a class="btn" href="./cham-cong.html">Chấm công</a>
+      <a class="btn" href="./luong.html">Lương</a>
+      <a class="btn" href="./bao-cao-luong.html">Báo cáo lương</a>
+      <a class="btn" href="./hop-dong.html">Hợp đồng</a>
 
-    <!-- Nội dung chính -->
-    <div class="content">
-      <h1>Danh sách chung</h1>
-      <p>Chọn mục bên menu trái để xem chi tiết từng phần.</p>
+      <!-- JS sẽ chèn thêm Phòng ban + Chức vụ vào ngay trước user-badge -->
+      <span id="user-badge" class="badge badge-muted">Đang tải user…</span>
+      <button id="logout-btn" class="btn">Đăng xuất</button>
     </div>
-  </body>
-</html>
+  </div>
+</header>

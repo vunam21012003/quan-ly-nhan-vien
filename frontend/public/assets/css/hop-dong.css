@@ -12,6 +12,7 @@ body {
 }
 
 h1 {
+  margin: 10px 0;
   text-align: center;
 }
 
@@ -69,4 +70,63 @@ td {
   float: right;
   cursor: pointer;
   font-size: 20px;
+}
+
+/* Container full width */
+.container.wide {
+  max-width: 1800px;
+  min-height: 80vh;
+  margin: 0 auto;
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+/* Cột hành động */
+.table td button {
+  margin: 0 2px;
+}
+
+/* Link file */
+.file-link {
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.file-link:hover {
+  color: #1d4ed8;
+}
+
+.table-wrap {
+  width: 1200px;
+  margin: 0 auto;
+}
+
+/* Áp dụng cho cả 2 nút */
+.btn-edit,
+.btn-del {
+  font-size: 18px; /* kích thước icon/text */
+  padding: 2px 15px; /* khoảng cách bên trong */
+  width: 50px; /* chiều rộng cố định */
+  height: 30px; /* chiều cao cố định */
+  border-radius: 8px; /* bo góc */
+  margin: auto 16px;
+}
+
+/* Tùy chỉnh từng loại nút nếu muốn */
+.btn-edit {
+  background-color: #facc15; /* vàng */
+  color: #000;
+  margin-bottom: 6px;
+}
+
+.btn-del {
+  background-color: #ef4444; /* đỏ */
+  color: #fff;
+}
+
+.pad {
+  padding: 0;
+  display: flex;
+  height: 76px;
 }

@@ -18,6 +18,7 @@ import taiKhoanRoutes from "./routes/taiKhoanRoutes";
 import baoCaoLuongRoutes from "./routes/baoCaoLuongRoutes";
 import authRoutes from "./routes/auth";
 import healthRoutes from "./routes/health";
+import ngayLeRoutes from "./routes/ngayLeRoutes";
 
 import { requireAuth, requireRole } from "./middlewares/auth";
 import { pool } from "./db";
@@ -30,6 +31,9 @@ app.use(cors({ origin: true }));
 app.use(express.json({ limit: "10mb" }));
 app.use(morgan("dev"));
 app.use("/health", healthRoutes);
+app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+app.use("/ngay-le", ngayLeRoutes);
 
 // 👉 Serve static HTML/CSS/JS from frontend/public
 const publicDir = path.join(__dirname, "..", "..", "frontend", "public");
