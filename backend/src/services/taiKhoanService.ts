@@ -1,63 +1,134 @@
+import { Request } from "express";
 import { pool } from "../db";
 import bcrypt from "bcryptjs";
+import { TaiKhoan } from "../models/taiKhoan";
+import { removeVietnameseTones } from "../utils/xoa-dau-tai-khoan";
 
-// Map role FE -> DB
-function toDbRole(role?: string): "admin" | "manager" | "nhanvien" {
-  if (role === "admin") return "admin";
-  if (role === "manager") return "manager";
-  return "nhanvien";
-}
-
-// Map role DB -> FE
-function toFeRole(dbRole: string): "admin" | "manager" | "employee" {
-  if (dbRole === "admin") return "admin";
-  if (dbRole === "manager") return "manager";
-  return "employee";
-}
-
-export const getAll = async () => {
+// ================== LẤY DANH SÁCH ==================
+export const getAll = async (req: Request) => {
   const [rows]: any = await pool.query(
-    `SELECT id, ten_dang_nhap AS username, quyen AS dbRole, nhan_vien_id FROM tai_khoan ORDER BY id DESC`
+    `
+    SELECT tk.*, nv.ho_ten, cv.ten_chuc_vu, pb.ten_phong_ban
+    FROM tai_khoan tk
+    LEFT JOIN nhan_vien nv ON nv.id = tk.nhan_vien_id
+    LEFT JOIN chuc_vu cv ON cv.id = nv.chuc_vu_id
+    LEFT JOIN phong_ban pb ON pb.id = nv.phong_ban_id
+    ORDER BY tk.id DESC
+  `
   );
-  return rows.map((r: any) => ({
-    id: r.id,
-    username: r.username,
-    role: toFeRole(r.dbRole),
-    nhan_vien_id: r.nhan_vien_id ?? null,
-  }));
+  return rows;
 };
 
-export const create = async (body: any) => {
-  const { username, password, role, nhan_vien_id } = body || {};
-  if (!username || !password) {
-    return { error: "username, password là bắt buộc" };
-  }
-
-  const dbRole = toDbRole(role);
-  const hash = await bcrypt.hash(String(password).trim(), 10);
-
-  try {
-    const [r]: any = await pool.query(
-      `INSERT INTO tai_khoan (ten_dang_nhap, mat_khau, quyen, nhan_vien_id)
-       VALUES (?, ?, ?, ?)`,
-      [username, hash, dbRole, nhan_vien_id ?? null]
-    );
-    return { id: r.insertId };
-  } catch (e: any) {
-    if (e?.code === "ER_DUP_ENTRY") {
-      return { errorCode: "DUPLICATE" };
-    }
-    throw e;
-  }
+// ================== LẤY THEO ID ==================
+export const getById = async (id: number) => {
+  const [[row]]: any = await pool.query(
+    `
+    SELECT tk.*, nv.ho_ten, cv.ten_chuc_vu, pb.ten_phong_ban
+    FROM tai_khoan tk
+    LEFT JOIN nhan_vien nv ON nv.id = tk.nhan_vien_id
+    LEFT JOIN chuc_vu cv ON cv.id = nv.chuc_vu_id
+    LEFT JOIN phong_ban pb ON pb.id = nv.phong_ban_id
+    WHERE tk.id = ?
+    LIMIT 1
+  `,
+    [id]
+  );
+  return row || null;
 };
 
-export const changePassword = async (id: number, password: string) => {
-  const hash = await bcrypt.hash(String(password).trim(), 10);
-  const [r]: any = await pool.query(`UPDATE tai_khoan SET mat_khau = ? WHERE id = ?`, [hash, id]);
-  return { ok: r.affectedRows > 0 };
+// ================== TẠO TÀI KHOẢN ==================
+export const create = async (body: TaiKhoan) => {
+  const { nhan_vien_id, ten_dang_nhap, mat_khau, trang_thai, chuc_vu_id } = body;
+
+  if (!nhan_vien_id || !ten_dang_nhap) return { error: "Thiếu thông tin bắt buộc" };
+
+  // Kiểm tra trùng username
+  const [[exists]]: any = await pool.query(
+    "SELECT id FROM tai_khoan WHERE ten_dang_nhap = ? LIMIT 1",
+    [ten_dang_nhap]
+  );
+  if (exists) return { error: "Tên đăng nhập đã tồn tại" };
+
+  // 🔐 Mã hoá mật khẩu bằng bcrypt
+  const hashedPassword = await bcrypt.hash(mat_khau?.trim() || "123456", 10);
+
+  const [r]: any = await pool.query(
+    `
+    INSERT INTO tai_khoan (nhan_vien_id, chuc_vu_id, ten_dang_nhap, mat_khau, trang_thai)
+    VALUES (?, ?, ?, ?, ?)
+  `,
+    [nhan_vien_id, chuc_vu_id || null, ten_dang_nhap, hashedPassword, trang_thai || "active"]
+  );
+
+  return { id: r.insertId };
 };
 
+// ================== TẠO TỰ ĐỘNG KHI THÊM NHÂN VIÊN ==================
+export const createDefaultForNhanVien = async (nhan_vien_id: number, ho_ten: string) => {
+  const username = removeVietnameseTones(ho_ten).toLowerCase().replace(/\s+/g, "");
+  const hashed = await bcrypt.hash("123456", 10);
+
+  const [r]: any = await pool.query(
+    `
+    INSERT INTO tai_khoan (nhan_vien_id, ten_dang_nhap, mat_khau, trang_thai)
+    VALUES (?, ?, ?, 'active')
+  `,
+    [nhan_vien_id, username, hashed]
+  );
+
+  return { id: r.insertId, username };
+};
+
+// ================== CẬP NHẬT ==================
+export const update = async (id: number, body: Partial<TaiKhoan>) => {
+  const { ten_dang_nhap, mat_khau, trang_thai, chuc_vu_id } = body;
+
+  // Nếu có thay đổi mật khẩu → hash lại
+  const hashed = mat_khau ? await bcrypt.hash(mat_khau.trim(), 10) : undefined;
+
+  const [r]: any = await pool.query(
+    `
+    UPDATE tai_khoan
+    SET ten_dang_nhap = ?, 
+        ${hashed ? "mat_khau = ?," : ""}
+        trang_thai = ?, 
+        chuc_vu_id = ?
+    WHERE id = ?
+  `,
+    hashed
+      ? [ten_dang_nhap, hashed, trang_thai || "active", chuc_vu_id || null, id]
+      : [ten_dang_nhap, trang_thai || "active", chuc_vu_id || null, id]
+  );
+
+  if (!r.affectedRows) return { error: "Không tìm thấy tài khoản" };
+  return { ok: true };
+};
+
+// ================== XOÁ ==================
 export const remove = async (id: number) => {
-  const [r]: any = await pool.query(`DELETE FROM tai_khoan WHERE id = ?`, [id]);
-  return { ok: r.affectedRows > 0 };
+  const [r]: any = await pool.query("DELETE FROM tai_khoan WHERE id = ?", [id]);
+  if (!r.affectedRows) return { error: "Không tìm thấy tài khoản để xóa" };
+  return { message: "Đã xóa tài khoản" };
+};
+
+// ================== ĐĂNG NHẬP ==================
+export const login = async (username: string, password: string) => {
+  const [[row]]: any = await pool.query(
+    `
+    SELECT tk.*, nv.ho_ten, cv.ten_chuc_vu
+    FROM tai_khoan tk
+    LEFT JOIN nhan_vien nv ON nv.id = tk.nhan_vien_id
+    LEFT JOIN chuc_vu cv ON cv.id = tk.chuc_vu_id
+    WHERE tk.ten_dang_nhap = ?
+    LIMIT 1
+  `,
+    [username]
+  );
+
+  if (!row) return { error: "Sai tài khoản hoặc mật khẩu" };
+
+  const ok = await bcrypt.compare(password.trim(), String(row.mat_khau).trim());
+  if (!ok) return { error: "Sai tài khoản hoặc mật khẩu" };
+
+  return row;
 };

@@ -7,22 +7,23 @@
     <link rel="icon" href="./assets/images/favicon.png" />
     <link rel="stylesheet" href="./assets/css/styles.css" />
     <link rel="stylesheet" href="./assets/css/luong.css" />
+    <style>
+      .bonus-config {
+        display: none !important;
+      }
+    </style>
   </head>
 
   <body class="bg">
-    <!-- ===== MENU CHUNG ===== -->
     <div id="menuContainer"></div>
 
-    <!-- ===== NỘI DUNG CHÍNH ===== -->
     <main class="container">
       <div class="page-header">
         <h1 class="page-title">Bảng lương</h1>
-
         <div class="toolbar">
           <select id="thang">
             <option value="">Chọn tháng</option>
           </select>
-
           <input id="nam" type="number" placeholder="Năm (VD: 2025)" />
           <button id="btn-search" class="btn">Lọc</button>
           <button id="btn-refresh" class="btn">Tải lại</button>
@@ -32,84 +33,18 @@
         </div>
       </div>
 
-      <!-- ====== bảng nhập tiền thưởng ==== -->
-      <!-- ===== CẤU HÌNH THƯỞNG ===== -->
-      <section
-        class="bonus-config card"
-        style="margin-top: 15px; padding: 10px"
-      >
-        <h3 style="margin-bottom: 10px">Cấu hình tiền thưởng</h3>
-
-        <div
-          class="form-grid"
-          style="
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 10px;
-          "
-        >
-          <!-- Tổng tiền thưởng -->
-          <div class="form-group">
-            <label for="tong_thuong">Tổng tiền thưởng</label>
-            <input
-              type="number"
-              id="tong_thuong"
-              placeholder="Nhập tổng tiền thưởng (VNĐ)"
-              min="0"
-              value="0"
-            />
-          </div>
-
-          <!-- Tỷ lệ thưởng cố định -->
-          <div class="form-group">
-            <label for="ty_le_co_dinh">Tỷ lệ thưởng cố định (%)</label>
-            <input
-              type="number"
-              id="ty_le_co_dinh"
-              placeholder="VD: 40"
-              min="0"
-              max="100"
-              value="40"
-            />
-          </div>
-
-          <!-- Tỷ lệ thưởng theo điểm công -->
-          <div class="form-group">
-            <label for="ty_le_diem_cong">Tỷ lệ thưởng theo điểm công (%)</label>
-            <input
-              type="number"
-              id="ty_le_diem_cong"
-              placeholder="VD: 60"
-              min="0"
-              max="100"
-              value="60"
-            />
-          </div>
-        </div>
-
-        <small class="text-muted">
-          ⚙️ Tổng tỷ lệ phải bằng 100%. Hệ thống sẽ chia tiền thưởng cho các
-          phòng ban và nhân viên dựa trên hai phần: <b>cố định</b> và
-          <b>theo điểm công</b>.
-        </small>
-      </section>
-
-      <!-- ===== BẢNG DỮ LIỆU ===== -->
       <div class="table-wrap">
         <table class="table" id="table">
           <thead>
             <tr>
-              <th style="width: 50px">#</th>
+              <th>ID</th>
               <th>Nhân viên</th>
-              <th>Hệ số</th>
-              <th>Lương cơ bản</th>
-              <th>Ngày công</th>
-              <th>Giờ tăng ca</th>
-              <th>Phụ cấp</th>
-              <th>Thưởng</th>
-              <th>Khấu trừ</th>
-              <th>Lương thực nhận</th>
-              <th style="width: 140px">Thao tác</th>
+              <th>Tổng lương (Gross)</th>
+              <th>Thực nhận (Net)</th>
+              <th>Tháng/Năm</th>
+              <th>BHXH</th>
+              <th>Thuế TNCN</th>
+              <th>Hành động</th>
             </tr>
           </thead>
           <tbody id="tbody">
@@ -120,7 +55,6 @@
         </table>
       </div>
 
-      <!-- ===== PHÂN TRANG ===== -->
       <div class="pagination">
         <button id="prev" class="page-btn">«</button>
         <span id="pageInfo" class="text-muted">Trang 1/1</span>
@@ -128,27 +62,18 @@
       </div>
     </main>
 
-    <!-- ===== MODAL THÊM/SỬA LƯƠNG ===== -->
     <dialog id="modal" style="max-width: 720px">
       <form id="form" method="dialog" class="form" style="padding: 10px 2px">
         <h3 id="modal-title" style="margin: 0">Thêm bản lương</h3>
-
         <div class="form-grid">
           <div class="form-group">
             <label for="nhan_vien_id">Nhân viên</label>
             <select id="nhan_vien_id" name="nhan_vien_id" required></select>
           </div>
-
           <div class="form-group">
-            <label for="luong_co_ban">Lương cơ bản</label>
-            <input
-              type="number"
-              id="luong_co_ban"
-              placeholder="VD: 6000000"
-              required
-            />
+            <label for="luong_co_ban">Lương thỏa thuận</label>
+            <input type="number" id="luong_co_ban" required />
           </div>
-
           <div class="form-group">
             <label for="he_so_luong">Hệ số lương</label>
             <input
@@ -159,54 +84,41 @@
               required
             />
           </div>
-
           <div class="form-group">
-            <label for="ngay_cong">Ngày công</label>
-            <input type="number" id="ngay_cong" placeholder="VD: 24" required />
-          </div>
-
-          <div class="form-group">
-            <label for="gio_tang_ca">Giờ tăng ca</label>
+            <label for="tong_gio_lam">Tổng giờ làm</label>
             <input
               type="number"
-              id="gio_tang_ca"
-              placeholder="VD: 10"
-              value="0"
+              id="tong_gio_lam"
+              placeholder="VD: 208"
+              required
             />
           </div>
-
+          <div class="form-group">
+            <label for="gio_tang_ca">Giờ tăng ca</label>
+            <input type="number" id="gio_tang_ca" value="0" />
+          </div>
           <div class="form-group">
             <label for="phu_cap">Phụ cấp</label>
             <input type="number" id="phu_cap" value="0" />
           </div>
-
           <div class="form-group">
             <label for="thuong">Thưởng</label>
             <input type="number" id="thuong" value="0" />
           </div>
-
           <div class="form-group">
             <label for="khau_tru">Khấu trừ</label>
             <input type="number" id="khau_tru" value="0" />
           </div>
         </div>
-
         <div class="form-group">
           <label for="thang_nam">Tháng/Năm</label>
           <input id="thang_nam" type="month" required />
         </div>
-
         <div class="form-group">
           <label for="ghi_chu">Ghi chú</label>
-          <textarea
-            id="ghi_chu"
-            rows="2"
-            placeholder="Nhập ghi chú nếu có"
-          ></textarea>
+          <textarea id="ghi_chu" rows="2"></textarea>
         </div>
-
         <div class="alert alert-error" id="modal-error" hidden></div>
-
         <div
           style="
             display: flex;
@@ -223,14 +135,11 @@
       </form>
     </dialog>
 
-    <!-- ===== FOOTER ===== -->
     <footer class="footer">
       <div class="container">
         <small>© <span id="y"></span> HR System</small>
       </div>
     </footer>
-
-    <!-- ===== SCRIPT ===== -->
     <script src="./assets/js/danh-sach.js"></script>
     <script type="module" src="./assets/js/luong.js"></script>
     <script type="module" src="./assets/js/navbar.js"></script>

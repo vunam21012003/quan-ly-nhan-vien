@@ -1,5 +1,4 @@
 import {
-  API_BASE,
   api,
   getUser,
   getToken,
@@ -7,272 +6,297 @@ import {
   requireAuthOrRedirect,
 } from './api.js';
 
-const state = {
+const st = {
+  list: [],
   page: 1,
   limit: 10,
   total: 0,
-  items: [],
   editingId: null,
-  lookups: { phong_ban: [], chuc_vu: [] },
+  roles: null,
+  phongBans: [],
+  chucVus: [],
 };
 
-function $(sel, root = document) {
-  return root.querySelector(sel);
-}
-function esc(s) {
-  return (s ?? '').toString().replace(/[&<>"']/g, (m) => {
-    return {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#039;',
-    }[m];
-  });
-}
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (s) =>
+  (s ?? '').toString().replace(
+    /[&<>"']/g,
+    (m) =>
+      ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;',
+      }[m])
+  );
 
-// ========== Thông tin người dùng ==========
 function setUserBadge() {
-  const badge = $('#user-badge');
   const u = getUser();
-  if (!badge) return;
+  const b = $('#user-badge');
+  if (!b) return;
   if (!u) {
-    badge.className = 'badge badge-warn';
-    badge.textContent = 'Chưa đăng nhập';
+    b.className = 'badge badge-warn';
+    b.textContent = 'Chưa đăng nhập';
     return;
   }
-  const role = u.role ?? u.quyen ?? 'user';
-  badge.className = 'badge badge-ok';
-  badge.textContent = `User: ${u.username ?? u.ten_dang_nhap ?? ''} • ${role}`;
-  if (role === 'employee' || role === 'nhanvien') {
-    const btn = $('#btn-create');
-    if (btn) btn.style.display = 'none';
-  }
+  const role = u.role ?? u.quyen ?? 'employee';
+  b.className = 'badge badge-ok';
+  b.textContent = `User: ${u.username ?? u.ten_dang_nhap ?? ''} • ${role}`;
+  st.roles = role;
+  if (role !== 'admin' && role !== 'manager')
+    $('#nv-btn-create').style.display = 'none';
 }
 
-// ========== Phân trang ==========
-function applyPageInfo() {
-  const totalPages = Math.max(1, Math.ceil(state.total / state.limit));
-  $('#pageInfo').textContent = `Trang ${state.page}/${totalPages}`;
-  $('#prev').disabled = state.page <= 1;
-  $('#next').disabled = state.page >= totalPages;
-}
-
-// ========== Render từng dòng ==========
 function rowHtml(x) {
-  const heSo =
-    x.he_so_luong != null && !isNaN(Number(x.he_so_luong))
-      ? Number(x.he_so_luong).toFixed(2)
-      : '';
-  return `<tr>
-    <td>${esc(x.id)}</td>
+  return `<tr data-id="${x.id}">
+    <td>${x.id}</td>
     <td>${esc(x.ho_ten)}</td>
-    <td>${esc(x.email)}</td>
     <td>${esc(x.gioi_tinh || '')}</td>
-    <td>${esc(x.ten_phong_ban || x.phong_ban_id || '')}</td>
-    <td>${esc(x.ten_chuc_vu || x.chuc_vu_id || '')}</td>
-    <td>${esc(heSo)}</td>
+    <td>${esc(x.ten_phong_ban || '')}</td>
+    <td>${esc(x.ten_chuc_vu || '')}</td>
+    <td>${esc(x.email || '')}</td>
+    <td>${esc(x.so_dien_thoai || '')}</td>
+    <td>${
+      x.ngay_vao_lam ? new Date(x.ngay_vao_lam).toLocaleDateString('vi-VN') : ''
+    }</td>
     <td>${esc(x.trang_thai || '')}</td>
     <td>
-      <button class="page-btn" data-action="edit" data-id="${x.id}">Sửa</button>
-      <button class="page-btn" data-action="del" data-id="${x.id}">Xoá</button>
+      <button class="page-btn" data-act="edit">Sửa</button>
+      <button class="page-btn" data-act="del">Xoá</button>
     </td>
   </tr>`;
 }
 
-// ========== Chuẩn hoá dữ liệu từ API ==========
-function unwrap(resp) {
-  const d = resp?.data ?? resp;
-  if (Array.isArray(d)) return { items: d, total: d.length };
-  if (d?.items) return { items: d.items, total: d.total ?? d.items.length };
-  if (d?.rows) return { items: d.rows, total: d.total ?? d.rows.length };
-  return { items: d?.list ?? [], total: d?.total ?? 0 };
-}
+async function loadPhongBans() {
+  const res = await api('/phong-ban?limit=500').catch(() => ({
+    data: { items: [] },
+  }));
+  const items = res?.data?.items || res.items || [];
+  st.phongBans = items;
 
-// ========== Load danh mục phòng ban / chức vụ ==========
-async function loadLookups() {
-  try {
-    const [pb, cv] = await Promise.all([
-      api('/phong-ban').catch(() => ({ data: [] })),
-      api('/chuc-vu').catch(() => ({ data: [] })),
-    ]);
-    state.lookups.phong_ban = unwrap(pb).items;
-    state.lookups.chuc_vu = unwrap(cv).items;
+  // dropdown lọc
+  const selPB = $('#nv-phongban');
+  selPB.innerHTML =
+    `<option value="">-- Tất cả phòng ban --</option>` +
+    items.map((x) => `<option value="${x.id}">${esc(x.ten)}</option>`).join('');
 
-    const selPB = $('#phong_ban_id'),
-      selCV = $('#chuc_vu_id');
-    if (selPB) {
-      selPB.innerHTML =
-        '<option value="">-- Chọn --</option>' +
-        state.lookups.phong_ban
-          .map((x) => `<option value="${x.id}">${esc(x.ten)}</option>`)
-          .join('');
-    }
-    if (selCV) {
-      selCV.innerHTML =
-        '<option value="">-- Chọn --</option>' +
-        state.lookups.chuc_vu
-          .map((x) => `<option value="${x.id}">${esc(x.ten_chuc_vu)}</option>`)
-          .join('');
-    }
-  } catch (err) {
-    console.error('Load lookup lỗi:', err);
-  }
-}
+  // dropdown trong form thêm/sửa
+  const selPBForm = $('#nv-phong_ban_id');
+  selPBForm.innerHTML =
+    `<option value="">-- Chọn phòng ban --</option>` +
+    items.map((x) => `<option value="${x.id}">${esc(x.ten)}</option>`).join('');
 
-// ========== Lấy danh sách nhân viên ==========
-async function fetchList() {
-  const q = new URLSearchParams({
-    page: String(state.page),
-    limit: String(state.limit),
+  // khi chọn phòng ban -> load chức vụ tương ứng
+  selPBForm.addEventListener('change', async () => {
+    const phongBanId = selPBForm.value;
+    await loadChucVus(phongBanId);
   });
-  const search = $('#search').value.trim();
-  if (search) q.set('search', search);
-
-  // ⚙️ Trim URL để tránh lỗi /nhan-vien%0A
-  const resp = await api(`/nhan-vien?${q.toString().trim()}`);
-  const { items, total } = unwrap(resp);
-  state.items = items || [];
-  state.total = total || state.items.length;
-
-  const tbody = $('#tbody');
-  if (!state.items.length) {
-    tbody.innerHTML = `<tr><td colspan="9" class="text-muted">Không có dữ liệu</td></tr>`;
-  } else {
-    tbody.innerHTML = state.items.map(rowHtml).join('');
-  }
-  applyPageInfo();
 }
 
-// ========== Form thêm/sửa ==========
-function openModal(editing = null) {
-  state.editingId = editing?.id ?? null;
-  $('#modal-title').textContent = editing
-    ? `Sửa nhân viên #${editing.id}`
-    : 'Thêm nhân viên';
-  $('#modal-error').hidden = true;
-  $('#ho_ten').value = editing?.ho_ten ?? '';
-  $('#email').value = editing?.email ?? '';
-  $('#so_dien_thoai').value = editing?.so_dien_thoai ?? '';
-  $('#gioi_tinh').value = editing?.gioi_tinh ?? '';
-  $('#phong_ban_id').value = editing?.phong_ban_id ?? '';
-  $('#chuc_vu_id').value = editing?.chuc_vu_id ?? '';
-  $('#ngay_vao_lam').value = editing?.ngay_vao_lam ?? '';
-  $('#he_so_luong').value = editing?.he_so_luong ?? 1.0;
-  $('#trang_thai').value = editing?.trang_thai ?? 'dang_lam';
-  $('#modal').showModal();
-}
-function closeModal() {
-  $('#modal').close();
+async function loadChucVus(phongBanId = '') {
+  const url = phongBanId
+    ? `/chuc-vu?phong_ban_id=${phongBanId}&limit=500`
+    : '/chuc-vu?limit=500';
+  const res = await api(url).catch(() => ({ data: { items: [] } }));
+  const items = res?.data?.items || res.items || [];
+  st.chucVus = items;
+
+  // dropdown lọc ngoài danh sách
+  const selCV = $('#nv-chucvu');
+  selCV.innerHTML =
+    `<option value="">-- Tất cả chức vụ --</option>` +
+    items
+      .map(
+        (x) =>
+          `<option value="${x.id}">${esc(x.ten_chuc_vu)} (${esc(
+            x.ten_phong_ban || ''
+          )})</option>`
+      )
+      .join('');
+
+  // dropdown trong form thêm/sửa
+  const selCVForm = $('#nv-chuc_vu_id');
+  selCVForm.innerHTML =
+    `<option value="">-- Chọn chức vụ --</option>` +
+    items
+      .map((x) => `<option value="${x.id}">${esc(x.ten_chuc_vu)}</option>`)
+      .join('');
 }
 
-// ========== Lưu nhân viên ==========
-async function onSave(e) {
-  e.preventDefault();
-  $('#modal-error').hidden = true;
+async function fetchList() {
+  const qs = new URLSearchParams({
+    page: String(st.page),
+    limit: String(st.limit),
+    search: $('#nv-search').value.trim(),
+    phong_ban_id: $('#nv-phongban').value || '',
+    chuc_vu_id: $('#nv-chucvu').value || '',
+  });
+  const res = await api(`/nhan-vien?${qs.toString()}`).catch(() => ({
+    data: { items: [], total: 0 },
+  }));
+  const d = res?.data ?? res;
+  st.list = d.items ?? [];
+  st.total = d.total ?? st.list.length;
 
-  const payload = {
-    ho_ten: $('#ho_ten').value.trim(),
-    email: $('#email').value.trim() || null,
-    so_dien_thoai: $('#so_dien_thoai').value.trim() || null,
-    gioi_tinh: $('#gioi_tinh').value || null,
-    phong_ban_id: $('#phong_ban_id').value || null,
-    chuc_vu_id: $('#chuc_vu_id').value || null,
-    ngay_vao_lam: $('#ngay_vao_lam').value || null,
-    he_so_luong: parseFloat($('#he_so_luong').value) || 1.0,
-    trang_thai: $('#trang_thai').value || 'dang_lam',
-  };
-  if (!payload.ho_ten) {
-    showModalError('Vui lòng nhập họ tên.');
+  $('#nv-tbody').innerHTML = st.list.length
+    ? st.list.map(rowHtml).join('')
+    : `<tr><td colspan="10" class="text-muted">Không có dữ liệu</td></tr>`;
+  renderPaging();
+}
+
+function renderPaging() {
+  const totalPages = Math.ceil((st.total || 0) / (st.limit || 10));
+  const c = $('#nv-pagination');
+  if (totalPages <= 1) {
+    c.innerHTML = '';
     return;
   }
-
-  try {
-    if (state.editingId) {
-      await api(`/nhan-vien/${state.editingId}`, {
-        method: 'PUT',
-        body: payload,
-      });
-    } else {
-      await api('/nhan-vien', { method: 'POST', body: payload });
-    }
-    closeModal();
-    await fetchList();
-  } catch (err) {
-    showModalError(err?.message || 'Lưu thất bại');
+  let html = '';
+  for (let i = 1; i <= totalPages; i++) {
+    html += `<button class="page-btn ${
+      i === st.page ? 'btn-primary' : ''
+    }" data-page="${i}">${i}</button>`;
   }
-}
-function showModalError(msg) {
-  const el = $('#modal-error');
-  el.hidden = false;
-  el.textContent = msg;
+  c.innerHTML = html;
+  c.querySelectorAll('button[data-page]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      st.page = Number(btn.dataset.page);
+      fetchList();
+    });
+  });
 }
 
-// ========== Gắn sự kiện ==========
-function bindEvents() {
-  $('#btn-refresh').addEventListener('click', () =>
-    fetchList().catch(() => {})
+function openModal(edit = null) {
+  st.editingId = edit?.id ?? null;
+  $('#nv-modal-title').textContent = edit
+    ? `Sửa nhân viên #${edit.id}`
+    : 'Thêm nhân viên';
+  $('#nv-ho_ten').value = edit?.ho_ten ?? '';
+  $('#nv-gioi_tinh').value = edit?.gioi_tinh ?? 'Nam';
+  $('#nv-ngay_sinh').value = edit?.ngay_sinh ?? '';
+  $('#nv-email').value = edit?.email ?? '';
+  $('#nv-so_dien_thoai').value = edit?.so_dien_thoai ?? '';
+  $('#nv-dia_chi').value = edit?.dia_chi ?? '';
+  $('#nv-phong_ban_id').value = edit?.phong_ban_id ?? '';
+  $('#nv-trang_thai').value = edit?.trang_thai ?? 'dang_lam';
+  $('#nv-ghi_chu').value = edit?.ghi_chu ?? '';
+  $('#nv-error').hidden = true;
+
+  // khi mở modal, tải lại chức vụ theo phòng ban hiện tại
+  const phongBanId = edit?.phong_ban_id ?? '';
+  loadChucVus(phongBanId).then(() => {
+    $('#nv-chuc_vu_id').value = edit?.chuc_vu_id ?? '';
+  });
+
+  $('#nv-modal').showModal();
+}
+
+function closeModal() {
+  $('#nv-modal').close();
+}
+
+function canEditOrDelete() {
+  return st.roles === 'admin' || st.roles === 'manager';
+}
+
+function bind() {
+  $('#nv-btn-refresh').addEventListener('click', () => {
+    st.page = 1;
+    $('#nv-search').value = '';
+    $('#nv-phongban').value = '';
+    $('#nv-chucvu').value = '';
+    fetchList();
+  });
+  $('#nv-btn-search').addEventListener('click', () => {
+    st.page = 1;
+    fetchList();
+  });
+  $('#nv-btn-create').addEventListener('click', () =>
+    canEditOrDelete()
+      ? openModal(null)
+      : alert('Bạn không có quyền tạo nhân viên')
   );
-  $('#btn-search').addEventListener('click', () => {
-    state.page = 1;
-    fetchList().catch(() => {});
-  });
-  $('#btn-create').addEventListener('click', () => openModal(null));
-  $('#btn-cancel').addEventListener('click', closeModal);
-  $('#form').addEventListener('submit', onSave);
-  $('#prev').addEventListener('click', () => {
-    if (state.page > 1) {
-      state.page--;
-      fetchList().catch(() => {});
+
+  $('#nv-cancel').addEventListener('click', closeModal);
+
+  $('#nv-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+      ho_ten: $('#nv-ho_ten').value.trim(),
+      gioi_tinh: $('#nv-gioi_tinh').value || 'Nam',
+      ngay_sinh: $('#nv-ngay_sinh').value || null,
+      email: $('#nv-email').value || null,
+      so_dien_thoai: $('#nv-so_dien_thoai').value || null,
+      dia_chi: $('#nv-dia_chi').value || null,
+      phong_ban_id: Number($('#nv-phong_ban_id').value) || null,
+      chuc_vu_id: Number($('#nv-chuc_vu_id').value) || null,
+      ngay_vao_lam: $('#nv-ngay_vao_lam').value || null,
+      trang_thai: $('#nv-trang_thai').value || 'dang_lam',
+      ghi_chu: $('#nv-ghi_chu').value || null,
+    };
+    if (!payload.ho_ten) {
+      showErr('Vui lòng nhập họ tên');
+      return;
     }
-  });
-  $('#next').addEventListener('click', () => {
-    state.page++;
-    fetchList().catch(() => {});
-  });
-
-  $('#tbody').addEventListener('click', async (e) => {
-    const btn = e.target.closest('button[data-action]');
-    if (!btn) return;
-    const id = btn.dataset.id;
-    const action = btn.dataset.action;
-
-    const row = state.items.find((x) => String(x.id) === String(id));
-
-    if (action === 'edit') {
-      let detail = row;
-      try {
-        const resp = await api(`/nhan-vien/${id}`);
-        detail = (resp?.data ?? resp) || row;
-      } catch {}
-      openModal(detail);
-    }
-
-    if (action === 'del') {
-      if (!confirm(`Xoá nhân viên #${id}?`)) return;
-      try {
-        await api(`/nhan-vien/${id}`, { method: 'DELETE' });
-        await fetchList();
-      } catch (err) {
-        alert(err?.message || 'Không thể xoá');
+    try {
+      if (st.editingId) {
+        await api(`/nhan-vien/${st.editingId}`, {
+          method: 'PUT',
+          body: payload,
+        });
+      } else {
+        await api('/nhan-vien', { method: 'POST', body: payload });
       }
+      closeModal();
+      await fetchList();
+    } catch (err) {
+      showErr(err?.message || 'Lưu thất bại');
+    }
+  });
+
+  $('#nv-tbody').addEventListener('click', async (e) => {
+    const row = e.target.closest('tr[data-id]');
+    if (!row) return;
+    const id = row.dataset.id;
+    const btn = e.target.closest('button.page-btn');
+    if (!btn) return;
+    const act = btn.dataset.act;
+    const item = st.list.find((x) => String(x.id) === String(id));
+
+    if (act === 'edit') {
+      if (!canEditOrDelete()) return alert('Bạn không có quyền');
+      openModal(item);
+    }
+    if (act === 'del') {
+      if (!canEditOrDelete()) return alert('Bạn không có quyền');
+      if (!confirm(`Xoá nhân viên #${id}?`)) return;
+      await api(`/nhan-vien/${id}`, { method: 'DELETE' });
+      await fetchList();
     }
   });
 
   $('#logout-btn').addEventListener('click', () => {
     clearAuth();
-    location.href = './dang-nhap.html';
+    location.href = './dangnhap.html';
   });
 }
 
-// ========== Khởi tạo ==========
+function showErr(m) {
+  const el = $('#nv-error');
+  el.hidden = false;
+  el.textContent = m;
+}
+
 async function init() {
-  requireAuthOrRedirect('./dang-nhap.html');
+  requireAuthOrRedirect('./dangnhap.html');
   if (!getToken()) return;
-  $('#y').textContent = new Date().getFullYear();
+  const yearEl = document.getElementById('y');
+  if (yearEl) yearEl.textContent = new Date().getFullYear();
   setUserBadge();
-  await loadLookups();
+  await loadPhongBans();
+  await loadChucVus();
   await fetchList();
-  bindEvents();
+  bind();
 }
 document.addEventListener('DOMContentLoaded', init);

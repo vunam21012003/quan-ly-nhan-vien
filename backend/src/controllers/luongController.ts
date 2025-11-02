@@ -1,3 +1,4 @@
+// src/controllers/luongController.ts
 import { Request, Response } from "express";
 import * as service from "../services/luongService";
 
@@ -39,8 +40,8 @@ export const getById = async (req: Request, res: Response) => {
 export const create = async (req: Request, res: Response) => {
   try {
     const result = await service.create(req.body);
-    if (result.error) return res.status(400).json({ error: result.error });
-    res.status(201).json({ id: result.id });
+    if ((result as any).error) return res.status(400).json({ error: (result as any).error });
+    res.status(201).json({ id: (result as any).id });
   } catch (err) {
     console.error("[POST /luong] error:", err);
     res.status(500).json({ error: "Server error" });
@@ -52,7 +53,7 @@ export const update = async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     const result = await service.update(id, req.body);
-    if (result.error) return res.status(400).json({ error: result.error });
+    if ((result as any).error) return res.status(400).json({ error: (result as any).error });
     res.json({ ok: true });
   } catch (err) {
     console.error("[PUT /luong/:id] error:", err);
@@ -77,28 +78,12 @@ export const remove = async (req: Request, res: Response) => {
 export const calcSalary = async (req: Request, res: Response) => {
   try {
     const { thang, nam } = req.query;
-
-    if (!thang || !nam) {
-      return res.status(400).json({ error: "Thiếu tham số thang hoặc nam" });
-    }
+    if (!thang || !nam) return res.status(400).json({ error: "Thiếu tham số thang hoặc nam" });
 
     const result = await service.calcSalaryForMonth(Number(thang), Number(nam));
-
     res.json(result);
   } catch (err) {
     console.error("[POST /luong/tinh-thang] error:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-};
-
-// ===== CHIA THƯỞNG TOÀN HỆ THỐNG =====
-export const chiaThuong = async (req: Request, res: Response) => {
-  try {
-    const result = await service.chiaThuong(req.body);
-    if (result.error) return res.status(400).json({ error: result.error });
-    res.json(result);
-  } catch (err) {
-    console.error("[POST /luong/chia-thuong] error:", err);
     res.status(500).json({ error: "Server error" });
   }
 };

@@ -4,130 +4,128 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Nhân viên - Quản lý nhân viên</title>
-    <link rel="icon" href="./assets/images/favicon.png" />
     <link rel="stylesheet" href="./assets/css/styles.css" />
-    <link rel="stylesheet" href="./assets/css/nhan-vien.css" />
   </head>
   <body class="bg">
-    <!-- Menu -->
     <div id="menuContainer"></div>
 
     <main class="container">
       <div class="page-header">
         <h1 class="page-title">Nhân viên</h1>
         <div class="toolbar">
-          <div class="form-group">
-            <input
-              id="search"
-              type="search"
-              placeholder="Tìm theo tên/email…"
-            />
-          </div>
-          <button id="btn-search" class="btn">Tìm</button>
-          <button id="btn-refresh" class="btn">Tải lại</button>
-          <button id="btn-create" class="btn btn-primary">
+          <input
+            id="nv-search"
+            type="search"
+            placeholder="Tìm theo tên / email / SĐT…"
+          />
+          <select id="nv-phongban"></select>
+          <select id="nv-chucvu"></select>
+          <button id="nv-btn-search" class="btn">Lọc</button>
+          <button id="nv-btn-refresh" class="btn">Tải lại</button>
+          <button id="nv-btn-create" class="btn btn-primary">
             Thêm nhân viên
           </button>
         </div>
       </div>
 
       <div class="table-wrap">
-        <table class="table" id="table">
+        <table class="table">
           <thead>
             <tr>
-              <th style="width: 70px">ID</th>
+              <th>ID</th>
               <th>Họ tên</th>
-              <th>Email</th>
               <th>Giới tính</th>
               <th>Phòng ban</th>
               <th>Chức vụ</th>
-              <th>Hệ số lương</th>
+              <th>Email</th>
+              <th>SĐT</th>
+              <th>Ngày vào</th>
               <th>Trạng thái</th>
-              <th style="width: 150px">Thao tác</th>
+              <th>Thao tác</th>
             </tr>
           </thead>
-          <tbody id="tbody">
+          <tbody id="nv-tbody">
             <tr>
-              <td colspan="8" class="text-muted">Đang tải…</td>
+              <td colspan="10" class="text-muted">Đang tải…</td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <div class="pagination">
-        <button id="prev" class="page-btn">«</button>
-        <span id="pageInfo" class="text-muted">Trang 1/1</span>
-        <button id="next" class="page-btn">»</button>
-      </div>
+      <div class="pagination" id="nv-pagination"></div>
     </main>
 
     <!-- Modal -->
-    <dialog id="modal" style="max-width: 620px">
-      <form id="form" method="dialog" class="form" style="padding: 10px 2px">
-        <h3 id="modal-title" style="margin: 0">Thêm nhân viên</h3>
+    <dialog id="nv-modal">
+      <form id="nv-form" method="dialog" class="form" style="padding: 10px 2px">
+        <h3 id="nv-modal-title" style="margin: 0">Thêm nhân viên</h3>
+
         <div class="form-group">
-          <label for="ho_ten">Họ tên</label>
-          <input id="ho_ten" name="ho_ten" required />
-        </div>
-        <div class="form-group">
-          <label for="email">Email</label>
-          <input id="email" name="email" type="email" />
-        </div>
-        <div class="form-group">
-          <label for="so_dien_thoai">Số điện thoại</label>
-          <input id="so_dien_thoai" name="so_dien_thoai" />
-        </div>
-        <div class="form-group">
-          <label for="gioi_tinh">Giới tính</label>
-          <select id="gioi_tinh" name="gioi_tinh">
-            <option value="">-- Chọn --</option>
-            <option value="Nam">Nam</option>
-            <option value="Nữ">Nữ</option>
-            <option value="Khác">Khác</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="phong_ban_id">Phòng ban</label>
-          <select id="phong_ban_id" name="phong_ban_id">
-            <option value="">-- Chọn --</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="chuc_vu_id">Chức vụ</label>
-          <select id="chuc_vu_id" name="chuc_vu_id">
-            <option value="">-- Chọn --</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="ngay_vao_lam">Ngày vào làm</label>
-          <input id="ngay_vao_lam" name="ngay_vao_lam" type="date" />
-        </div>
-        <div class="form-group">
-          <label for="he_so_luong">Hệ số lương:</label>
-          <input
-            type="number"
-            id="he_so_luong"
-            step="0.01"
-            min="0"
-            class="form-control"
-            placeholder="Nhập hệ số lương (VD: 2.5)"
-            required
-          />
+          <label for="nv-ho_ten">Họ tên</label>
+          <input id="nv-ho_ten" required />
         </div>
 
         <div class="form-group">
-          <label for="trang_thai">Trạng thái</label>
-          <select id="trang_thai" name="trang_thai">
+          <label for="nv-gioi_tinh">Giới tính</label>
+          <select id="nv-gioi_tinh">
+            <option value="Nam">Nam</option>
+            <option value="Nữ">Nữ</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="nv-ngay_sinh">Ngày sinh</label>
+          <input id="nv-ngay_sinh" type="date" />
+        </div>
+
+        <div class="form-group">
+          <label for="nv-email">Email</label>
+          <input id="nv-email" type="email" />
+        </div>
+
+        <div class="form-group">
+          <label for="nv-so_dien_thoai">Số điện thoại</label>
+          <input id="nv-so_dien_thoai" />
+        </div>
+
+        <div class="form-group">
+          <label for="nv-dia_chi">Địa chỉ</label>
+          <input id="nv-dia_chi" />
+        </div>
+
+        <div class="form-group">
+          <label for="nv-phong_ban_id">Phòng ban</label>
+          <select id="nv-phong_ban_id" required></select>
+        </div>
+
+        <div class="form-group">
+          <label for="nv-chuc_vu_id">Chức vụ</label>
+          <select id="nv-chuc_vu_id" required></select>
+        </div>
+
+        <div class="form-group">
+          <label for="nv-ngay_vao_lam">Ngày vào làm</label>
+          <input id="nv-ngay_vao_lam" type="date" />
+        </div>
+
+        <div class="form-group">
+          <label for="nv-trang_thai">Trạng thái</label>
+          <select id="nv-trang_thai">
             <option value="dang_lam">Đang làm</option>
             <option value="tam_nghi">Tạm nghỉ</option>
             <option value="da_nghi">Đã nghỉ</option>
           </select>
         </div>
 
-        <div class="alert alert-error" id="modal-error" hidden></div>
+        <div class="form-group">
+          <label for="nv-ghi_chu">Ghi chú</label>
+          <textarea id="nv-ghi_chu" placeholder="Tuỳ chọn"></textarea>
+        </div>
+
+        <div class="alert alert-error" id="nv-error" hidden></div>
         <div style="display: flex; gap: 8px; justify-content: flex-end">
-          <button id="btn-cancel" type="button" class="btn">Hủy</button>
-          <button id="btn-save" type="submit" class="btn btn-primary">
+          <button id="nv-cancel" type="button" class="btn">Hủy</button>
+          <button id="nv-save" type="submit" class="btn btn-primary">
             Lưu
           </button>
         </div>

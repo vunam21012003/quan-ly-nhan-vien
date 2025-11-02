@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tài khoản - Quản lý nhân viên</title>
+    <link rel="stylesheet" href="./assets/css/styles.css" />
+  </head>
+
+  <body class="bg">
+    <div id="menuContainer"></div>
+
+    <main class="container">
+      <div class="page-header">
+        <h1 class="page-title">Tài khoản</h1>
+        <div class="toolbar">
+          <input id="searchName" type="text" placeholder="Tìm theo tên..." />
+          <select id="chucVuFilter">
+            <option value="">-- Tất cả chức vụ --</option>
+          </select>
+          <select id="trangThaiFilter">
+            <option value="">-- Tất cả trạng thái --</option>
+            <option value="1">Hoạt động</option>
+            <option value="0">Khóa</option>
+          </select>
+          <button id="btn-search" class="btn">Lọc</button>
+          <button id="btn-refresh" class="btn">Tải lại</button>
+          <button id="btn-create" class="btn btn-primary">
+            ➕ Thêm tài khoản
+          </button>
+        </div>
+      </div>
+
+      <!-- BẢNG TÀI KHOẢN -->
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nhân viên</th>
+              <th>Tên đăng nhập</th>
+              <th>Chức vụ</th>
+              <th>Trạng thái</th>
+              <th>Ngày tạo</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr>
+              <td colspan="7" class="text-muted">Đang tải…</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- PHÂN TRANG -->
+      <div class="pagination">
+        <button id="prev" class="page-btn">«</button>
+        <span id="pageInfo" class="text-muted">Trang 1/1</span>
+        <button id="next" class="page-btn">»</button>
+      </div>
+    </main>
+
+    <!-- MODAL -->
+    <dialog id="modal" style="max-width: 500px">
+      <form id="form" method="dialog" class="form" style="padding: 10px 2px">
+        <h3 id="modal-title">Thêm tài khoản</h3>
+
+        <div class="form-group">
+          <label for="m-nvId">ID nhân viên</label>
+          <input id="m-nvId" type="number" required />
+        </div>
+
+        <div class="form-group">
+          <label for="m-username">Tên đăng nhập</label>
+          <input
+            id="m-username"
+            type="text"
+            placeholder="Tự tạo từ họ tên nếu để trống"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="m-password">Mật khẩu</label>
+          <input id="m-password" type="password" placeholder="123456" />
+        </div>
+
+        <div class="form-group">
+          <label for="m-chucVu">Chức vụ</label>
+          <select id="m-chucVu" required></select>
+        </div>
+
+        <div class="form-group">
+          <label for="m-trangThai">Trạng thái</label>
+          <select id="m-trangThai">
+            <option value="1">Hoạt động</option>
+            <option value="0">Khóa</option>
+          </select>
+        </div>
+
+        <div id="modal-error" class="alert alert-error" hidden></div>
+
+        <div style="display: flex; gap: 8px; justify-content: flex-end">
+          <button id="btn-cancel" type="button" class="btn">Hủy</button>
+          <button id="btn-save" type="submit" class="btn btn-primary">
+            Lưu
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <footer class="footer">
+      <div class="container">
+        <small>© <span id="y"></span> HR System</small>
+      </div>
+    </footer>
+
+    <script src="./assets/js/danh-sach.js"></script>
+    <script type="module" src="./assets/js/tai-khoan.js"></script>
+  </body>
+</html>

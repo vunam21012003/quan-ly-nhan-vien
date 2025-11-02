@@ -42,3 +42,77 @@
   border: 1px solid #ccc;
   border-radius: 4px;
 }
+
+/* --- BẢNG LƯƠNG MỚI --- */
+.salary-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.salary-table th {
+  background: #f4f6f8;
+  font-weight: 600;
+  padding: 8px 6px;
+  border-bottom: 1px solid #ddd;
+}
+
+.salary-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.salary-table tr:hover {
+  background-color: #f9f9f9;
+}
+
+.salary-net {
+  color: #0a8a43;
+  font-weight: 600;
+}
+
+.salary-gross {
+  font-weight: 600;
+  color: #1a73e8;
+}
+
+.expand-row {
+  background: #fafafa;
+  display: none;
+  text-align: left;
+}
+
+.expand-row.active {
+  display: table-row;
+}
+
+.expand-box {
+  padding: 10px 14px;
+  font-size: 0.9rem;
+}
+
+.expand-box h4 {
+  font-size: 1rem;
+  color: #333;
+  margin: 6px 0;
+}
+
+.expand-box table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 4px;
+}
+
+.expand-box td {
+  padding: 4px 6px;
+  border-bottom: 1px dashed #ccc;
+}
+
+.expand-box td:first-child {
+  font-weight: 500;
+  color: #444;
+}

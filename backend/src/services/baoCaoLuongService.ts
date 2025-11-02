@@ -57,11 +57,11 @@ export const getBaoCaoLuong = async (query: any) => {
       cv.ten_chuc_vu,
       l.thang,
       l.nam,
-      l.luong_co_ban,
+      l.luong_thoa_thuan,
       l.phu_cap,
       l.thuong,
       l.khau_tru,
-      (COALESCE(l.luong_co_ban,0) + COALESCE(l.phu_cap,0) + COALESCE(l.thuong,0) - COALESCE(l.khau_tru,0)) AS tong_luong
+      (COALESCE(l.luong_thoa_thuan,0) + COALESCE(l.phu_cap,0) + COALESCE(l.thuong,0) - COALESCE(l.khau_tru,0)) AS tong_luong
     FROM luong l
     JOIN nhan_vien nv ON nv.id = l.nhan_vien_id
     LEFT JOIN phong_ban pb ON pb.id = nv.phong_ban_id
@@ -106,11 +106,11 @@ export const getChiTietLuongNhanVien = async (
       cv.ten_chuc_vu,
       l.thang,
       l.nam,
-      l.luong_co_ban,
+      l.luong_thoa_thuan,
       l.phu_cap,
       l.thuong,
       l.khau_tru,
-      (COALESCE(l.luong_co_ban,0) + COALESCE(l.phu_cap,0) + COALESCE(l.thuong,0) - COALESCE(l.khau_tru,0)) AS tong_luong
+      (COALESCE(l.luong_thoa_thuan,0) + COALESCE(l.phu_cap,0) + COALESCE(l.thuong,0) - COALESCE(l.khau_tru,0)) AS tong_luong
     FROM luong l
     JOIN nhan_vien nv ON nv.id = l.nhan_vien_id
     LEFT JOIN phong_ban pb ON pb.id = nv.phong_ban_id

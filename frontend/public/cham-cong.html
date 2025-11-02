@@ -5,16 +5,67 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Chấm công - Quản lý nhân viên</title>
     <link rel="stylesheet" href="./assets/css/styles.css" />
+    <style>
+      /* ===== TAB MENU ===== */
+      .tab-menu {
+        display: flex;
+        gap: 10px;
+        margin: 15px 0;
+        border-bottom: 2px solid #ddd;
+        padding-bottom: 6px;
+      }
+      .tab-btn {
+        background: #f3f3f3;
+        border: 1px solid #ccc;
+        padding: 6px 16px;
+        border-radius: 6px 6px 0 0;
+        cursor: pointer;
+        font-weight: bold;
+      }
+      .tab-btn.active {
+        background: #007bff;
+        color: white;
+        border-color: #007bff;
+      }
+      .tab-content {
+        display: none;
+      }
+      .tab-content.active {
+        display: block;
+      }
+    </style>
   </head>
+
   <body class="bg">
     <div id="menuContainer"></div>
 
     <main class="container">
       <div class="page-header">
-        <h1 class="page-title">Chấm công</h1>
+        <h1 class="page-title">Quản lý chấm công</h1>
+      </div>
+
+      <!-- ===== TAB MENU ===== -->
+      <div class="tab-menu">
+        <button class="tab-btn active" data-tab="cham-cong-tab">
+          🕒 Chấm công
+        </button>
+        <button class="tab-btn" data-tab="ngay-le-tab">
+          🎉 Ngày lễ / Làm bù
+        </button>
+        <button class="tab-btn" data-tab="thuong-phat-tab">
+          💰 Thưởng phạt
+        </button>
+      </div>
+
+      <!-- ===== TAB 1: CHẤM CÔNG ===== -->
+      <section id="cham-cong-tab" class="tab-content active">
         <div class="toolbar">
           <input id="nvId" type="number" placeholder="Nhân viên ID" />
           <input id="nvName" type="text" placeholder="Tên nhân viên" />
+          <select id="phongBanFilter">
+            <option value="">-- Tất cả phòng ban --</option>
+          </select>
+
           <select id="statusFilter">
             <option value="">-- Tất cả trạng thái --</option>
             <option value="di_lam">Đi làm</option>
@@ -38,66 +89,107 @@
             📤 Upload Excel
             <input type="file" id="fileExcel" accept=".xlsx,.xls" hidden />
           </label>
+          <button id="btn-export" class="btn">📊 Xuất Excel</button>
         </div>
-      </div>
 
-      <!-- BẢNG CHẤM CÔNG -->
-      <div class="table-wrap">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Nhân viên</th>
-              <th>Ngày</th>
-              <th>Check-in</th>
-              <th>Check-out</th>
-              <th>Trạng thái</th>
-              <th>Ghi chú</th>
-              <th>Thao tác</th>
-            </tr>
-          </thead>
-          <tbody id="tbody">
-            <tr>
-              <td colspan="9" class="text-muted">Đang tải…</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <!-- BẢNG CHẤM CÔNG -->
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nhân viên</th>
+                <th>Ngày</th>
+                <th>Check-in</th>
+                <th>Check-out</th>
+                <th>Trạng thái</th>
+                <th>Ghi chú</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="tbody">
+              <tr>
+                <td colspan="9" class="text-muted">Đang tải…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-      <!-- PHÂN TRANG -->
-      <div class="pagination">
-        <button id="prev" class="page-btn">«</button>
-        <span id="pageInfo" class="text-muted">Trang 1/1</span>
-        <button id="next" class="page-btn">»</button>
-      </div>
+        <div class="pagination">
+          <button id="prev" class="page-btn">«</button>
+          <span id="pageInfo" class="text-muted">Trang 1/1</span>
+          <button id="next" class="page-btn">»</button>
+        </div>
 
-      <hr />
+        <!-- MODAL THÊM/SỬA CHẤM CÔNG -->
+        <dialog id="modal" style="max-width: 620px">
+          <form
+            id="form"
+            method="dialog"
+            class="form"
+            style="padding: 10px 2px"
+          >
+            <h3 id="modal-title" style="margin: 0">Thêm chấm công</h3>
+            <div class="form-group">
+              <label for="m-nvId">Nhân viên ID</label>
+              <input id="m-nvId" type="number" required />
+            </div>
+            <div class="form-group">
+              <label for="m-ngay">Ngày</label>
+              <input id="m-ngay" type="date" required />
+            </div>
+            <div class="form-group">
+              <label for="m-in">Check-in</label>
+              <input id="m-in" type="time" />
+            </div>
+            <div class="form-group">
+              <label for="m-out">Check-out</label>
+              <input id="m-out" type="time" />
+            </div>
+            <div class="form-group">
+              <label for="m-note">Ghi chú</label>
+              <input id="m-note" />
+            </div>
+            <div class="form-group">
+              <label for="m-status">Trạng thái</label>
+              <select id="m-status" class="form-control">
+                <option value="di_lam">Đi làm</option>
+                <option value="di_muon">Đi muộn</option>
+                <option value="ve_som">Về sớm</option>
+                <option value="nghi_phep">Nghỉ phép</option>
+                <option value="nghi_khong_phep">Nghỉ không phép</option>
+                <option value="ngay_le">Ngày lễ</option>
+              </select>
+            </div>
+            <div id="modal-error" class="alert alert-error" hidden></div>
+            <div style="display: flex; gap: 8px; justify-content: flex-end">
+              <button id="btn-cancel" type="button" class="btn">Hủy</button>
+              <button id="btn-save" type="submit" class="btn btn-primary">
+                Lưu
+              </button>
+            </div>
+          </form>
+        </dialog>
+      </section>
 
-      <!-- DANH SÁCH NGÀY LỄ -->
-      <section>
-        <h2>🎉 Danh sách ngày lễ</h2>
+      <!-- ===== TAB 2: NGÀY LỄ ===== -->
+      <section id="ngay-le-tab" class="tab-content">
+        <h2>🎉 Danh sách ngày lễ / làm bù</h2>
         <div style="margin-bottom: 10px">
           <input id="le-ngay" type="date" />
           <input id="le-ten" placeholder="Tên ngày lễ" />
           <select id="le-loai">
             <option value="le">Lễ</option>
             <option value="tet">Tết</option>
-            <input
-              id="le-he-so"
-              type="number"
-              step="0.1"
-              placeholder="Hệ số (VD: 3)"
-              style="width: 120px"
-            />
-            <input
-              id="le-so-ngay-nghi"
-              type="number"
-              step="1"
-              placeholder="Số ngày nghỉ"
-              style="width: 120px"
-            />
             <option value="lam_bu">Làm bù</option>
+            <option value="cuoi_tuan">cuối tuần</option>
           </select>
+          <input
+            id="le-so-ngay-nghi"
+            type="number"
+            step="1"
+            placeholder="Số ngày nghỉ"
+          />
           <button id="btn-add-le" class="btn btn-primary">Thêm</button>
         </div>
         <table class="table">
@@ -106,70 +198,76 @@
               <th>Ngày</th>
               <th>Tên</th>
               <th>Loại</th>
-              <th>Hệ số</th>
+              <th>số ngày</th>
               <th>Thao tác</th>
             </tr>
           </thead>
           <tbody id="tbody-le"></tbody>
         </table>
       </section>
-    </main>
 
-    <!-- MODAL THÊM/SỬA -->
-    <dialog id="modal" style="max-width: 620px">
-      <form id="form" method="dialog" class="form" style="padding: 10px 2px">
-        <h3 id="modal-title" style="margin: 0">Thêm chấm công</h3>
+      <!-- ===== TAB 3: THƯỞNG PHẠT ===== -->
+      <section id="thuong-phat-tab" class="tab-content">
+        <h2>💰 Quản lý thưởng phạt</h2>
 
-        <div class="form-group">
-          <label for="m-nvId">Nhân viên ID</label>
-          <input id="m-nvId" type="number" required />
-        </div>
-
-        <div class="form-group">
-          <label for="m-ngay">Ngày</label>
-          <input id="m-ngay" type="date" required />
-        </div>
-
-        <div class="form-group">
-          <label for="m-in">Check-in</label>
-          <input id="m-in" type="time" />
-        </div>
-
-        <div class="form-group">
-          <label for="m-out">Check-out</label>
-          <input id="m-out" type="time" />
-        </div>
-
-        <div class="form-group">
-          <label for="m-note">Ghi chú</label>
-          <input id="m-note" />
-        </div>
-
-        <div class="form-group">
-          <label for="m-status">Trạng thái</label>
-          <select id="m-status" class="form-control">
-            <option value="di_lam">Đi làm</option>
-            <option value="di_muon">Đi muộn</option>
-            <option value="di_muon_co_phep">Đi muộn có phép</option>
-            <option value="ve_som">Về sớm</option>
-            <option value="ve_som_co_phep">Về sớm có phép</option>
-            <option value="di_muon_ve_som">Đi muộn + về sớm</option>
-            <option value="nghi_phep">Nghỉ phép</option>
-            <option value="nghi_khong_phep">Nghỉ không phép</option>
-            <option value="ngay_le">Ngày lễ</option>
+        <!-- THANH CÔNG CỤ -->
+        <div id="thuong-phat-toolbar" style="margin-bottom: 10px">
+          <!-- Gợi ý nhân viên sẽ được thêm bằng JS -->
+          <select id="tp-loai">
+            <option value="THUONG">Thưởng</option>
+            <option value="PHAT">Phạt</option>
           </select>
+
+          <input
+            id="tp-so-tien"
+            type="number"
+            step="1000"
+            placeholder="Số tiền"
+            style="width: 120px"
+          />
+          <input
+            id="tp-ly-do"
+            type="text"
+            placeholder="Lý do"
+            style="width: 200px"
+          />
+
+          <!-- Bộ lọc -->
+          <select id="tp-thang">
+            <option value="">-- Tháng --</option>
+          </select>
+
+          <select id="tp-nam">
+            <option value="">-- Năm --</option>
+          </select>
+
+          <button id="btn-filter-nv" class="btn">Lọc</button>
+          <button id="btn-tp-add" class="btn btn-primary">Thêm</button>
+          <button id="btn-export-tp" class="btn">📊 Xuất Excel</button>
         </div>
 
-        <div id="modal-error" class="alert alert-error" hidden></div>
-
-        <div style="display: flex; gap: 8px; justify-content: flex-end">
-          <button id="btn-cancel" type="button" class="btn">Hủy</button>
-          <button id="btn-save" type="submit" class="btn btn-primary">
-            Lưu
-          </button>
-        </div>
-      </form>
-    </dialog>
+        <!-- BẢNG DỮ LIỆU -->
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nhân viên</th>
+              <th>Loại</th>
+              <th>Số tiền</th>
+              <th>Lý do</th>
+              <th>Ngày tạo</th>
+              <th>Người tạo</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-tp">
+            <tr>
+              <td colspan="8" class="text-muted">Đang tải…</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
 
     <footer class="footer">
       <div class="container">
@@ -177,7 +275,27 @@
       </div>
     </footer>
 
+    <!-- JS MODULES -->
     <script src="./assets/js/danh-sach.js"></script>
     <script type="module" src="./assets/js/cham-cong.js"></script>
+    <script type="module" src="./assets/js/thuong-phat.js"></script>
+
+    <!-- JS đổi tab -->
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const tabs = document.querySelectorAll('.tab-btn');
+        const sections = document.querySelectorAll('.tab-content');
+
+        tabs.forEach((tab) => {
+          tab.addEventListener('click', () => {
+            tabs.forEach((t) => t.classList.remove('active'));
+            sections.forEach((s) => s.classList.remove('active'));
+
+            tab.classList.add('active');
+            document.getElementById(tab.dataset.tab)?.classList.add('active');
+          });
+        });
+      });
+    </script>
   </body>
 </html>

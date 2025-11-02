@@ -1,0 +1,23 @@
+import { Request, Response } from "express";
+import * as phanCongLamBuService from "../services/phanCongLamBuService";
+
+export const getByDate = async (req: Request, res: Response) => {
+  try {
+    const data = await phanCongLamBuService.getByDate(req.params.ngay!);
+    res.json({ status: true, data });
+  } catch (err: any) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+};
+
+export const saveForDate = async (req: Request, res: Response) => {
+  try {
+    const { ngay, nhan_vien_ids } = req.body || {};
+    if (!ngay) return res.status(400).json({ status: false, message: "Thiếu ngày" });
+
+    const result = await phanCongLamBuService.saveForDate(ngay, nhan_vien_ids || []);
+    res.json({ status: true, ...result });
+  } catch (err: any) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+};

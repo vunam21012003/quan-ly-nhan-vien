@@ -1,122 +1,117 @@
-import { Request } from "express";
 import { pool } from "../db";
+import { NhanVien } from "../models/nhanVien";
+import { removeVietnameseTones } from "../utils/xoa-dau-tai-khoan";
+import { layPhamViNguoiDung } from "../utils/pham-vi-nguoi-dung";
+import * as taiKhoanService from "./taiKhoanService";
 
-// ================== XÁC ĐỊNH PHẠM VI NGƯỜI DÙNG ==================
-async function getUserScope(req: Request) {
-  const user = (req as any).user;
-  const [[me]]: any = await pool.query(
-    "SELECT nhan_vien_id AS employeeId FROM tai_khoan WHERE id = ?",
-    [user.id]
+/** Helper: kiểm tra user hiện tại có phải Manager phòng Kế Toán không */
+async function isAccountingManager(userAccountId: number): Promise<boolean> {
+  const [[row]]: any = await pool.query(
+    `SELECT 1 FROM phong_ban 
+     WHERE manager_taikhoan_id = ? AND ten_phong_ban LIKE '%Kế Toán%' LIMIT 1`,
+    [userAccountId]
   );
-  const employeeId = me?.employeeId ?? null;
-
-  let managedDepartmentIds: number[] = [];
-  if (user.role === "manager") {
-    const [rows]: any = await pool.query("SELECT id FROM phong_ban WHERE manager_taikhoan_id = ?", [
-      user.id,
-    ]);
-    managedDepartmentIds = rows.map((r: any) => r.id);
-  }
-
-  return { employeeId, managedDepartmentIds, role: user.role };
+  return !!row;
 }
 
-// ================== LẤY DANH SÁCH NHÂN VIÊN ==================
-export const getAll = async (req: Request) => {
-  const user = (req as any).user;
-  const { employeeId, managedDepartmentIds } = await getUserScope(req);
-
-  const page = Math.max(1, Number(req.query.page) || 1);
-  const limit = Math.min(100, Number(req.query.limit) || 20);
+/** Liệt kê nhân viên có phân trang + lọc + theo phạm vi quyền */
+export const getAll = async (req: any) => {
+  const search = (req.query.search as string) || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const chucVuId = Number(req.query.chuc_vu_id) || null;
+  const phongBanId = Number(req.query.phong_ban_id) || null;
   const offset = (page - 1) * limit;
-  const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
 
-  const whereParts: string[] = [];
-  const whereParams: any[] = [];
+  const scope = await layPhamViNguoiDung(req);
 
-  if (q) {
-    whereParts.push(
-      `(nv.ho_ten LIKE ? OR nv.email LIKE ? OR pb.ten_phong_ban LIKE ? OR cv.ten_chuc_vu LIKE ?)`
-    );
-    whereParams.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
+  const where: string[] = [];
+  const params: any[] = [];
+
+  if (search) {
+    where.push(`(nv.ho_ten LIKE ? OR nv.email LIKE ? OR nv.so_dien_thoai LIKE ?)`);
+    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+  }
+  if (chucVuId) {
+    where.push(`nv.chuc_vu_id = ?`);
+    params.push(chucVuId);
+  }
+  if (phongBanId) {
+    where.push(`nv.phong_ban_id = ?`);
+    params.push(phongBanId);
   }
 
-  if (user.role === "manager") {
-    if (!managedDepartmentIds.length) return { items: [], total: 0, page, limit };
-    whereParts.push(`nv.phong_ban_id IN (${managedDepartmentIds.map(() => "?").join(",")})`);
-    whereParams.push(...managedDepartmentIds);
-  } else if (user.role === "employee") {
-    if (!employeeId) return { items: [], total: 0, page, limit };
-    whereParts.push(`nv.id = ?`);
-    whereParams.push(employeeId);
+  // Áp dụng phạm vi theo role
+  if (scope.role === "employee" && scope.employeeId) {
+    where.push(`nv.id = ?`);
+    params.push(scope.employeeId);
+  } else if (scope.role === "manager" && scope.managedDepartmentIds.length) {
+    where.push(`nv.phong_ban_id IN (${scope.managedDepartmentIds.map(() => "?").join(",")})`);
+    params.push(...scope.managedDepartmentIds);
   }
 
-  const whereSql = whereParts.length ? `WHERE ${whereParts.join(" AND ")}` : "";
+  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
   const [rows]: any = await pool.query(
-    `
-    SELECT nv.*, cv.ten_chuc_vu, pb.ten_phong_ban
-    FROM nhan_vien nv
-    LEFT JOIN chuc_vu cv ON cv.id = nv.chuc_vu_id
-    LEFT JOIN phong_ban pb ON pb.id = nv.phong_ban_id
-    ${whereSql}
-    ORDER BY nv.id DESC
-    LIMIT ? OFFSET ?
-  `,
-    [...whereParams, limit, offset]
+    `SELECT 
+       nv.id, nv.ho_ten, nv.gioi_tinh, nv.ngay_sinh, nv.dia_chi, nv.so_dien_thoai, nv.email,
+       nv.anh_dai_dien, nv.phong_ban_id, nv.chuc_vu_id, nv.ngay_vao_lam, nv.trang_thai, nv.ghi_chu,
+       pb.ten_phong_ban, cv.ten_chuc_vu, cv.quyen_mac_dinh, cv.muc_luong_co_ban
+     FROM nhan_vien nv
+     LEFT JOIN phong_ban pb ON pb.id = nv.phong_ban_id
+     LEFT JOIN chuc_vu   cv ON cv.id = nv.chuc_vu_id
+     ${whereSql}
+     ORDER BY nv.id DESC
+     LIMIT ? OFFSET ?`,
+    [...params, limit, offset]
   );
 
-  const [[countRow]]: any = await pool.query(
-    `
-    SELECT COUNT(*) AS total
-    FROM nhan_vien nv
-    LEFT JOIN chuc_vu cv ON cv.id = nv.chuc_vu_id
-    LEFT JOIN phong_ban pb ON pb.id = nv.phong_ban_id
-    ${whereSql}
-  `,
-    whereParams
+  const [[{ total }]]: any = await pool.query(
+    `SELECT COUNT(*) AS total
+     FROM nhan_vien nv
+     ${whereSql}`,
+    params
   );
 
-  return { items: rows, total: countRow?.total || 0, page, limit };
+  return { items: rows, total };
 };
 
-// ================== LẤY NHÂN VIÊN THEO ID ==================
-export const getById = async (req: Request) => {
-  const id = Number(req.params.id);
-  const { employeeId, managedDepartmentIds, role } = await getUserScope(req);
+export const getById = async (req: any, id: number) => {
+  const scope = await layPhamViNguoiDung(req);
 
-  const whereParts = ["nv.id = ?"];
-  const whereParams: any[] = [id];
+  const [rows]: any = await pool.query(
+    `SELECT 
+       nv.*, pb.ten_phong_ban, cv.ten_chuc_vu, cv.quyen_mac_dinh, cv.muc_luong_co_ban
+     FROM nhan_vien nv
+     LEFT JOIN phong_ban pb ON pb.id = nv.phong_ban_id
+     LEFT JOIN chuc_vu   cv ON cv.id = nv.chuc_vu_id
+     WHERE nv.id = ?
+     LIMIT 1`,
+    [id]
+  );
+  const row = rows?.[0];
+  if (!row) return null;
 
-  if (role === "manager") {
-    if (!managedDepartmentIds.length) return null;
-    whereParts.push(`nv.phong_ban_id IN (${managedDepartmentIds.map(() => "?").join(",")})`);
-    whereParams.push(...managedDepartmentIds);
-  } else if (role === "employee") {
-    if (!employeeId) return null;
-    whereParts.push(`nv.id = ?`);
-    whereParams.push(employeeId);
+  // Kiểm tra phạm vi xem
+  if (scope.role === "employee" && scope.employeeId !== row.id) return null;
+  if (scope.role === "manager" && !scope.managedDepartmentIds.includes(row.phong_ban_id))
+    return null;
+
+  return row;
+};
+
+/** Tạo NHÂN VIÊN + Auto tạo TÀI KHOẢN (quyền theo chuc_vu.quyen_mac_dinh) */
+export const create = async (req: any, data: NhanVien) => {
+  const userId = (req as any).user?.id as number;
+  const scope = await layPhamViNguoiDung(req);
+
+  // Quyền: admin luôn OK, manager chỉ OK nếu là trưởng phòng Kế Toán
+  if (
+    !(scope.role === "admin" || (scope.role === "manager" && (await isAccountingManager(userId))))
+  ) {
+    return { error: "Bạn không có quyền tạo nhân viên" };
   }
 
-  const whereSql = `WHERE ${whereParts.join(" AND ")}`;
-
-  const [[row]]: any = await pool.query(
-    `
-    SELECT nv.*, cv.ten_chuc_vu, pb.ten_phong_ban
-    FROM nhan_vien nv
-    LEFT JOIN chuc_vu cv ON cv.id = nv.chuc_vu_id
-    LEFT JOIN phong_ban pb ON pb.id = nv.phong_ban_id
-    ${whereSql}
-    LIMIT 1
-  `,
-    whereParams
-  );
-
-  return row || null;
-};
-
-// ================== TẠO NHÂN VIÊN ==================
-export const create = async (body: any) => {
   const {
     ho_ten,
     gioi_tinh,
@@ -124,154 +119,133 @@ export const create = async (body: any) => {
     dia_chi,
     so_dien_thoai,
     email,
+    anh_dai_dien,
     phong_ban_id,
     chuc_vu_id,
     ngay_vao_lam,
-    trang_thai,
-    he_so_luong, // 🆕 Thêm trường mới
-  } = body || {};
+    trang_thai = "dang_lam",
+    ghi_chu,
+  } = data;
 
-  if (!ho_ten) return { error: "ho_ten là bắt buộc" };
-
-  const [r]: any = await pool.query(
-    `
-    INSERT INTO nhan_vien
-      (ho_ten, gioi_tinh, ngay_sinh, dia_chi, so_dien_thoai, email,
-       phong_ban_id, chuc_vu_id, ngay_vao_lam, trang_thai, he_so_luong)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `,
+  // 🧩 Thêm mới nhân viên
+  const [rNv]: any = await pool.query(
+    `INSERT INTO nhan_vien 
+     (ho_ten, gioi_tinh, ngay_sinh, dia_chi, so_dien_thoai, email, anh_dai_dien,
+      phong_ban_id, chuc_vu_id, ngay_vao_lam, trang_thai, ghi_chu)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
     [
       ho_ten,
-      gioi_tinh || null,
+      gioi_tinh,
       ngay_sinh || null,
       dia_chi || null,
       so_dien_thoai || null,
       email || null,
+      anh_dai_dien || null,
       phong_ban_id || null,
       chuc_vu_id || null,
       ngay_vao_lam || null,
-      trang_thai || "dang_lam",
-      he_so_luong || 1.0,
+      trang_thai,
+      ghi_chu || null,
     ]
   );
 
-  return { id: r.insertId };
-};
+  const nhan_vien_id = rNv.insertId;
 
-// ================== CẬP NHẬT NHÂN VIÊN ==================
-export const update = async (id: number, body: any) => {
-  const {
-    ho_ten,
-    gioi_tinh,
-    ngay_sinh,
-    dia_chi,
-    so_dien_thoai,
-    email,
-    phong_ban_id,
+  // 🔎 Lấy quyền mặc định theo chức vụ
+  const [[cv]]: any = await pool.query(`SELECT quyen_mac_dinh FROM chuc_vu WHERE id=? LIMIT 1`, [
     chuc_vu_id,
-    ngay_vao_lam,
-    trang_thai,
-    he_so_luong, // 🆕
-  } = body || {};
+  ]);
+  const quyen = cv?.quyen_mac_dinh || "employee";
 
-  const [r]: any = await pool.query(
-    `
-    UPDATE nhan_vien SET
-      ho_ten=?, gioi_tinh=?, ngay_sinh=?, dia_chi=?, so_dien_thoai=?, email=?,
-      phong_ban_id=?, chuc_vu_id=?, ngay_vao_lam=?, trang_thai=?, he_so_luong=?
-    WHERE id=?
-  `,
-    [
-      ho_ten || null,
-      gioi_tinh || null,
-      ngay_sinh || null,
-      dia_chi || null,
-      so_dien_thoai || null,
-      email || null,
-      phong_ban_id || null,
-      chuc_vu_id || null,
-      ngay_vao_lam || null,
-      trang_thai || null,
-      he_so_luong || 1.0,
-      id,
-    ]
-  );
+  // 🧩 Sinh username không dấu, tránh trùng
+  const parts = removeVietnameseTones(ho_ten).toLowerCase().trim().split(/\s+/);
+  const lastName = parts.pop();
+  const firstPart = parts.length > 0 ? parts[0] : "nv";
+  let base = `${lastName}.${firstPart}`; // ví dụ: a.nguyen
 
-  if (!r.affectedRows) return { error: "Không tìm thấy" };
-  return { ok: true };
+  let ten_dang_nhap = base;
+  let suffix = 1;
+  while (true) {
+    const [[exist]]: any = await pool.query(
+      "SELECT id FROM tai_khoan WHERE ten_dang_nhap = ? LIMIT 1",
+      [ten_dang_nhap]
+    );
+    if (!exist) break;
+    suffix++;
+    ten_dang_nhap = `${base}${suffix}`;
+  }
+
+  // ✅ Gọi service tạo tài khoản (tự động bcrypt hash mật khẩu)
+  const tk = await taiKhoanService.create({
+    nhan_vien_id,
+    chuc_vu_id: chuc_vu_id || null,
+    ten_dang_nhap,
+    mat_khau: "123456",
+    trang_thai: "active",
+  });
+
+  return { id: nhan_vien_id, taikhoan_id: tk.id, ten_dang_nhap, quyen };
 };
 
-// ================== CẬP NHẬT MỘT PHẦN ==================
-export const partialUpdate = async (id: number, body: any) => {
-  const allowed: Record<string, string> = {
-    ho_ten: "ho_ten",
-    gioi_tinh: "gioi_tinh",
-    ngay_sinh: "ngay_sinh",
-    dia_chi: "dia_chi",
-    so_dien_thoai: "so_dien_thoai",
-    email: "email",
-    phong_ban_id: "phong_ban_id",
-    chuc_vu_id: "chuc_vu_id",
-    ngay_vao_lam: "ngay_vao_lam",
-    trang_thai: "trang_thai",
-    he_so_luong: "he_so_luong", // 🆕 thêm vào danh sách allowed
-  };
+export const update = async (req: any, id: number, data: Partial<NhanVien>) => {
+  const userId = (req as any).user?.id as number;
+  const scope = await layPhamViNguoiDung(req);
+
+  // Chỉ admin hoặc manager Kế Toán được update
+  if (
+    !(scope.role === "admin" || (scope.role === "manager" && (await isAccountingManager(userId))))
+  ) {
+    return { error: "Bạn không có quyền cập nhật" };
+  }
+
+  const fields = [
+    "ho_ten",
+    "gioi_tinh",
+    "ngay_sinh",
+    "dia_chi",
+    "so_dien_thoai",
+    "email",
+    "anh_dai_dien",
+    "phong_ban_id",
+    "chuc_vu_id",
+    "ngay_vao_lam",
+    "trang_thai",
+    "ghi_chu",
+  ] as const;
 
   const sets: string[] = [];
   const params: any[] = [];
-
-  for (const k in body) {
-    if (!(k in allowed)) continue;
-    sets.push(`${allowed[k]} = ?`);
-    params.push(body[k]);
+  for (const k of fields) {
+    if (k in data) {
+      sets.push(`${k} = ?`);
+      // @ts-ignore
+      params.push(data[k] ?? null);
+    }
   }
+  if (!sets.length) return { ok: true };
 
-  if (!sets.length) return { error: "Không có trường nào để cập nhật" };
-
-  const sql = `UPDATE nhan_vien SET ${sets.join(", ")} WHERE id = ?`;
   params.push(id);
-  const [r]: any = await pool.query(sql, params);
-
-  if (!r.affectedRows) return { error: "Không tìm thấy" };
-  return { changed: r.changedRows || sets.length };
+  const [r]: any = await pool.query(`UPDATE nhan_vien SET ${sets.join(", ")} WHERE id = ?`, params);
+  return { ok: r.affectedRows > 0 };
 };
 
-// ================== XÓA NHÂN VIÊN ==================
-export const remove = async (id: number, force = false) => {
-  if (!Number.isFinite(id) || id <= 0) return { error: "ID không hợp lệ" };
-
-  if (!force) {
-    const [r]: any = await pool.query("DELETE FROM nhan_vien WHERE id = ?", [id]);
-    if (!r.affectedRows) return { error: "Không tìm thấy nhân viên để xóa" };
-    return { message: "Đã xóa nhân viên" };
+export const remove = async (req: any, id: number) => {
+  const userId = (req as any).user?.id as number;
+  const scope = await layPhamViNguoiDung(req);
+  if (
+    !(scope.role === "admin" || (scope.role === "manager" && (await isAccountingManager(userId))))
+  ) {
+    return { error: "Bạn không có quyền xoá" };
   }
+  const [r]: any = await pool.query(`DELETE FROM nhan_vien WHERE id=?`, [id]);
+  return { ok: r.affectedRows > 0 };
+};
 
-  const conn = await pool.getConnection();
-  try {
-    await conn.beginTransaction();
-
-    const tables = ["cham_cong", "phan_tich_cong", "hop_dong", "lich_su_tra_luong", "luong"];
-    for (const t of tables) {
-      try {
-        await conn.query(`DELETE FROM ${t} WHERE nhan_vien_id = ?`, [id]);
-      } catch (err: any) {
-        const msg = String(err?.message || "");
-        if (!/doesn't exist|unknown table|unknown column/i.test(msg)) throw err;
-      }
-    }
-
-    const [r]: any = await conn.query("DELETE FROM nhan_vien WHERE id = ?", [id]);
-    if (!r.affectedRows) {
-      await conn.rollback();
-      return { status: 404, error: "Không tìm thấy nhân viên để xóa" };
-    }
-
-    await conn.commit();
-    return { message: "Đã xóa (force)" };
-  } catch (e) {
-    await conn.rollback();
-    throw e;
-  } finally {
-    conn.release();
-  }
+// Dùng cho trang Chức vụ: lấy danh sách NV theo chuc_vu_id
+export const getByChucVu = async (chuc_vu_id: number) => {
+  const [rows]: any = await pool.query(
+    `SELECT id, ho_ten, email FROM nhan_vien WHERE chuc_vu_id = ? ORDER BY id DESC`,
+    [chuc_vu_id]
+  );
+  return rows;
 };

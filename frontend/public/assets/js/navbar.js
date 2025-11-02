@@ -1,4 +1,4 @@
-import { getUser } from './api.js';
+import { getUser, clearAuth } from './api.js';
 
 fetch('danh-sach.html')
   .then((res) => res.text())
@@ -8,8 +8,8 @@ fetch('danh-sach.html')
     const u = getUser();
     console.log('User hiện tại:', u);
 
-    // ✅ Nếu là admin → thêm link vào trước user-badge
-    if (u && (u.role === 'admin' || u.quyen === 'admin')) {
+    // ✅ Thêm link quản trị nếu là admin
+    if (u && u.role === 'admin') {
       const userBadge = document.getElementById('user-badge');
       if (userBadge) {
         userBadge.insertAdjacentHTML(
@@ -17,17 +17,17 @@ fetch('danh-sach.html')
           `
           <a class="btn" href="./phong-ban.html">Phòng ban</a>
           <a class="btn" href="./chuc-vu.html">Chức vụ</a>
+          <a class="btn" href="./tai-khoan.html">Tài khoản</a>
         `
         );
       }
     }
 
-    // 🔑 Đăng xuất
+    // ✅ Đăng xuất
     const logoutBtn = document.getElementById('logout-btn');
     logoutBtn?.addEventListener('click', () => {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.replace('dangnhap.html');
+      clearAuth();
+      window.location.replace('dang-nhap.html');
     });
   })
   .catch((err) => {

@@ -79,6 +79,8 @@ async function fetchList(params = {}) {
   if (params.nhan_vien_id) qs.set('nhan_vien_id', params.nhan_vien_id);
   if (params.from) qs.set('from', params.from);
   if (params.to) qs.set('to', params.to);
+  if (params.phong_ban_id) qs.set('phong_ban_id', params.phong_ban_id);
+  if (params.trang_thai) qs.set('trang_thai', params.trang_thai);
 
   const resp = await api(`/cham-cong?${qs}`).catch(() => ({ data: [] }));
   const { items, total } = unwrap(resp);
@@ -142,6 +144,17 @@ async function onSave(e) {
   }
 }
 
+async function fetchPhongBan() {
+  const resp = await api('/cham-cong/phong-ban/list');
+  const { items } = unwrap(resp);
+  const select = $('#phongBanFilter');
+  select.innerHTML =
+    '<option value="">-- Tất cả phòng ban --</option>' +
+    items
+      .map((x) => `<option value="${x.id}">${esc(x.ten_phong_ban)}</option>`)
+      .join('');
+}
+
 // ================== UPLOAD EXCEL ==================
 async function onUploadExcel(e) {
   const file = e.target.files[0];
@@ -170,6 +183,48 @@ async function onUploadExcel(e) {
   e.target.value = ''; // reset input
 }
 
+// ================== XUẤT EXCEL ==================
+$('#btn-export').addEventListener('click', async () => {
+  const nvId = $('#nvId').value.trim();
+  const status = $('#statusFilter').value;
+  const from = $('#from').value;
+  const to = $('#to').value;
+  const phongBanId = $('#phongBanFilter').value;
+
+  const qs = new URLSearchParams();
+  if (nvId) qs.set('nhan_vien_id', nvId);
+  if (status) qs.set('trang_thai', status);
+  if (from) qs.set('from', from);
+  if (to) qs.set('to', to);
+  if (phongBanId) qs.set('phong_ban_id', phongBanId);
+
+  const token = getToken();
+  const url = `/cham-cong/export?${qs.toString()}`;
+
+  try {
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) {
+      const msg = await res.text();
+      alert('❌ Lỗi khi xuất Excel: ' + msg);
+      return;
+    }
+
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    const downloadUrl = window.URL.createObjectURL(blob);
+    a.href = downloadUrl;
+    a.download = 'ChamCong.xlsx';
+    a.click();
+    window.URL.revokeObjectURL(downloadUrl);
+  } catch (err) {
+    alert('❌ Không thể tải file Excel');
+    console.error(err);
+  }
+});
+
 // ================== NGÀY LỄ ==================
 async function fetchNgayLe() {
   const resp = await api('/ngay-le');
@@ -181,7 +236,6 @@ async function fetchNgayLe() {
           <td>${esc(fmtDate(x.ngay))}</td>
           <td>${esc(x.ten_ngay)}</td>
           <td>${esc(x.loai)}</td>
-          <td>${esc(x.he_so_luong ?? '')}</td>
           <td>${esc(x.so_ngay_nghi ?? '')}</td>  
           <td><button class="page-btn" data-id="${
             x.id
@@ -197,8 +251,8 @@ async function addNgayLe() {
     ngay: $('#le-ngay').value,
     ten_ngay: $('#le-ten').value,
     loai: $('#le-loai').value,
-    he_so_luong: Number($('#le-he-so').value) || 3,
-    so_ngay_nghi: Number($('#le-so-ngay-nghi').value) || 1, // 👈 thêm dòng này
+    mo_ta: null,
+    so_ngay_nghi: Number($('#le-so-ngay-nghi').value) || 1,
   };
   if (!body.ngay || !body.ten_ngay) return alert('Điền đầy đủ thông tin!');
   await api('/ngay-le', { method: 'POST', body });
@@ -223,6 +277,7 @@ function bind() {
     const status = $('#statusFilter').value;
     const from = $('#from').value;
     const to = $('#to').value;
+    const phongBanId = $('#phongBanFilter').value;
 
     st.page = 1;
     st.filtered = true;
@@ -233,6 +288,7 @@ function bind() {
       trang_thai: status || null,
       from: from || null,
       to: to || null,
+      phong_ban_id: phongBanId || null,
     });
   });
 
@@ -299,8 +355,29 @@ async function init() {
   if (!getToken()) return;
   setUserBadge();
 
+  await fetchPhongBan();
   await fetchNgayLe();
   await showTodayOnly(); // 🔹 chỉ hiển thị chấm công hôm nay
   bind();
 }
+
+// ================== TAB CHUYỂN ĐỔI ==================
+document.addEventListener('DOMContentLoaded', () => {
+  const buttons = document.querySelectorAll('.tab-btn');
+  const sections = document.querySelectorAll('.tab-content');
+
+  buttons.forEach((btn) =>
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab;
+      buttons.forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      sections.forEach((s) => {
+        if (s.id === 'tab-' + tab) s.hidden = false;
+        else s.hidden = true;
+      });
+    })
+  );
+});
+
 document.addEventListener('DOMContentLoaded', init);

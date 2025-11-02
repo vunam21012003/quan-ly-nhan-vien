@@ -4,40 +4,22 @@ import * as controller from "../controllers/nhanVienController";
 
 const router = Router();
 
-/**
- * Danh sách nhân viên
- * Chỉ admin/manager được list tất cả
- */
-router.get("/", requireAuth, requireRole(["admin", "manager"]), controller.getAll);
+// Xem danh sách: mọi role đều có thể gọi, nhưng service sẽ tự filter theo phạm vi
+router.get("/", requireAuth, requireRole(["admin", "manager", "employee"]), controller.list);
 
-/**
- * Chi tiết theo ID
- * Cho phép admin/manager/employee xem (quyền hạn chi tiết xử lý ở controller/service nếu cần)
- */
+// Xem chi tiết: mọi role (service sẽ kiểm tra phạm vi)
 router.get("/:id", requireAuth, requireRole(["admin", "manager", "employee"]), controller.getById);
 
-/**
- * Tạo mới nhân viên
- * Chỉ admin
- */
-router.post("/", requireAuth, requireRole(["admin"]), controller.create);
+// Tạo: admin hoặc manager Kế Toán (service kiểm tra bổ sung)
+router.post("/", requireAuth, requireRole(["admin", "manager"]), controller.create);
 
-/**
- * Cập nhật toàn phần
- * Chỉ admin
- */
-router.put("/:id", requireAuth, requireRole(["admin"]), controller.update);
+// Sửa: admin hoặc manager Kế Toán
+router.put("/:id", requireAuth, requireRole(["admin", "manager"]), controller.update);
 
-/**
- * Cập nhật một phần (partial)
- * Chỉ admin
- */
-router.patch("/:id", requireAuth, requireRole(["admin"]), controller.partialUpdate);
+// Xoá: admin hoặc manager Kế Toán
+router.delete("/:id", requireAuth, requireRole(["admin", "manager"]), controller.remove);
 
-/**
- * Xoá nhân viên
- * Chỉ admin
- */
-router.delete("/:id", requireAuth, requireRole(["admin"]), controller.remove);
+// Phục vụ trang Chức vụ: lấy NV theo chuc_vu_id
+router.get("/by-chucvu/:chuc_vu_id", requireAuth, requireRole(["admin"]), controller.getByChucVu);
 
 export default router;

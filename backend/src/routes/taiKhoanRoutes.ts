@@ -1,11 +1,15 @@
 import { Router } from "express";
-import * as controller from "../controllers/taiKhoanController";
+import * as taiKhoanController from "../controllers/taiKhoanController";
+import { requireAuth, requireRole } from "../middlewares/auth";
 
 const router = Router();
 
-router.get("/", controller.getAll);
-router.post("/", controller.create);
-router.post("/:id/change-password", controller.changePassword);
-router.delete("/:id", controller.remove);
+router.get("/", requireAuth, requireRole(["admin", "manager"]), taiKhoanController.getAll);
+router.get("/:id", requireAuth, requireRole(["admin", "manager"]), taiKhoanController.getById);
+router.post("/", requireAuth, requireRole(["admin"]), taiKhoanController.create);
+router.put("/:id", requireAuth, requireRole(["admin"]), taiKhoanController.update);
+router.delete("/:id", requireAuth, requireRole(["admin"]), taiKhoanController.remove);
+
+router.post("/login", taiKhoanController.login);
 
 export default router;

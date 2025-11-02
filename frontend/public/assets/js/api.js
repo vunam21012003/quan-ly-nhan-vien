@@ -1,5 +1,3 @@
-// frontend/public/assets/js/api.js
-// Cấu hình 1 chỗ để đổi nhanh khi deploy:
 export const API_BASE = window.API_BASE || 'http://localhost:8001';
 
 // ==== Lưu/Lấy token & user trong localStorage ====
@@ -30,7 +28,7 @@ export function clearAuth() {
 }
 
 // ==== Wrapper fetch chuẩn hoá ====
-// Hỗ trợ JSON và FormData
+// Tự động đính kèm token & xử lý lỗi JSON
 export async function api(
   path,
   { method = 'GET', body, headers, formData = false } = {}
@@ -40,7 +38,6 @@ export async function api(
     ...headers,
   };
 
-  // Nếu không phải FormData thì mới set Content-Type JSON
   if (!formData) {
     finalHeaders['Content-Type'] = 'application/json';
   }
@@ -48,14 +45,9 @@ export async function api(
   const res = await fetch(API_BASE + path, {
     method,
     headers: finalHeaders,
-    body: body
-      ? formData
-        ? body // FormData giữ nguyên
-        : JSON.stringify(body)
-      : undefined,
+    body: body ? (formData ? body : JSON.stringify(body)) : undefined,
   });
 
-  // Cố gắng parse JSON, nếu lỗi giữ object rỗng
   let data = {};
   try {
     data = await res.json();
@@ -70,25 +62,24 @@ export async function api(
   return data;
 }
 
-// ==== Gọi /health để hiện badge ====
+// ==== Gọi /health để kiểm tra hệ thống ====
 export async function healthCheck() {
   try {
     const res = await fetch(API_BASE + '/health');
     const data = await res.json().catch(() => ({}));
-    return { ok: res.ok && !!data?.db?.ok, data };
+    return { ok: res.ok, data };
   } catch {
     return { ok: false, data: null };
   }
 }
 
-// ==== Tiện ích cho trang khác ====
-// Nếu chưa đăng nhập thì redirect
+// ==== Tiện ích bảo vệ trang ====
 export function requireAuthOrRedirect(to = './dang-nhap.html') {
   if (!getToken()) location.href = to;
 }
 
-// ==== Logout tiện ích ====
-// Xoá token và user, redirect về login
+// ==== Đăng xuất nhanh ====
 export function logout() {
   clearAuth();
+  window.location.replace('./dang-nhap.html');
 }

@@ -17,7 +17,7 @@ exports.up = async (knex) => {
         .onDelete("SET NULL");
       t.integer("thang").notNullable();
       t.integer("nam").notNullable();
-      t.decimal("luong_co_ban", 15, 2).notNullable().defaultTo(0);
+      t.decimal("luong_thoa_thuan", 15, 2).notNullable().defaultTo(0);
       t.decimal("phu_cap", 15, 2).notNullable().defaultTo(0);
       t.decimal("thuong", 15, 2).notNullable().defaultTo(0);
       t.decimal("khoan_khac", 15, 2).notNullable().defaultTo(0);

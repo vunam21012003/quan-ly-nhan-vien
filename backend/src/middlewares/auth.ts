@@ -1,28 +1,28 @@
+// src/middlewares/auth.ts
 import { Request, Response, NextFunction } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
+import { layPhamViNguoiDung } from "../utils/pham-vi-nguoi-dung";
 
-/**
- * Định nghĩa payload trong JWT
- */
 export interface JwtUser extends JwtPayload {
   id: number;
-  role: "admin" | "manager" | "employee";
   username: string;
 }
 
-// Augment Express để hỗ trợ req.user
 declare global {
   namespace Express {
     interface Request {
       user?: JwtUser;
+      phamvi?: {
+        employeeId: number | null;
+        managedDepartmentIds: number[];
+        role: "admin" | "manager" | "employee";
+      };
     }
   }
 }
-export {}; // bắt buộc để kích hoạt augmentation
 
-/**
- * Trích token từ header Authorization
- */
+export {}; // Bắt buộc để kích hoạt augmentation
+
 function getBearerToken(req: Request): string | null {
   const h = req.headers.authorization;
   if (!h) return null;
@@ -31,11 +31,6 @@ function getBearerToken(req: Request): string | null {
   return token;
 }
 
-/**
- * Middleware: xác thực bằng JWT
- * - Nếu hợp lệ: gắn req.user
- * - Nếu sai: trả 401
- */
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const token = getBearerToken(req);
   if (!token) return res.status(401).json({ error: "Missing token" });
@@ -49,24 +44,21 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-/**
- * Middleware: kiểm tra vai trò được cho phép
- * Ví dụ: requireRole(["admin", "manager"])
- */
-export function requireRole(roles: Array<JwtUser["role"]>) {
-  return (req: Request, res: Response, next: NextFunction) => {
-    const user = req.user;
-    if (!user) return res.status(401).json({ error: "Unauthorized" });
-    if (!roles.includes(user.role)) {
+export function requireRole(roles: Array<"admin" | "manager" | "employee">) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+
+    const phamvi = await layPhamViNguoiDung(req);
+
+    if (!roles.includes(phamvi.role)) {
       return res.status(403).json({ error: "Forbidden" });
     }
+
+    (req as any).phamvi = phamvi;
     next();
   };
 }
 
-/**
- * Helper kiểm tra vai trò
- */
-export const isAdmin = (req: Request) => req.user?.role === "admin";
-export const isManager = (req: Request) => req.user?.role === "manager";
-export const isEmployee = (req: Request) => req.user?.role === "employee";
+export const isAdmin = (req: Request) => req.phamvi?.role === "admin";
+export const isManager = (req: Request) => req.phamvi?.role === "manager";
+export const isEmployee = (req: Request) => req.phamvi?.role === "employee";

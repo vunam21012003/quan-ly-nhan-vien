@@ -13,7 +13,11 @@
       <div class="page-header">
         <h1 class="page-title">Phòng ban</h1>
         <div class="toolbar">
-          <input id="pb-search" type="search" placeholder="Tìm theo tên…" />
+          <input
+            id="pb-search"
+            type="search"
+            placeholder="Tìm theo tên phòng ban…"
+          />
           <button id="pb-btn-search" class="btn">Tìm</button>
           <button id="pb-btn-refresh" class="btn">Tải lại</button>
           <button id="pb-btn-create" class="btn btn-primary">
@@ -27,16 +31,16 @@
           <thead>
             <tr>
               <th style="width: 80px">ID</th>
-              <th>Tên</th>
+              <th>Tên phòng ban</th>
               <th>Mô tả</th>
-              <th>Quản lý</th>
+              <th>Trưởng phòng</th>
               <th style="width: 150px">Thao tác</th>
             </tr>
           </thead>
 
           <tbody id="pb-tbody">
             <tr>
-              <td colspan="4" class="text-muted">Đang tải…</td>
+              <td colspan="5" class="text-muted">Đang tải…</td>
             </tr>
           </tbody>
         </table>
@@ -47,20 +51,23 @@
     <dialog id="pb-modal">
       <form id="pb-form" method="dialog" class="form" style="padding: 10px 2px">
         <h3 id="pb-modal-title" style="margin: 0">Thêm phòng ban</h3>
+
         <div class="form-group">
-          <label for="pb-ten">Tên</label>
-          <input id="pb-ten" required />
+          <label for="pb-ten">Tên phòng ban</label>
+          <input id="pb-ten" placeholder="Nhập tên phòng ban" required />
         </div>
+
         <div class="form-group">
           <label for="pb-mo_ta">Mô tả</label>
-          <textarea id="pb-mo_ta" placeholder="Tuỳ chọn"></textarea>
+          <textarea id="pb-mo_ta" placeholder="Nhập mô tả nếu có"></textarea>
         </div>
+
         <div class="form-group">
           <label for="pb-manager">Trưởng phòng</label>
           <input
             id="pb-manager"
             list="pb-manager-list"
-            placeholder="Gõ để tìm nhân viên…"
+            placeholder="Gõ để tìm nhân viên hoặc để trống"
           />
           <datalist id="pb-manager-list"></datalist>
         </div>

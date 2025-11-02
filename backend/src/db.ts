@@ -13,4 +13,11 @@ export const pool = mysql.createPool({
   // (tuỳ chọn) tránh lỗi timezone/charset
   // dateStrings: true,
   // charset: "utf8mb4_general_ci",
+
+  // ⚡️ GIỮ KẾT NỐI ỔN ĐỊNH
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0,
+
+  dateStrings: true, // ← DATE/DATETIME trả về dạng chuỗi
+  timezone: "Z", // tránh tự dịch múi giờ
 });

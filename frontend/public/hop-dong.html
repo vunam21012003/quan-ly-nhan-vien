@@ -6,7 +6,30 @@
     <title>Hợp đồng lao động - Quản lý nhân viên</title>
     <link rel="stylesheet" href="./assets/css/styles.css" />
     <link rel="stylesheet" href="./assets/css/hop-dong.css" />
+    <style>
+      .dropdown-list {
+        position: absolute;
+        top: 58px;
+        left: 0;
+        right: 0;
+        background: #fff;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        max-height: 180px;
+        overflow-y: auto;
+        z-index: 9999;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
+      .dropdown-list div {
+        padding: 6px 10px;
+        cursor: pointer;
+      }
+      .dropdown-list div:hover {
+        background: #f3f3f3;
+      }
+    </style>
   </head>
+
   <body class="bg">
     <div id="menuContainer"></div>
 
@@ -32,7 +55,10 @@
               <th>Ngày bắt đầu</th>
               <th>Ngày kết thúc</th>
               <th>Lương thỏa thuận</th>
-              <th>Phụ cấp</th>
+              <th>Phụ cấp cố định</th>
+              <th>Phụ cấp thâm niên</th>
+              <th>Phụ cấp năng lực</th>
+              <th>Phụ cấp trách nhiệm</th>
               <th>Trạng thái</th>
               <th>Ghi chú</th>
               <th>Tài liệu</th>
@@ -44,22 +70,45 @@
       </div>
     </main>
 
+    <!-- Modal xác nhận -->
+    <dialog id="confirmModal" style="max-width: 600px; padding: 20px">
+      <h3>Xác nhận thông tin hợp đồng</h3>
+      <div id="confirmContent" style="margin-top: 10px"></div>
+      <div
+        style="
+          display: flex;
+          justify-content: flex-end;
+          gap: 8px;
+          margin-top: 20px;
+        "
+      >
+        <button id="btnConfirmCancel" class="btn">Hủy</button>
+        <button id="btnConfirmOk" class="btn btn-primary">Xác nhận</button>
+      </div>
+    </dialog>
+
     <!-- Modal -->
     <dialog id="contractModal" style="max-width: 620px">
-      <form
-        id="contractForm"
-        method="dialog"
-        class="form"
-        style="padding: 10px 2px"
-      >
+      <form id="contractForm" class="form" style="padding: 10px 2px">
         <h3 id="modalTitle" style="margin: 0">Thêm hợp đồng</h3>
         <input type="hidden" id="contractId" />
 
-        <!-- Chỉ admin mới nhập -->
-        <div class="form-group admin-only">
-          <label for="nhan_vien_id">Nhân viên ID</label>
-          <input type="text" id="nhan_vien_id" />
+        <!-- Chỉ admin -->
+        <div class="form-group admin-only" style="position: relative">
+          <label for="nhan_vien_search">Nhân viên</label>
+          <input
+            type="text"
+            id="nhan_vien_search"
+            placeholder="Nhập tên hoặc ID để tìm..."
+            autocomplete="off"
+          />
+          <div
+            id="nhan_vien_dropdown"
+            class="dropdown-list"
+            style="display: none"
+          ></div>
         </div>
+
         <div class="form-group admin-only">
           <label for="so_hop_dong">Số hợp đồng</label>
           <input type="text" id="so_hop_dong" />
@@ -87,9 +136,22 @@
 
         <!-- Admin + Manager -->
         <div class="form-group">
-          <label for="phu_cap">Phụ cấp</label>
-          <input type="number" id="phu_cap" />
+          <label for="phu_cap_co_dinh">Phụ cấp cố định</label>
+          <input type="number" id="phu_cap_co_dinh" />
         </div>
+        <div class="form-group">
+          <label for="phu_cap_tham_nien">Phụ cấp thâm niên</label>
+          <input type="number" id="phu_cap_tham_nien" />
+        </div>
+        <div class="form-group">
+          <label for="phu_cap_nang_luc">Phụ cấp năng lực</label>
+          <input type="number" id="phu_cap_nang_luc" />
+        </div>
+        <div class="form-group">
+          <label for="phu_cap_trach_nhiem">Phụ cấp trách nhiệm</label>
+          <input type="number" id="phu_cap_trach_nhiem" />
+        </div>
+
         <div class="form-group">
           <label for="file_hop_dong">Tệp hợp đồng</label>
           <input
@@ -98,7 +160,6 @@
             accept=".pdf,.doc,.docx,.jpg,.png"
           />
         </div>
-
         <div class="form-group">
           <label for="trang_thai">Trạng thái</label>
           <select id="trang_thai">

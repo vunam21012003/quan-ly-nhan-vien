@@ -7,19 +7,17 @@ import {
 } from './api.js';
 const $ = (s, r = document) => r.querySelector(s);
 const esc = (s) =>
-  (s ?? '')
-    .toString()
-    .replace(
-      /[&<>"']/g,
-      (m) =>
-        ({
-          '&': '&amp;',
-          '<': '&lt;',
-          '>': '&gt;',
-          '"': '&quot;',
-          "'": '&#039;',
-        }[m])
-    );
+  (s ?? '').toString().replace(
+    /[&<>"']/g,
+    (m) =>
+      ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;',
+      }[m])
+  );
 const money = (v) => (v == null ? 0 : Number(v)).toLocaleString('vi-VN');
 
 function setUserBadge() {
@@ -56,7 +54,7 @@ function unwrapReport(r) {
 function renderCards(s) {
   const parts = [
     { k: 'tong_chi', label: 'TỔNG CHI', val: s.tong_chi },
-    { k: 'tong_co_ban', label: 'LƯƠNG CƠ BẢN', val: s.tong_co_ban },
+    { k: 'tong_co_ban', label: 'LƯƠNG THỎA THUẬN', val: s.tong_co_ban },
     { k: 'tong_phu_cap', label: 'PHỤ CẤP', val: s.tong_phu_cap },
     { k: 'tong_thuong', label: 'THƯỞNG', val: s.tong_thuong },
     { k: 'tong_khac', label: 'KHOẢN KHÁC', val: s.tong_khac },
@@ -84,7 +82,7 @@ function renderCards(s) {
 
 function rowHtml(x) {
   const total =
-    Number(x.luong_co_ban || 0) +
+    Number(x.luong_thoa_thuan || 0) +
     Number(x.phu_cap || 0) +
     Number(x.thuong || 0) +
     Number(x.khoan_khac || 0);
@@ -93,7 +91,7 @@ function rowHtml(x) {
   return `<tr>
     <td>${esc(id)}</td>
     <td>${esc(hoten)}</td>
-    <td>${money(x.luong_co_ban)}</td>
+    <td>${money(x.luong_thoa_thuan)}</td>
     <td>${money(x.phu_cap)}</td>
     <td>${money(x.thuong)}</td>
     <td>${money(x.khoan_khac)}</td>

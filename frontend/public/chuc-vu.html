@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="./assets/css/styles.css" />
   </head>
   <body class="bg">
+    <!-- ===== MENU CHUNG ===== -->
     <div id="menuContainer"></div>
 
     <main class="container">
@@ -26,20 +27,22 @@
         <table class="table">
           <thead>
             <tr>
-              <th>Tên</th>
+              <th>Tên chức vụ</th>
+              <th>Phòng ban</th>
               <th>Mô tả</th>
+              <th>Quyền mặc định</th>
+              <th>Mức lương cơ bản (VNĐ)</th>
               <th style="width: 150px">Thao tác</th>
             </tr>
           </thead>
           <tbody id="cv-tbody">
             <tr>
-              <td colspan="3" class="text-muted">Đang tải…</td>
+              <td colspan="6" class="text-muted">Đang tải…</td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <!-- pagination -->
       <div
         id="cv-pagination"
         class="pagination"
@@ -51,14 +54,46 @@
     <dialog id="cv-modal">
       <form id="cv-form" method="dialog" class="form" style="padding: 10px 2px">
         <h3 id="cv-modal-title" style="margin: 0">Thêm chức vụ</h3>
+
         <div class="form-group">
-          <label for="cv-ten">Tên</label>
+          <label for="cv-ten">Tên chức vụ</label>
           <input id="cv-ten" required />
         </div>
+
+        <div class="form-group">
+          <label for="cv-phongban">Phòng ban</label>
+          <select id="cv-phongban"></select>
+        </div>
+
+        <div class="form-group">
+          <label for="cv-quyen">Quyền mặc định</label>
+          <select id="cv-quyen" required>
+            <option value="employee">Nhân viên (employee)</option>
+            <option value="manager">Quản lý (manager)</option>
+            <option value="admin">Quản trị (admin)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="cv-luong">Mức lương cơ bản (VNĐ)</label>
+          <input
+            id="cv-luong"
+            type="number"
+            step="1000"
+            min="0"
+            value="0"
+            placeholder="Nhập mức lương"
+          />
+        </div>
+
         <div class="form-group">
           <label for="cv-mo_ta">Mô tả</label>
-          <textarea id="cv-mo_ta" placeholder="Tuỳ chọn"></textarea>
+          <textarea
+            id="cv-mo_ta"
+            placeholder="Ghi chú thêm (nếu có)"
+          ></textarea>
         </div>
+
         <div class="alert alert-error" id="cv-error" hidden></div>
         <div style="display: flex; gap: 8px; justify-content: flex-end">
           <button id="cv-cancel" type="button" class="btn">Hủy</button>
@@ -69,6 +104,7 @@
       </form>
     </dialog>
 
+    <!-- FOOTER -->
     <footer class="footer">
       <div class="container">
         <small>© <span id="y"></span> HR System</small>

@@ -17,34 +17,69 @@ import phanTichCongRoutes from "./routes/phanTichCongRoutes";
 import taiKhoanRoutes from "./routes/taiKhoanRoutes";
 import baoCaoLuongRoutes from "./routes/baoCaoLuongRoutes";
 import authRoutes from "./routes/auth";
-import healthRoutes from "./routes/health";
+import thuongPhatRoutes from "./routes/thuongPhatRoutes";
+
 import ngayLeRoutes from "./routes/ngayLeRoutes";
+import phanCongLamBuRoutes from "./routes/phanCongLamBuRoutes";
+import "./scripts/capNhatHopDongHetHan";
 
 import { requireAuth, requireRole } from "./middlewares/auth";
 import { pool } from "./db";
 
 const app = express();
 
-// Middlewares
-app.use(helmet());
-app.use(cors({ origin: true }));
+/* ----------------------------------------------
+ * 🔒 Cấu hình bảo mật Helmet
+ * ---------------------------------------------- */
+app.use(
+  helmet({
+    crossOriginEmbedderPolicy: false,
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        "default-src": ["'self'"],
+        "script-src": ["'self'", "'unsafe-inline'"],
+        "style-src": ["'self'", "'unsafe-inline'"],
+        "img-src": ["'self'", "data:", "blob:"],
+      },
+    },
+  })
+);
+
+/* ----------------------------------------------
+ * 🌐 Cấu hình CORS
+ * ---------------------------------------------- */
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+  })
+);
+
 app.use(express.json({ limit: "10mb" }));
 app.use(morgan("dev"));
-app.use("/health", healthRoutes);
+
+/* ----------------------------------------------
+ * 🧩 Routes công khai
+ * ---------------------------------------------- */
+
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 app.use("/ngay-le", ngayLeRoutes);
 
-// 👉 Serve static HTML/CSS/JS from frontend/public
+/* ----------------------------------------------
+ * 🖥️ Serve static HTML/CSS/JS từ frontend/public
+ * ---------------------------------------------- */
 const publicDir = path.join(__dirname, "..", "..", "frontend", "public");
 app.use(express.static(publicDir));
 
-// 👉 Trang mặc định khi vào /
 app.get("/", (_req, res) => {
   res.sendFile(path.join(publicDir, "index.html"));
 });
 
-// Health check
+/* ----------------------------------------------
+ * 🩺 Health check & Debug DB
+ * ---------------------------------------------- */
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
 app.get("/__health/db", async (_req, res) => {
@@ -61,7 +96,6 @@ app.get("/__health/db", async (_req, res) => {
   }
 });
 
-// Debug: xem đang dùng schema nào
 app.get("/__debug/db", async (_req, res) => {
   try {
     const [rows]: any = await pool.query("SELECT DATABASE() AS dbname");
@@ -71,34 +105,50 @@ app.get("/__debug/db", async (_req, res) => {
   }
 });
 
-// Auth
+/* ----------------------------------------------
+ * 🔐 API chính có xác thực
+ * ---------------------------------------------- */
+
+// ✅ Đăng nhập, đăng ký, đổi mật khẩu
 app.use("/auth", authRoutes);
 
-// Public routes
+// ✅ Quản lý danh mục cơ bản
 app.use("/phong-ban", phongBanRoutes);
 app.use("/chuc-vu", chucvuRoutes);
-app.use("/nhan-vien", nhanVienRoutes);
+app.use("/phan-cong-lam-bu", phanCongLamBuRoutes);
+// ✅ Quản lý thưởng phạt
+app.use("/thuong-phat", requireAuth, requireRole(["admin", "manager"]), thuongPhatRoutes);
 
-// Protected routes
-app.use("/cham-cong", requireAuth, chamCongRoutes);
-app.use("/hop-dong", requireAuth, hopDongRoutes);
-app.use("/luong", requireAuth, luongRoutes);
+// ✅ Nhân viên (CRUD + auto tạo tài khoản)
+app.use("/nhan-vien", requireAuth, requireRole(["admin", "manager", "employee"]), nhanVienRoutes);
+
+// ✅ Chấm công, hợp đồng, lương
+app.use("/cham-cong", requireAuth, requireRole(["admin", "manager", "employee"]), chamCongRoutes);
+app.use("/hop-dong", requireAuth, requireRole(["admin", "manager"]), hopDongRoutes);
+app.use("/luong", requireAuth, requireRole(["admin", "manager"]), luongRoutes);
+
+// ✅ Lịch sử trả lương, báo cáo, phân tích công
 app.use("/lich-su-tra-luong", requireAuth, requireRole(["admin", "manager"]), lichSuTraLuongRoutes);
 app.use("/bao-cao-luong", requireAuth, requireRole(["admin", "manager"]), baoCaoLuongRoutes);
 app.use("/phan-tich-cong", requireAuth, requireRole(["admin", "manager"]), phanTichCongRoutes);
-app.use("/tai-khoan", requireAuth, requireRole(["admin"]), taiKhoanRoutes);
 
-// 404 fallback
+// ✅ Tài khoản (Admin + Manager kế toán)
+app.use("/tai-khoan", requireAuth, requireRole(["admin", "manager"]), taiKhoanRoutes);
+
+/* ----------------------------------------------
+ * ⚠️ Xử lý lỗi & 404
+ * ---------------------------------------------- */
 app.use((_req, res) => res.status(404).json({ message: "Endpoint không tồn tại" }));
 
-// Error handler
 app.use((err: any, _req: any, res: any, _next: any) => {
-  console.error(err);
+  console.error("🔥 SERVER ERROR:", err);
   res.status(err?.status || 500).json({ message: err?.message || "Lỗi máy chủ" });
 });
 
-// Start server
+/* ----------------------------------------------
+ * 🚀 Khởi động server
+ * ---------------------------------------------- */
 const PORT = Number(process.env.PORT || 8001);
-app.listen(PORT, () => console.log(`HR server listening on http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`✅ HR server running at http://localhost:${PORT}`));
 
 export default app;

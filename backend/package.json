@@ -2,11 +2,12 @@
   "name": "backend",
   "version": "1.0.0",
   "main": "index.js",
+  "description": "Hệ thống Quản lý nhân viên - Backend (Express + TypeScript + MySQL)",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon --watch src -e ts --exec \"webpack --config webpack.config.js && node dist/bundle.js\"",
-    "build": "webpack --config webpack.config.js --mode production",
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "start": "node dist/bundle.js",
+    "build": "webpack --config webpack.config.js --mode production",
+    "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint \"src/**/*.{js,ts}\"",
     "lint:fix": "eslint \"src/**/*.{js,ts}\" --fix",
     "format": "prettier --write \"src/**/*.{js,ts,json,md}\"",
@@ -18,8 +19,15 @@
     "db:seed": "knex seed:run --knexfile knexfile.js",
     "db:reseed": "npm run db:reset && npm run db:seed"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "express",
+    "typescript",
+    "mysql",
+    "knex",
+    "hr-system",
+    "backend"
+  ],
+  "author": "Hệ thống Quản lý Nhân viên",
   "license": "ISC",
   "dependencies": {
     "@fastify/cors": "^11.1.0",
@@ -65,6 +73,5 @@
     "typescript": "^5.9.2",
     "webpack": "^5.101.3",
     "webpack-cli": "^6.0.1"
-  },
-  "description": ""
+  }
 }

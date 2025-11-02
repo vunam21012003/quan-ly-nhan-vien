@@ -1,65 +1,72 @@
 import { Request, Response } from "express";
 import * as service from "../services/nhanVienService";
 
-export const getAll = async (req: Request, res: Response) => {
+export const list = async (req: Request, res: Response) => {
   try {
-    const result = await service.getAll(req);
-    res.json(result);
+    const data = await service.getAll(req);
+    res.json({ status: true, data });
   } catch (e) {
-    res.status(500).json({ error: "Server error" });
+    console.error(e);
+    res.status(500).json({ status: false, message: "Server error" });
   }
 };
 
 export const getById = async (req: Request, res: Response) => {
   try {
-    const result = await service.getById(req);
-    if (!result) return res.status(404).json({ message: "Không tìm thấy" });
-    res.json(result);
+    const id = Number(req.params.id);
+    const row = await service.getById(req, id);
+    if (!row)
+      return res.status(404).json({ status: false, message: "Không có quyền hoặc không tìm thấy" });
+    res.json({ status: true, data: row });
   } catch (e) {
-    res.status(500).json({ error: "Server error" });
+    console.error(e);
+    res.status(500).json({ status: false, message: "Server error" });
   }
 };
 
 export const create = async (req: Request, res: Response) => {
   try {
-    const result = await service.create(req.body);
-    if (result.error) return res.status(400).json({ message: result.error });
-    res.status(201).json({ id: result.id, message: "OK" });
+    const result = await service.create(req, req.body);
+    if ((result as any).error) return res.status(403).json(result);
+    res.status(201).json({ status: true, ...result });
   } catch (e) {
-    res.status(500).json({ error: "Server error" });
+    console.error(e);
+    res.status(500).json({ status: false, message: "Server error" });
   }
 };
 
 export const update = async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
-    const result = await service.update(id, req.body);
-    if (result.error) return res.status(400).json({ message: result.error });
-    res.json({ message: "Đã cập nhật" });
+    const result = await service.update(req, id, req.body);
+    if ((result as any).error) return res.status(403).json(result);
+    res.json({ status: true, ...result });
   } catch (e) {
-    res.status(500).json({ error: "Server error" });
-  }
-};
-
-export const partialUpdate = async (req: Request, res: Response) => {
-  try {
-    const id = Number(req.params.id);
-    const result = await service.partialUpdate(id, req.body);
-    if (result.error) return res.status(400).json({ message: result.error });
-    res.json({ message: "Đã cập nhật", changed: result.changed });
-  } catch (e) {
-    res.status(500).json({ error: "Server error" });
+    console.error(e);
+    res.status(500).json({ status: false, message: "Server error" });
   }
 };
 
 export const remove = async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
-    const force = String(req.query.force || "") === "true";
-    const result = await service.remove(id, force);
-    if (result.error) return res.status(result.status || 400).json({ message: result.error });
-    res.json({ message: result.message });
+    const result = await service.remove(req, id);
+    if ((result as any).error) return res.status(403).json(result);
+    res.json({ status: true, ...result });
   } catch (e) {
-    res.status(500).json({ error: "Server error" });
+    console.error(e);
+    res.status(500).json({ status: false, message: "Server error" });
+  }
+};
+
+// cho trang Chức vụ
+export const getByChucVu = async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.chuc_vu_id);
+    const items = await service.getByChucVu(id);
+    res.json({ items });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: "Server error" });
   }
 };

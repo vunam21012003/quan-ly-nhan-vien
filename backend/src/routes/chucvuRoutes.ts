@@ -1,3 +1,4 @@
+// src/routes/chucVuRoutes.ts
 import { Router } from "express";
 import { requireAuth, requireRole } from "../middlewares/auth";
 import * as controller from "../controllers/chucvuController";

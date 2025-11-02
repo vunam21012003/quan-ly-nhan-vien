@@ -256,3 +256,21 @@ textarea {
   background: var(--primary);
   color: #fff;
 }
+
+/* ======tài khoản ====== */
+.table-wrap {
+  overflow-x: auto;
+  margin-top: 10px;
+}
+
+.btn-edit,
+.btn-delete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.btn-delete:hover {
+  color: red;
+}

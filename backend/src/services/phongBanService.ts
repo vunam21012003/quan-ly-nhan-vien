@@ -1,3 +1,4 @@
+// src/services/phongBanService.ts
 import { pool } from "../db";
 
 // Lấy danh sách phòng ban có phân trang + tìm kiếm
@@ -11,7 +12,6 @@ export const getAll = async (search: string, page: number, limit: number) => {
     params.push(`%${search}%`);
   }
 
-  // Lấy dữ liệu trang hiện tại
   const [rows]: any = await pool.query(
     `SELECT 
         pb.id, 
@@ -28,7 +28,6 @@ export const getAll = async (search: string, page: number, limit: number) => {
     [...params, limit, offset]
   );
 
-  // Đếm tổng số bản ghi
   const [[{ total }]]: any = await pool.query(
     `SELECT COUNT(*) as total FROM phong_ban pb ${where}`,
     params
@@ -37,25 +36,33 @@ export const getAll = async (search: string, page: number, limit: number) => {
   return { items: rows, total };
 };
 
-// Tạo mới phòng ban
-export const create = async (ten: string, mo_ta?: string, managerId?: number) => {
+// Tạo mới
+export const create = async (ten_phong_ban: string, mo_ta?: string, managerId?: number) => {
   const [r]: any = await pool.query(
-    `INSERT INTO phong_ban (ten_phong_ban, mo_ta, manager_taikhoan_id) VALUES (?, ?, ?)`,
-    [ten, mo_ta || null, managerId || null]
+    `INSERT INTO phong_ban (ten_phong_ban, mo_ta, manager_taikhoan_id)
+     VALUES (?, ?, ?)`,
+    [ten_phong_ban, mo_ta || null, managerId || null]
   );
   return { id: r.insertId };
 };
 
-// Cập nhật phòng ban
-export const update = async (id: number, ten: string, mo_ta?: string, managerId?: number) => {
+// Cập nhật
+export const update = async (
+  id: number,
+  ten_phong_ban: string,
+  mo_ta?: string,
+  managerId?: number
+) => {
   const [r]: any = await pool.query(
-    `UPDATE phong_ban SET ten_phong_ban=?, mo_ta=?, manager_taikhoan_id=? WHERE id=?`,
-    [ten || null, mo_ta || null, managerId || null, id]
+    `UPDATE phong_ban
+     SET ten_phong_ban=?, mo_ta=?, manager_taikhoan_id=?
+     WHERE id=?`,
+    [ten_phong_ban || null, mo_ta || null, managerId || null, id]
   );
   return { ok: r.affectedRows > 0 };
 };
 
-// Xoá phòng ban
+// Xoá
 export const remove = async (id: number) => {
   const [r]: any = await pool.query(`DELETE FROM phong_ban WHERE id=?`, [id]);
   return { ok: r.affectedRows > 0 };

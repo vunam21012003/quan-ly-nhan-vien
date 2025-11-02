@@ -3,28 +3,43 @@ import { pool } from "../db";
 import { Request } from "express";
 
 export type VaiTro = "admin" | "manager" | "employee";
+
 export type PhepPhamVi = {
-  employeeId?: number | null;
+  employeeId: number | null;
   managedDepartmentIds: number[];
+  role: VaiTro;
 };
 
-export async function lấyPhạmViNgườiDùng(req: Request): Promise<PhepPhamVi> {
-  const user = (req as any).user as { id: number; role: VaiTro };
+/**
+ * Lấy phạm vi người dùng hiện tại (để xác định quyền và giới hạn dữ liệu)
+ */
+export async function layPhamViNguoiDung(req: Request): Promise<PhepPhamVi> {
+  const user = (req as any).user as { id: number };
 
-  // lấy nhan_vien_id từ bảng tài khoản
   const [[me]]: any = await pool.query(
-    `SELECT nhan_vien_id AS employeeId FROM tai_khoan WHERE id = ? LIMIT 1`,
+    `
+    SELECT 
+      tk.nhan_vien_id AS employeeId,
+      cv.quyen_mac_dinh AS role
+    FROM tai_khoan tk
+    LEFT JOIN nhan_vien nv ON tk.nhan_vien_id = nv.id
+    LEFT JOIN chuc_vu cv ON nv.chuc_vu_id = cv.id
+    WHERE tk.id = ? LIMIT 1
+    `,
     [user.id]
   );
 
-  // nếu là manager → lấy danh sách phòng ban mà tài khoản này quản lý
   let managedDepartmentIds: number[] = [];
-  if (user.role === "manager") {
+  if (me?.role === "manager") {
     const [rows]: any = await pool.query(`SELECT id FROM phong_ban WHERE manager_taikhoan_id = ?`, [
       user.id,
     ]);
     managedDepartmentIds = rows.map((r: any) => r.id);
   }
 
-  return { employeeId: me?.employeeId ?? null, managedDepartmentIds };
+  return {
+    employeeId: me?.employeeId ?? null,
+    managedDepartmentIds,
+    role: me?.role ?? "employee",
+  };
 }

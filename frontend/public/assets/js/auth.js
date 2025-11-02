@@ -1,4 +1,3 @@
-// frontend/public/assets/js/auth.js
 import { api, setToken, saveUser, healthCheck } from './api.js';
 
 function setBadge(state, text) {
@@ -21,18 +20,25 @@ function setLoading(btn, on) {
   btn.textContent = on ? 'Đang đăng nhập…' : 'Đăng nhập';
 }
 
+// ✅ Chuẩn hoá quyền từ backend
 function mapRole(user) {
-  const raw = user?.role ?? user?.quyen ?? user?.permission ?? '';
-  if (raw === 'nhanvien') return 'employee';
-  return raw; // admin | manager | employee
+  const raw = String(
+    user?.role || user?.quyen_mac_dinh || user?.permission || ''
+  )
+    .toLowerCase()
+    .trim();
+
+  if (['admin', 'manager', 'employee'].includes(raw)) return raw;
+  if (raw === 'nhanvien' || raw === 'user') return 'employee';
+  return 'employee';
 }
 
 async function init() {
-  // Hiển thị năm ở footer (nếu có)
+  // Hiển thị năm ở footer
   const y = document.getElementById('y');
   if (y) y.textContent = new Date().getFullYear();
 
-  // Kiểm tra /health để báo tình trạng
+  // Kiểm tra kết nối backend
   const { ok } = await healthCheck();
   if (ok) setBadge('ok', 'Hệ thống: OK');
   else setBadge('error', 'Hệ thống: Không kết nối');
@@ -65,33 +71,38 @@ async function init() {
     try {
       setLoading(submitBtn, true);
 
-      // Gọi API đăng nhập
-      const data = await api('/auth/login', {
+      const res = await api('/auth/login', {
         method: 'POST',
         body: { username, password },
       });
 
-      // Linh hoạt lấy token & user tuỳ backend trả về
-      const token = data?.data?.token ?? data?.token;
-      const user = data?.data?.user ?? data?.user ?? null;
+      const token = res?.data?.token ?? res?.token;
+      const user = res?.data?.user ?? res?.user ?? null;
 
-      if (!token) throw new Error('Không nhận được token từ máy chủ.');
+      if (!token || !user)
+        throw new Error('Không nhận được token hoặc user từ máy chủ.');
 
+      // ✅ Lưu token và user
       setToken(token);
       saveUser(user);
 
-      // Điều hướng theo role
       const role = mapRole(user);
-      if (role === 'admin' || role === 'manager') {
-        window.location.href = './nhan-vien.html';
-      } else if (role === 'employee') {
-        window.location.href = './trang-chinh.html';
-      } else {
-        // không rõ role → cho về 403 để an toàn
-        window.location.href = './403.html';
+      console.log('Đăng nhập thành công:', { role, user });
+
+      // ✅ Điều hướng theo quyền
+      switch (role) {
+        case 'admin':
+        case 'manager':
+          window.location.href = './nhan-vien.html';
+          break;
+        case 'employee':
+          window.location.href = './trang-chinh.html';
+          break;
+        default:
+          window.location.href = './403.html';
+          break;
       }
     } catch (err) {
-      // Hiển thị lỗi thân thiện
       let msg = err?.message || 'Đăng nhập thất bại.';
       if (err?.status === 401) msg = 'Sai tên đăng nhập hoặc mật khẩu.';
       if (err?.status === 429)

@@ -1,3 +1,4 @@
+// src/routes/luongRoutes.ts
 import { Router } from "express";
 import { requireAuth, requireRole } from "../middlewares/auth";
 import * as controller from "../controllers/luongController";
@@ -11,10 +12,7 @@ router.post("/", requireAuth, requireRole(["admin"]), controller.create);
 router.put("/:id", requireAuth, requireRole(["admin"]), controller.update);
 router.delete("/:id", requireAuth, requireRole(["admin"]), controller.remove);
 
-// ✅ Tính lương theo tháng
+// ✅ Tính lương tháng theo mô hình 3P
 router.post("/tinh-thang", requireAuth, requireRole(["admin"]), controller.calcSalary);
-
-// ✅ Thêm route chia thưởng toàn hệ thống
-router.post("/chia-thuong", requireAuth, requireRole(["admin"]), controller.chiaThuong);
 
 export default router;

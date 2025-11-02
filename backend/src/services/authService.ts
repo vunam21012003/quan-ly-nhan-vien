@@ -2,80 +2,98 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { pool } from "../db";
 
-function normalizeRole(dbRole: string): "admin" | "manager" | "employee" {
-  if (dbRole === "admin") return "admin";
-  if (dbRole === "manager") return "manager";
-  return "employee";
-}
+const JWT_SECRET = process.env.JWT_SECRET || "dev_secret_change_me";
 
-function toDbRole(role?: string): "admin" | "manager" | "nhanvien" {
-  if (role === "admin") return "admin";
-  if (role === "manager") return "manager";
-  return "nhanvien";
-}
-
+// ===================== REGISTER =====================
 export const register = async (body: any) => {
   try {
-    const { username, password, role, nhan_vien_id } = body || {};
+    const { username, password, nhan_vien_id } = body || {};
     if (!username || !password) {
-      return { error: "username, password là bắt buộc", status: 400 };
+      return { error: "Thiếu tên đăng nhập hoặc mật khẩu", status: 400 };
     }
 
-    const dbRole = toDbRole(role);
-    const hash = await bcrypt.hash(String(password).trim(), 10);
-
-    const sql = `
-      INSERT INTO tai_khoan (ten_dang_nhap, mat_khau, quyen, nhan_vien_id)
-      VALUES (?, ?, ?, ?)
-    `;
-    const [result] = await pool.execute(sql, [username, hash, dbRole, nhan_vien_id ?? null]);
-    return { data: { id: (result as any).insertId } };
-  } catch (err: any) {
-    if (err?.code === "ER_DUP_ENTRY") {
+    // Kiểm tra trùng tên đăng nhập
+    const [exist] = await pool.query(`SELECT id FROM tai_khoan WHERE ten_dang_nhap = ? LIMIT 1`, [
+      username,
+    ]);
+    if ((exist as any[]).length > 0) {
       return { error: "Tên đăng nhập đã tồn tại", status: 409 };
     }
+
+    // Mã hoá mật khẩu
+    const hashed = await bcrypt.hash(password.trim(), 10);
+
+    // Tạo tài khoản
+    const [r]: any = await pool.execute(
+      `INSERT INTO tai_khoan (ten_dang_nhap, mat_khau, nhan_vien_id)
+       VALUES (?, ?, ?)`,
+      [username, hashed, nhan_vien_id || null]
+    );
+
+    return { data: { id: r.insertId, message: "Tạo tài khoản thành công" } };
+  } catch (err) {
     console.error("Register error:", err);
     return { error: "Server error", status: 500 };
   }
 };
 
+// ===================== LOGIN =====================
 export const login = async (body: any) => {
   try {
     const { username, password } = body || {};
     if (!username || !password) {
-      return { error: "username, password là bắt buộc", status: 400 };
+      return { error: "Thiếu tên đăng nhập hoặc mật khẩu", status: 400 };
     }
 
-    const [rows] = await pool.query(
-      `SELECT id, ten_dang_nhap, TRIM(mat_khau) AS mat_khau, quyen, nhan_vien_id
-       FROM tai_khoan
-       WHERE ten_dang_nhap = ?
-       LIMIT 1`,
+    // 🔹 Lấy thông tin tài khoản + nhân viên + chức vụ (để xác định quyền)
+    const [rows]: any = await pool.query(
+      `
+      SELECT 
+        tk.id, tk.ten_dang_nhap, tk.mat_khau, tk.nhan_vien_id,
+        nv.ho_ten, cv.ten_chuc_vu, cv.quyen_mac_dinh AS role
+      FROM tai_khoan tk
+      LEFT JOIN nhan_vien nv ON tk.nhan_vien_id = nv.id
+      LEFT JOIN chuc_vu cv ON nv.chuc_vu_id = cv.id
+      WHERE tk.ten_dang_nhap = ?
+      LIMIT 1
+      `,
       [username]
     );
+
     const userRow = (rows as any[])[0];
     if (!userRow) {
-      return { error: "Sai tài khoản hoặc mật khẩu", status: 401 };
+      return { error: "Sai tên đăng nhập hoặc mật khẩu", status: 401 };
     }
 
-    const hash = String(userRow.mat_khau || "").trim();
-    const pass = String(password).trim();
-    const ok = await bcrypt.compare(pass, hash);
+    // 🔹 Kiểm tra mật khẩu
+    const ok = await bcrypt.compare(password.trim(), String(userRow.mat_khau).trim());
     if (!ok) {
-      return { error: "Sai tài khoản hoặc mật khẩu", status: 401 };
+      return { error: "Sai tên đăng nhập hoặc mật khẩu", status: 401 };
     }
 
-    const role = normalizeRole(userRow.quyen);
-    const secret = process.env.JWT_SECRET || "dev_secret_change_me";
-    const token = jwt.sign({ id: userRow.id, role, username: userRow.ten_dang_nhap }, secret, {
-      expiresIn: "7d",
-    });
+    // ✅ Lấy quyền từ chức vụ
+    const role = userRow.role || "employee";
 
+    // 🔹 Tạo JWT
+    const token = jwt.sign(
+      {
+        id: userRow.id,
+        username: userRow.ten_dang_nhap,
+        nhan_vien_id: userRow.nhan_vien_id,
+        role,
+      },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    // 🔹 Dữ liệu trả về
     const user = {
       id: userRow.id,
       username: userRow.ten_dang_nhap,
+      nhan_vien_id: userRow.nhan_vien_id,
+      ho_ten: userRow.ho_ten,
+      chuc_vu: userRow.ten_chuc_vu,
       role,
-      nhan_vien_id: userRow.nhan_vien_id ?? null,
     };
 
     return { data: { token, user } };
@@ -85,31 +103,30 @@ export const login = async (body: any) => {
   }
 };
 
+// ===================== CHANGE PASSWORD =====================
 export const changePassword = async (userId: number, body: any) => {
   try {
     const { old_password, new_password } = body || {};
     if (!old_password || !new_password) {
-      return { error: "old_password, new_password là bắt buộc", status: 400 };
+      return { error: "Thiếu mật khẩu cũ hoặc mới", status: 400 };
     }
 
-    const [rows] = await pool.query(
-      `SELECT TRIM(mat_khau) AS mat_khau FROM tai_khoan WHERE id = ?`,
-      [userId]
-    );
+    // Lấy mật khẩu hiện tại
+    const [rows] = await pool.query(`SELECT mat_khau FROM tai_khoan WHERE id = ? LIMIT 1`, [
+      userId,
+    ]);
     const current = (rows as any[])[0]?.mat_khau;
-    if (!current) {
-      return { error: "Tài khoản không tồn tại", status: 404 };
-    }
+    if (!current) return { error: "Không tìm thấy tài khoản", status: 404 };
 
-    const ok = await bcrypt.compare(String(old_password).trim(), String(current).trim());
-    if (!ok) {
-      return { error: "Mật khẩu cũ không đúng", status: 401 };
-    }
+    // So sánh mật khẩu cũ
+    const match = await bcrypt.compare(old_password.trim(), String(current).trim());
+    if (!match) return { error: "Mật khẩu cũ không đúng", status: 401 };
 
-    const hash = await bcrypt.hash(String(new_password).trim(), 10);
-    await pool.execute(`UPDATE tai_khoan SET mat_khau = ? WHERE id = ?`, [hash, userId]);
+    // Cập nhật mật khẩu mới
+    const hashed = await bcrypt.hash(new_password.trim(), 10);
+    await pool.execute(`UPDATE tai_khoan SET mat_khau = ? WHERE id = ?`, [hashed, userId]);
 
-    return { data: { ok: true } };
+    return { data: { message: "Đổi mật khẩu thành công" } };
   } catch (err) {
     console.error("Change password error:", err);
     return { error: "Server error", status: 500 };
