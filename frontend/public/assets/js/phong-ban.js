@@ -13,6 +13,9 @@ const st = {
   limit: 10,
   total: 0,
   managers: [],
+  // Gán State để lưu thông tin User và quyền, khắc phục lỗi ReferenceError
+  USER: null,
+  IS_ADMIN: false,
 };
 
 function $(s, r = document) {
@@ -32,19 +35,24 @@ function esc(s) {
   );
 }
 
+// Hàm cập nhật huy hiệu người dùng và ẩn/hiện nút thêm
 function setUserBadge() {
-  const b = $('#user-badge'),
-    u = getUser();
+  const b = $('#user-badge');
   if (!b) return;
-  if (!u) {
+
+  if (!st.USER) {
     b.className = 'badge badge-warn';
     b.textContent = 'Chưa đăng nhập';
     return;
   }
-  const role = u.role ?? u.quyen ?? 'user';
+  const role = st.USER.role ?? st.USER.quyen ?? 'user';
   b.className = 'badge badge-ok';
-  b.textContent = `User: ${u.username ?? u.ten_dang_nhap ?? ''} • ${role}`;
-  if (role !== 'admin') {
+  b.textContent = `User: ${
+    st.USER.username ?? st.USER.ten_dang_nhap ?? ''
+  } • ${role}`;
+
+  // Ẩn nút tạo nếu không phải Admin
+  if (!st.IS_ADMIN) {
     $('#pb-btn-create').style.display = 'none';
   }
 }
@@ -56,17 +64,22 @@ function unwrap(r) {
   return { items: d?.list ?? [], total: d?.total ?? 0 };
 }
 
+// Hàm tạo HTML cho mỗi dòng, ẩn nút Thao tác nếu không phải Admin
 function rowHtml(x) {
+  const actionButtons = st.IS_ADMIN
+    ? `<td>
+          <button class="page-btn" data-act="edit" data-id="${x.id}">Sửa</button>
+          <button class="page-btn" data-act="del"  data-id="${x.id}">Xoá</button>
+      </td>`
+    : `<td>—</td>`; // Nếu không phải Admin thì ẩn nút thao tác
+
   return `<tr>
-    <td>${esc(x.id)}</td>
-    <td>${esc(x.ten)}</td>
-    <td>${esc(x.mo_ta || '')}</td>
-    <td>${esc(x.manager_name || '')}</td>
-    <td>
-      <button class="page-btn" data-act="edit" data-id="${x.id}">Sửa</button>
-      <button class="page-btn" data-act="del"  data-id="${x.id}">Xoá</button>
-    </td>
-  </tr>`;
+        <td>${esc(x.id)}</td>
+        <td>${esc(x.ten)}</td>
+        <td>${esc(x.mo_ta || '')}</td>
+        <td>${esc(x.manager_name || '')}</td>
+        ${actionButtons}
+    </tr>`;
 }
 
 function renderPagination() {
@@ -102,9 +115,17 @@ async function fetchList() {
     limit: String(st.limit),
   });
   if (s) qs.set('search', s);
-  const res = await api(`/phong-ban?${qs.toString()}`).catch(() => ({
-    data: [],
-  }));
+  const res = await api(`/phong-ban?${qs.toString()}`).catch((e) => {
+    console.error('Lỗi khi tải danh sách:', e);
+    // Xử lý khi Backend trả về lỗi 403 (Không có quyền)
+    if (e.status === 403) {
+      $(
+        '#pb-tbody'
+      ).innerHTML = `<tr><td colspan="5" class="text-danger">Bạn không có quyền xem danh sách này. (Lỗi 403)</td></tr>`;
+    }
+    return { data: [] };
+  });
+
   const { items, total } = unwrap(res);
   st.list = items;
   st.total = total || items.length;
@@ -122,11 +143,14 @@ async function loadManagers() {
   st.managers = items;
   const list = document.getElementById('pb-manager-list');
   list.innerHTML = items
-    .map((x) => `<option value="${esc(x.ho_ten)}">`)
+    .map((x) => `<option value="${esc(x.id)} - ${esc(x.ho_ten)}">`)
     .join('');
 }
 
+// Ngăn chặn mở Modal nếu không phải Admin
 function openModal(edit = null) {
+  if (!st.IS_ADMIN) return; // Chỉ Admin mới được mở modal Thêm/Sửa
+
   st.editingId = edit?.id ?? null;
   $('#pb-modal-title').textContent = edit
     ? `Sửa phòng ban #${edit.id}`
@@ -156,14 +180,22 @@ function showErr(m) {
   el.textContent = m;
 }
 
+// Kiểm tra quyền Admin trước khi gửi request C/U
 async function onSave(e) {
   e.preventDefault();
+  if (!st.IS_ADMIN) {
+    showErr('Bạn không có quyền thực hiện thao tác này.');
+    return;
+  }
+
   const val = $('#pb-manager').value.trim();
+  // Lấy ID từ chuỗi: "ID - Tên"
   const idStr = val.split(' ')[0];
   const payload = {
     ten: $('#pb-ten').value.trim(),
     mo_ta: $('#pb-mo_ta').value.trim() || null,
-    manager_taikhoan_id: idStr && !isNaN(idStr) ? Number(idStr) : null,
+    // Ép kiểu ID thành số (manager_taikhoan_id)
+    manager_taikhoan_id: idStr && !isNaN(Number(idStr)) ? Number(idStr) : null,
   };
   if (!payload.ten) {
     showErr('Vui lòng nhập tên');
@@ -200,13 +232,19 @@ function bind() {
   $('#pb-cancel').addEventListener('click', closeModal);
   $('#pb-form').addEventListener('submit', onSave);
 
+  // Kiểm tra quyền Admin trước khi thực hiện Sửa/Xóa
   $('#pb-tbody').addEventListener('click', async (e) => {
     const btn = e.target.closest('button[data-act]');
     if (!btn) return;
+
+    if (!st.IS_ADMIN) return; // Chỉ Admin mới được thao tác Sửa/Xóa
+
     const id = btn.dataset.id;
     const act = btn.dataset.act;
     const row = st.list.find((x) => String(x.id) === String(id));
+
     if (act === 'edit') openModal(row);
+
     if (act === 'del') {
       if (!confirm(`Xoá phòng ban #${id}?`)) return;
       try {
@@ -225,9 +263,16 @@ function bind() {
   });
 }
 
+// Gán st.USER và st.IS_ADMIN ở đây để tránh lỗi ReferenceError
 async function init() {
   requireAuthOrRedirect('./dangnhap.html');
   if (!getToken()) return;
+
+  // Gán USER và IS_ADMIN sau khi xác thực
+  st.USER = getUser();
+  const currentRole = st.USER?.role ?? st.USER?.quyen;
+  st.IS_ADMIN = currentRole === 'admin';
+
   const yearEl = $('#y');
   if (yearEl) yearEl.textContent = new Date().getFullYear();
 

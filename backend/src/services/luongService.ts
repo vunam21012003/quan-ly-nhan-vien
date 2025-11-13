@@ -3,6 +3,7 @@
 // ===============================================
 import { pool } from "../db";
 import { RowDataPacket, ResultSetHeader } from "mysql2";
+import { Request } from "express";
 
 /**
  * ===============================================
@@ -151,6 +152,11 @@ export const create = async (body: any) => {
  * ===============================================
  */
 export const update = async (id: number, body: any) => {
+  const [check]: any = await pool.query(`SELECT trang_thai_duyet FROM luong WHERE id=?`, [id]);
+  if (check[0]?.trang_thai_duyet === "da_duyet") {
+    return { error: "Bản lương này đã được duyệt, không thể chỉnh sửa." };
+  }
+
   const {
     nhan_vien_id,
     thang,
@@ -200,6 +206,10 @@ export const update = async (id: number, body: any) => {
  * ===============================================
  */
 export const remove = async (id: number) => {
+  const [check]: any = await pool.query(`SELECT trang_thai_duyet FROM luong WHERE id=?`, [id]);
+  if (check[0]?.trang_thai_duyet === "da_duyet") {
+    return { error: "Bản lương này đã được duyệt, không thể chỉnh sửa." };
+  }
   const [result] = await pool.query<ResultSetHeader>(`DELETE FROM luong WHERE id = ?`, [id]);
   return result.affectedRows > 0;
 };
@@ -394,4 +404,88 @@ export const calcSalaryForMonth = async (thang: number, nam: number) => {
   }
 
   return { thang, nam, count: results.length, items: results };
+};
+
+/**
+ * ===============================================
+ * DUYỆT LƯƠNG CẢ THÁNG
+ * ===============================================
+ */
+export const duyetLuongTheoThang = async (req: Request) => {
+  const q = (req as any).query;
+  const thang = Number(q.thang);
+  const nam = Number(q.nam);
+
+  const user = (req as any).user;
+  const nguoi_thuc_hien_id = Number(user?.nhan_vien_id) || null; // ✅ dùng nhan_vien_id
+
+  console.log("🧩 Duyệt lương tháng:", { thang, nam, nguoi_thuc_hien_id });
+
+  if (!thang || !nam) return { error: "Thiếu tham số thang hoặc năm" };
+  if (!nguoi_thuc_hien_id)
+    return { error: "Tài khoản chưa liên kết với nhân viên, không thể duyệt" };
+
+  // 1️⃣ Kiểm tra dữ liệu lương
+  const [countRows]: any = await pool.query(
+    `SELECT COUNT(*) AS cnt FROM luong WHERE thang = ? AND nam = ?`,
+    [thang, nam]
+  );
+  if (countRows[0].cnt === 0) return { error: `Không có dữ liệu lương tháng ${thang}/${nam}` };
+
+  // 2️⃣ Kiểm tra đã duyệt chưa
+  const [duyetCheck]: any = await pool.query(
+    `SELECT COUNT(*) AS cnt FROM luong WHERE thang = ? AND nam = ? AND trang_thai_duyet = 'da_duyet'`,
+    [thang, nam]
+  );
+  if (duyetCheck[0].cnt > 0)
+    return { error: `Lương tháng ${thang}/${nam} đã được duyệt trước đó.` };
+
+  // 3️⃣ Cập nhật trạng thái
+  await pool.query(`UPDATE luong SET trang_thai_duyet = 'da_duyet' WHERE thang = ? AND nam = ?`, [
+    thang,
+    nam,
+  ]);
+
+  // 4️⃣ Ghi lịch sử duyệt
+  await pool.query(
+    `INSERT INTO lich_su_tra_luong 
+       (nhan_vien_id, thang, nam, so_tien_thuc_tra, ngay_tra, nguoi_thuc_hien_id, trang_thai, ghi_chu)
+     SELECT l.nhan_vien_id, l.thang, l.nam, l.luong_thuc_nhan, NOW(), ?, 'cho_xu_ly',
+            CONCAT('Duyệt lương tháng ', ?, '/', ?, ' - chờ chi trả')
+     FROM luong l
+     WHERE l.thang = ? AND l.nam = ?`,
+    [nguoi_thuc_hien_id, thang, nam, thang, nam]
+  );
+
+  return { message: `✅ Đã duyệt toàn bộ lương tháng ${thang}/${nam}` };
+};
+/**
+ * ===============================================
+ * HỦY DUYỆT LƯƠNG CẢ THÁNG
+ * ===============================================
+ */
+export const huyDuyetLuongTheoThang = async (thang: number, nam: number) => {
+  // 1️⃣ Kiểm tra có dữ liệu lương không
+  const [countRows]: any = await pool.query(
+    `SELECT COUNT(*) AS cnt FROM luong WHERE thang = ? AND nam = ?`,
+    [thang, nam]
+  );
+  if (countRows[0].cnt === 0) {
+    return { error: `Không có dữ liệu lương tháng ${thang}/${nam}` };
+  }
+
+  // 2️⃣ Cập nhật trạng thái về chưa duyệt
+  await pool.query(`UPDATE luong SET trang_thai_duyet = 'chua_duyet' WHERE thang = ? AND nam = ?`, [
+    thang,
+    nam,
+  ]);
+
+  // 3️⃣ Cập nhật lịch sử chi trả thành "đã hủy"
+  await pool.query(
+    `UPDATE lich_su_tra_luong SET trang_thai = 'that_bai', ghi_chu = CONCAT(ghi_chu, ' (Đã hủy duyệt)')
+     WHERE thang = ? AND nam = ? AND trang_thai = 'cho_xu_ly'`,
+    [thang, nam]
+  );
+
+  return { message: `Đã hủy duyệt lương tháng ${thang}/${nam}` };
 };

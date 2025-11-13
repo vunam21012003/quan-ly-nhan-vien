@@ -100,11 +100,21 @@ export const importExcel = async (req: Request, res: Response) => {
     const buffer = fs.readFileSync(readPath);
     const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
 
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName as keyof typeof workbook.Sheets];
+    // ✅ Lấy sheet đầu tiên an toàn
+    const sheetName = (workbook.SheetNames && workbook.SheetNames[0]) || "";
+    if (!sheetName)
+      return res.status(400).json({ message: "Không tìm thấy sheet trong file Excel" });
+
+    const sheet = (workbook.Sheets as any)[sheetName];
     if (!sheet) return res.status(400).json({ message: "Không tìm thấy sheet trong file Excel" });
 
-    const rows: Record<string, any>[] = XLSX.utils.sheet_to_json(sheet);
+    // ✅ Đọc toàn bộ sheet thành JSON
+    const rows: Record<string, any>[] = XLSX.utils.sheet_to_json(sheet, {
+      defval: "",
+      raw: false,
+      dateNF: "yyyy-mm-dd",
+    });
+
     console.log(`✅ Đọc ${rows.length} dòng từ file Excel.`);
 
     let added = 0,
@@ -112,11 +122,115 @@ export const importExcel = async (req: Request, res: Response) => {
       fail = 0;
     const affected: Array<{ nvId: number; ngay: string }> = [];
 
+    // ================== HÀM CHUẨN HÓA DỮ LIỆU ==================
+    function normalizeDate(value: any): string | null {
+      if (!value) return null;
+
+      // 1️⃣ Excel lưu ngày dạng số
+      if (typeof value === "number") {
+        const ssf = (XLSX as any).SSF;
+        if (ssf?.parse_date_code) {
+          const parsed = ssf.parse_date_code(value);
+          if (parsed) {
+            const y = parsed.y;
+            const m = String(parsed.m).padStart(2, "0");
+            const d = String(parsed.d).padStart(2, "0");
+            return `${y}-${m}-${d}`;
+          }
+        }
+        const date = new Date(Math.round((value - 25569) * 86400 * 1000));
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+          date.getDate()
+        ).padStart(2, "0")}`;
+      }
+
+      // 2️⃣ Nếu là Date object
+      if (value instanceof Date) {
+        const y = value.getFullYear();
+        const m = String(value.getMonth() + 1).padStart(2, "0");
+        const d = String(value.getDate()).padStart(2, "0");
+        return `${y}-${m}-${d}`;
+      }
+
+      // 3️⃣ Nếu là chuỗi
+      const str: string = String(value).trim().replace(/\./g, "/");
+      const cleaned = str.split(" ")[0] as string;
+
+      // ISO yyyy-mm-dd
+      if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned)) {
+        return cleaned;
+      }
+
+      // dd/mm/yyyy hoặc dd-mm-yyyy
+      const regex: RegExp = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/;
+      const match = cleaned.match(regex);
+
+      if (match) {
+        // ✅ ép kiểu rõ ràng để không bị báo đỏ
+        const [_full, d1, m1, y] = match as [string, string, string, string];
+
+        const month: string = m1.padStart(2, "0");
+        const day: string = d1.padStart(2, "0");
+
+        return `${y}-${month}-${day}`;
+      }
+
+      // 4️⃣ Date auto-parse
+      const d = new Date(cleaned);
+      if (!isNaN(d.getTime())) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        return `${y}-${m}-${day}`;
+      }
+
+      return null;
+    }
+
+    function normalizeTime(value: any): string | null {
+      if (!value) return null;
+
+      // Excel lưu giờ dạng phần thập phân của ngày (VD: 0.5 = 12:00)
+      if (typeof value === "number") {
+        const totalMinutes = Math.round(value * 24 * 60);
+        const h = Math.floor(totalMinutes / 60);
+        const m = totalMinutes % 60;
+        return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+      }
+
+      if (value instanceof Date) {
+        const h = value.getHours();
+        const m = value.getMinutes();
+        return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+      }
+
+      const str = String(value).trim();
+
+      // Dạng 08:10
+      const match1 = str.match(/^(\d{1,2}):(\d{1,2})$/);
+      if (match1) {
+        const h = match1[1] || "0";
+        const mi = match1[2] || "0";
+        return `${h.padStart(2, "0")}:${mi.padStart(2, "0")}`;
+      }
+
+      // Dạng 8h10 hoặc 8h
+      const match2 = str.match(/^(\d{1,2})h:?(\d{1,2})?$/i);
+      if (match2) {
+        const h = match2[1] || "0";
+        const mi = match2[2] || "00";
+        return `${h.padStart(2, "0")}:${mi.padStart(2, "0")}`;
+      }
+
+      return null;
+    }
+
+    // ================== XỬ LÝ DỮ LIỆU ==================
     for (const [i, r] of rows.entries()) {
       const nhan_vien_id = r?.nhan_vien_id;
-      const ngay_lam = r?.ngay || r?.ngay_lam;
-      const gio_vao = r?.check_in || r?.gio_vao;
-      const gio_ra = r?.check_out || r?.gio_ra;
+      const ngay_lam = normalizeDate(r?.ngay || r?.ngay_lam);
+      const gio_vao = normalizeTime(r?.check_in || r?.gio_vao);
+      const gio_ra = normalizeTime(r?.check_out || r?.gio_ra);
       const ghi_chu_excel = r?.ghi_chu || "";
 
       if (!nhan_vien_id || !ngay_lam) {
@@ -125,28 +239,39 @@ export const importExcel = async (req: Request, res: Response) => {
         continue;
       }
 
-      const {
-        trang_thai,
-        ghi_chu: ghiChuAuto,
-        tong_gio,
-      } = await service.evaluateChamCong(
-        Number(nhan_vien_id),
-        String(ngay_lam),
-        gio_vao || null,
-        gio_ra || null,
-        ghi_chu_excel
-      );
-
-      const finalNote =
-        ghi_chu_excel &&
-        (ghi_chu_excel.toLowerCase().includes("có phép") ||
-          ghi_chu_excel.toLowerCase().includes("co phep") ||
-          ghi_chu_excel.toLowerCase().includes("nghỉ") ||
-          ghi_chu_excel.toLowerCase().includes("nghi"))
-          ? ghi_chu_excel
-          : ghiChuAuto;
+      // Đảm bảo null an toàn
+      const safeIn = gio_vao === undefined || gio_vao === null ? null : gio_vao;
+      const safeOut = gio_ra === undefined || gio_ra === null ? null : gio_ra;
 
       try {
+        const safeIn: string | null =
+          gio_vao === undefined || gio_vao === null || gio_vao === "" ? null : gio_vao;
+
+        const safeOut: string | null =
+          gio_ra === undefined || gio_ra === null || gio_ra === "" ? null : gio_ra;
+
+        // ✅ bây giờ gọi hàm evaluateChamCong sẽ không còn đỏ nữa
+        const {
+          trang_thai,
+          ghi_chu: ghiChuAuto,
+          tong_gio,
+        } = await service.evaluateChamCong(
+          Number(nhan_vien_id),
+          String(ngay_lam),
+          safeIn,
+          safeOut,
+          ghi_chu_excel
+        );
+
+        const finalNote =
+          ghi_chu_excel &&
+          (ghi_chu_excel.toLowerCase().includes("có phép") ||
+            ghi_chu_excel.toLowerCase().includes("co phep") ||
+            ghi_chu_excel.toLowerCase().includes("nghỉ") ||
+            ghi_chu_excel.toLowerCase().includes("nghi"))
+            ? ghi_chu_excel
+            : ghiChuAuto;
+
         const [exist]: any = await pool.query(
           "SELECT id FROM cham_cong WHERE nhan_vien_id = ? AND ngay_lam = ?",
           [nhan_vien_id, ngay_lam]
@@ -157,15 +282,7 @@ export const importExcel = async (req: Request, res: Response) => {
             `UPDATE cham_cong 
              SET gio_vao=?, gio_ra=?, trang_thai=?, ghi_chu=?, tong_gio=? 
              WHERE nhan_vien_id=? AND ngay_lam=?`,
-            [
-              gio_vao || null,
-              gio_ra || null,
-              trang_thai,
-              finalNote,
-              tong_gio,
-              nhan_vien_id,
-              ngay_lam,
-            ]
+            [safeIn, safeOut, trang_thai, finalNote, tong_gio, nhan_vien_id, ngay_lam]
           );
           updated++;
         } else {
@@ -173,15 +290,7 @@ export const importExcel = async (req: Request, res: Response) => {
             `INSERT INTO cham_cong 
              (nhan_vien_id, ngay_lam, gio_vao, gio_ra, trang_thai, ghi_chu, tong_gio) 
              VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [
-              nhan_vien_id,
-              ngay_lam,
-              gio_vao || null,
-              gio_ra || null,
-              trang_thai,
-              finalNote,
-              tong_gio,
-            ]
+            [nhan_vien_id, ngay_lam, safeIn, safeOut, trang_thai, finalNote, tong_gio]
           );
           added++;
         }
@@ -193,7 +302,7 @@ export const importExcel = async (req: Request, res: Response) => {
       }
     }
 
-    // ✅ Tổng hợp lại theo tháng cho các nhân viên bị ảnh hưởng
+    // ✅ Cập nhật tổng hợp theo tháng
     const touched = new Set<string>();
     for (const a of affected) {
       const key = `${a.nvId}|${a.ngay.slice(0, 7)}`;
@@ -202,7 +311,7 @@ export const importExcel = async (req: Request, res: Response) => {
       await capNhatPhanTichCong(a.nvId, a.ngay);
     }
 
-    // Dọn file tạm
+    // 🧹 Xóa file tạm
     try {
       fs.unlinkSync(file.path);
       if (fs.existsSync(`${file.path}.xlsx`)) fs.unlinkSync(`${file.path}.xlsx`);
@@ -210,6 +319,7 @@ export const importExcel = async (req: Request, res: Response) => {
       console.warn("⚠️ Không thể xoá file tạm:", file.path);
     }
 
+    // ✅ Trả kết quả
     res.json({
       message: `✅ Import hoàn tất: ${added} mới, ${updated} cập nhật, ${fail} lỗi.`,
       added,

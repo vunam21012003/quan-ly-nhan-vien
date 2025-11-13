@@ -1,0 +1,281 @@
+/* =========================================================================
+   1. BASE STYLES & LAYOUT
+   ========================================================================= */
+
+/* Đảm bảo container chính hoạt động tốt */
+.container {
+  padding: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Header của trang */
+.page-header {
+  display: flex;
+  flex-direction: column; /* Mặc định mobile: xếp dọc */
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.page-title {
+  font-size: 1.8rem;
+  margin: 0;
+  color: #333;
+}
+
+/* Thanh công cụ (Toolbar) */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap; /* Cho phép các mục xuống dòng trên mobile */
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.toolbar input[type='text'],
+.toolbar select {
+  flex-grow: 1; /* Cho phép các trường lọc chiếm diện tích */
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  min-width: 120px; /* Đảm bảo kích thước tối thiểu trên mobile */
+}
+
+.toolbar .btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap; /* Ngăn nút bị ngắt dòng */
+}
+
+/* Nút chính */
+.btn-primary {
+  background-color: #007bff;
+  color: white;
+}
+.btn-primary:hover {
+  background-color: #0056b3;
+}
+.btn-primary:active {
+  background-color: #004085;
+}
+
+/* Tối ưu hóa Toolbar trên màn hình lớn */
+@media (min-width: 768px) {
+  .page-header {
+    flex-direction: row; /* Desktop: xếp ngang */
+    justify-content: space-between;
+    align-items: center;
+  }
+  .toolbar {
+    flex-wrap: nowrap;
+    gap: 1rem;
+  }
+  .toolbar input[type='text'],
+  .toolbar select {
+    flex-grow: 0;
+    width: auto;
+  }
+}
+
+/* =========================================================================
+   2. TABLE STYLES (Responsive Table)
+   ========================================================================= */
+
+.table-wrap {
+  overflow-x: auto; /* Cuộn ngang nếu bảng quá rộng */
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background-color: white;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.table thead {
+  background-color: #f4f4f4;
+}
+
+.table th,
+.table td {
+  padding: 0.75rem 1rem;
+  border: 1px solid #eee;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.table tbody tr:hover {
+  background-color: #f0f0f0;
+}
+
+/* Cột Thao tác */
+.table td:last-child {
+  white-space: nowrap;
+}
+
+/* Nút Thao tác trong bảng */
+.btn-edit,
+.btn-delete {
+  padding: 0.3rem 0.5rem;
+  margin: 0 0.2rem;
+  font-size: 0.8rem;
+  border-radius: 4px;
+  background: #e0e0e0;
+  color: #333;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-edit:hover {
+  background-color: #b0e0e6;
+} /* Màu xanh nhạt */
+.btn-delete:hover {
+  background-color: #f4cccc;
+} /* Màu đỏ nhạt */
+
+/* Mobile Table Optimization (Card View) */
+/* Ẩn tiêu đề bảng trên mobile */
+@media (max-width: 600px) {
+  .table thead {
+    display: none;
+  }
+
+  .table,
+  .table tbody,
+  .table tr,
+  .table td {
+    display: block;
+    width: 100%;
+  }
+
+  .table tr {
+    margin-bottom: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .table td {
+    text-align: right;
+    padding-left: 50%;
+    position: relative;
+    border-bottom: 1px solid #eee;
+    font-size: 1rem;
+  }
+
+  .table td:last-child {
+    border-bottom: none;
+    text-align: center;
+    padding-left: 0;
+  }
+
+  /* Tạo nhãn (label) ảo cho từng cột */
+  .table td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 1rem;
+    width: 45%;
+    padding-right: 10px;
+    white-space: nowrap;
+    text-align: left;
+    font-weight: bold;
+    color: #555;
+  }
+}
+
+/* =========================================================================
+   3. MODAL (Thêm/Sửa) STYLES
+   ========================================================================= */
+
+dialog {
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  width: 90%;
+  max-width: 500px;
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.form {
+  padding: 1.5rem;
+}
+
+.form h3 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: #007bff;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 0.5rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.form-group input[type='text'],
+.form-group input[type='password'],
+.form-group select {
+  width: 100%;
+  padding: 0.6rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box; /* Đảm bảo padding không làm tăng kích thước */
+}
+
+/* Footer nút Lưu/Hủy trong Modal */
+.form > div:last-child {
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.form .btn {
+  padding: 0.6rem 1.2rem;
+}
+
+/* =========================================================================
+   4. UTILITIES & ALERTS
+   ========================================================================= */
+.alert {
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.alert-error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.text-muted {
+  color: #6c757d;
+}
+
+/* Footer (chỉ để tham khảo, nếu bạn dùng chung styles.css thì không cần) */
+.footer {
+  padding: 1rem;
+  text-align: center;
+  border-top: 1px solid #eee;
+  margin-top: 2rem;
+}

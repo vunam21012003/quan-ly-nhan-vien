@@ -1,0 +1,77 @@
+/* CSS cho Modal Phân công làm bù */
+
+/* Định dạng chung cho Modal */
+#phanCongModal {
+  border: none;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  width: 400px; /* Chiều rộng cố định */
+  max-width: 90%;
+  font-family: Arial, sans-serif;
+}
+
+/* Phần "Chọn tất cả nhân viên" */
+.pc-select-all-header {
+  margin-bottom: 15px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.pc-label-select-all {
+  display: flex; /* Căn chỉnh checkbox và text */
+  align-items: center;
+  font-weight: bold;
+  color: #333;
+  cursor: pointer;
+}
+
+/* Container cho danh sách nhân viên có thanh cuộn */
+.pc-employee-list-scroll {
+  max-height: 250px; /* Chiều cao tối đa để bật thanh cuộn */
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 10px;
+  background-color: #fcfcfc;
+  margin-bottom: 20px;
+}
+
+/* Từng mục nhân viên trong danh sách */
+.pc-employee-item {
+  padding: 8px 0;
+  border-bottom: 1px dashed #f0f0f0;
+}
+
+.pc-employee-item:last-child {
+  border-bottom: none;
+}
+
+.pc-label-employee {
+  display: flex; /* Căn chỉnh checkbox và text */
+  align-items: center;
+  gap: 8px; /* Khoảng cách giữa checkbox và text */
+  color: #444;
+  cursor: pointer;
+}
+
+/* Định dạng chung cho tất cả Checkbox */
+.pc-checkbox {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  margin: 0;
+  accent-color: #007bff;
+}
+
+/* Định dạng nút bấm (nếu cần tùy chỉnh thêm) */
+#phanCongModal button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+#btn-pc-save {
+  background-color: #007bff;
+  color: white;
+}

@@ -16,14 +16,18 @@ export const getById = async (req: Request, res: Response) => {
 
 // ================== TẠO ==================
 export const create = async (req: Request, res: Response) => {
-  const result = await taiKhoanService.create(req.body);
+  // Loại bỏ chuc_vu_id khỏi req.body khi tạo thủ công
+  const { chuc_vu_id, ...data } = req.body;
+  const result = await taiKhoanService.create(data);
   res.json(result);
 };
 
 // ================== CẬP NHẬT ==================
 export const update = async (req: Request, res: Response) => {
   const id = Number(req.params.id);
-  const result = await taiKhoanService.update(id, req.body);
+  // Loại bỏ chuc_vu_id khỏi req.body khi cập nhật thủ công
+  const { chuc_vu_id, ...data } = req.body;
+  const result = await taiKhoanService.update(id, data);
   res.json(result);
 };
 

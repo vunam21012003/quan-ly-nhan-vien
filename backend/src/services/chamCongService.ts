@@ -37,8 +37,8 @@ const toMinutes = (t: string): number => {
 export async function evaluateChamCong(
   nhan_vien_id: number,
   ngay_lam: string,
-  gio_vao_excel?: string,
-  gio_ra_excel?: string,
+  gio_vao_excel?: string | null,
+  gio_ra_excel?: string | null,
   ghi_chu_excel?: string
 ) {
   // 🔧 Chuẩn hóa định dạng ngày (tránh lệch timezone)

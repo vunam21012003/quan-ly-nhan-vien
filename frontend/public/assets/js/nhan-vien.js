@@ -12,7 +12,11 @@ const st = {
   limit: 10,
   total: 0,
   editingId: null,
-  roles: null,
+  // Thêm các biến state để quản lý quyền
+  USER: null,
+  ROLE: null,
+  IS_ADMIN: false,
+  IS_MANAGER_OR_ADMIN: false,
   phongBans: [],
   chucVus: [],
 };
@@ -32,40 +36,63 @@ const esc = (s) =>
   );
 
 function setUserBadge() {
-  const u = getUser();
   const b = $('#user-badge');
   if (!b) return;
-  if (!u) {
+  if (!st.USER) {
     b.className = 'badge badge-warn';
     b.textContent = 'Chưa đăng nhập';
     return;
   }
-  const role = u.role ?? u.quyen ?? 'employee';
+
   b.className = 'badge badge-ok';
-  b.textContent = `User: ${u.username ?? u.ten_dang_nhap ?? ''} • ${role}`;
-  st.roles = role;
-  if (role !== 'admin' && role !== 'manager')
+  b.textContent = `User: ${st.USER.username ?? st.USER.ten_dang_nhap ?? ''} • ${
+    st.ROLE
+  }`;
+
+  // Ẩn nút tạo nếu không phải Admin hoặc Manager
+  if (!st.IS_MANAGER_OR_ADMIN) {
     $('#nv-btn-create').style.display = 'none';
+  }
 }
 
 function rowHtml(x) {
+  const isEmployeeSelf =
+    st.ROLE === 'employee' && st.USER.nhan_vien_id === x.id;
+  const actionButtons = st.IS_MANAGER_OR_ADMIN
+    ? `
+        <button class="page-btn btn-sm" data-act="view">Xem</button>
+        <button class="page-btn btn-sm" data-act="edit">Sửa</button>
+        <button class="page-btn btn-sm" data-act="del">Xoá</button>
+      `
+    : `
+        <button class="page-btn btn-sm" data-act="view">Xem</button>
+        ${
+          isEmployeeSelf
+            ? '<span class="text-muted">—</span>'
+            : '<span class="text-muted">—</span>'
+        }
+      `;
+
   return `<tr data-id="${x.id}">
     <td>${x.id}</td>
     <td>${esc(x.ho_ten)}</td>
     <td>${esc(x.gioi_tinh || '')}</td>
     <td>${esc(x.ten_phong_ban || '')}</td>
     <td>${esc(x.ten_chuc_vu || '')}</td>
-    <td>${esc(x.email || '')}</td>
-    <td>${esc(x.so_dien_thoai || '')}</td>
-    <td>${
+    <td class="td-email">${esc(x.email || '')}</td>
+    <td class="td-sdt">${esc(x.so_dien_thoai || '')}</td>
+    <td class="td-ngayvao">${
       x.ngay_vao_lam ? new Date(x.ngay_vao_lam).toLocaleDateString('vi-VN') : ''
     }</td>
-    <td>${esc(x.trang_thai || '')}</td>
-    <td>
-      <button class="page-btn" data-act="edit">Sửa</button>
-      <button class="page-btn" data-act="del">Xoá</button>
-    </td>
+    <td class="td-trangthai">${esc(x.trang_thai || '')}</td>
+    <td class="td-actions">${actionButtons}</td>
   </tr>`;
+}
+
+function unwrap(r) {
+  const d = r?.data ?? r;
+  if (d?.items) return { items: d.items, total: d.total ?? d.items.length };
+  return { items: d?.list ?? [], total: d?.total ?? 0 };
 }
 
 async function loadPhongBans() {
@@ -135,7 +162,7 @@ async function fetchList() {
   const res = await api(`/nhan-vien?${qs.toString()}`).catch(() => ({
     data: { items: [], total: 0 },
   }));
-  const d = res?.data ?? res;
+  const d = res?.data?.data ?? res?.data ?? res;
   st.list = d.items ?? [];
   st.total = d.total ?? st.list.length;
 
@@ -143,6 +170,15 @@ async function fetchList() {
     ? st.list.map(rowHtml).join('')
     : `<tr><td colspan="10" class="text-muted">Không có dữ liệu</td></tr>`;
   renderPaging();
+
+  // THÊM: Tự động mở chi tiết cho Employee
+  if (
+    st.ROLE === 'employee' &&
+    st.list.length === 1 &&
+    st.list[0].id === st.USER.nhan_vien_id
+  ) {
+    openModal(st.list[0], 'view');
+  }
 }
 
 function renderPaging() {
@@ -167,27 +203,59 @@ function renderPaging() {
   });
 }
 
-function openModal(edit = null) {
-  st.editingId = edit?.id ?? null;
-  $('#nv-modal-title').textContent = edit
-    ? `Sửa nhân viên #${edit.id}`
-    : 'Thêm nhân viên';
-  $('#nv-ho_ten').value = edit?.ho_ten ?? '';
-  $('#nv-gioi_tinh').value = edit?.gioi_tinh ?? 'Nam';
-  $('#nv-ngay_sinh').value = edit?.ngay_sinh ?? '';
-  $('#nv-email').value = edit?.email ?? '';
-  $('#nv-so_dien_thoai').value = edit?.so_dien_thoai ?? '';
-  $('#nv-dia_chi').value = edit?.dia_chi ?? '';
-  $('#nv-phong_ban_id').value = edit?.phong_ban_id ?? '';
-  $('#nv-trang_thai').value = edit?.trang_thai ?? 'dang_lam';
-  $('#nv-ghi_chu').value = edit?.ghi_chu ?? '';
+// SỬA: Thêm tham số mode ('edit'/'view')
+function openModal(item = null, mode = 'edit') {
+  const isView = mode === 'view' || item === null;
+
+  st.editingId = item?.id ?? null;
+
+  $('#nv-modal-title').textContent =
+    isView && item
+      ? `Chi tiết nhân viên #${item.id}`
+      : item
+      ? `Sửa nhân viên #${item.id}`
+      : 'Thêm nhân viên';
+
+  // Điền dữ liệu
+  $('#nv-ho_ten').value = item?.ho_ten ?? '';
+  $('#nv-gioi_tinh').value = item?.gioi_tinh ?? 'Nam';
+  $('#nv-ngay_sinh').value = item?.ngay_sinh
+    ? item.ngay_sinh.split('T')[0]
+    : '';
+  $('#nv-email').value = item?.email ?? '';
+  $('#nv-so_dien_thoai').value = item?.so_dien_thoai ?? '';
+  $('#nv-dia_chi').value = item?.dia_chi ?? '';
+  $('#nv-phong_ban_id').value = item?.phong_ban_id ?? '';
+  $('#nv-trang_thai').value = item?.trang_thai ?? 'dang_lam';
+  $('#nv-ghi_chu').value = item?.ghi_chu ?? '';
+  $('#nv-ngay_vao_lam').value = item?.ngay_vao_lam
+    ? item.ngay_vao_lam.split('T')[0]
+    : '';
+
   $('#nv-error').hidden = true;
 
-  // khi mở modal, tải lại chức vụ theo phòng ban hiện tại
-  const phongBanId = edit?.phong_ban_id ?? '';
+  // Tải lại chức vụ theo phòng ban hiện tại và chọn giá trị
+  const phongBanId = item?.phong_ban_id ?? '';
   loadChucVus(phongBanId).then(() => {
-    $('#nv-chuc_vu_id').value = edit?.chuc_vu_id ?? '';
+    $('#nv-chuc_vu_id').value = item?.chuc_vu_id ?? '';
   });
+
+  // Đặt chế độ xem/sửa
+  const allInputs = $('#nv-form').querySelectorAll('input, select, textarea');
+  allInputs.forEach((input) => {
+    // Chỉ cho phép nhập/chọn nếu mode là edit (và không phải view)
+    input.readOnly = isView;
+    input.disabled = isView;
+    // Bỏ thuộc tính disabled cho nút Save (chỉ áp dụng cho input)
+  });
+
+  const saveBtn = $('#nv-save');
+  const cancelBtn = $('#nv-cancel');
+
+  // Ẩn nút Lưu nếu là chế độ Xem
+  saveBtn.style.display = isView && item ? 'none' : 'block';
+  // Đổi tên nút Hủy thành Đóng nếu là chế độ Xem
+  cancelBtn.textContent = isView && item ? 'Đóng' : 'Hủy';
 
   $('#nv-modal').showModal();
 }
@@ -196,9 +264,10 @@ function closeModal() {
   $('#nv-modal').close();
 }
 
-function canEditOrDelete() {
-  return st.roles === 'admin' || st.roles === 'manager';
-}
+// Hàm này không cần thiết vì logic quyền đã chuyển sang st.IS_MANAGER_OR_ADMIN
+// function canEditOrDelete() {
+//   return st.ROLE === 'admin' || st.ROLE === 'manager';
+// }
 
 function bind() {
   $('#nv-btn-refresh').addEventListener('click', () => {
@@ -212,9 +281,11 @@ function bind() {
     st.page = 1;
     fetchList();
   });
+
+  // SỬA: Kiểm tra quyền trước khi mở form Thêm
   $('#nv-btn-create').addEventListener('click', () =>
-    canEditOrDelete()
-      ? openModal(null)
+    st.IS_MANAGER_OR_ADMIN
+      ? openModal(null, 'edit')
       : alert('Bạn không có quyền tạo nhân viên')
   );
 
@@ -222,6 +293,12 @@ function bind() {
 
   $('#nv-form').addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (!st.IS_MANAGER_OR_ADMIN) {
+      showErr('Bạn không có quyền thực hiện thao tác này.');
+      return;
+    }
+
+    // Logic lưu giữ nguyên
     const payload = {
       ho_ten: $('#nv-ho_ten').value.trim(),
       gioi_tinh: $('#nv-gioi_tinh').value || 'Nam',
@@ -264,15 +341,26 @@ function bind() {
     const act = btn.dataset.act;
     const item = st.list.find((x) => String(x.id) === String(id));
 
-    if (act === 'edit') {
-      if (!canEditOrDelete()) return alert('Bạn không có quyền');
-      openModal(item);
+    if (act === 'view') {
+      openModal(item, 'view');
     }
+
+    // Sửa và Xóa chỉ cho phép nếu là Admin/Manager và không phải đang ở chế độ xem
+    if (act === 'edit') {
+      if (!st.IS_MANAGER_OR_ADMIN) return alert('Bạn không có quyền');
+      openModal(item, 'edit');
+    }
+
     if (act === 'del') {
-      if (!canEditOrDelete()) return alert('Bạn không có quyền');
+      if (!st.IS_MANAGER_OR_ADMIN) return alert('Bạn không có quyền');
       if (!confirm(`Xoá nhân viên #${id}?`)) return;
-      await api(`/nhan-vien/${id}`, { method: 'DELETE' });
-      await fetchList();
+
+      try {
+        await api(`/nhan-vien/${id}`, { method: 'DELETE' });
+        await fetchList();
+      } catch (err) {
+        alert(err?.message || 'Không thể xoá');
+      }
     }
   });
 
@@ -291,8 +379,16 @@ function showErr(m) {
 async function init() {
   requireAuthOrRedirect('./dangnhap.html');
   if (!getToken()) return;
+
+  // Thiết lập quyền và vai trò
+  st.USER = getUser();
+  st.ROLE = st.USER?.role ?? st.USER?.quyen ?? 'employee';
+  st.IS_ADMIN = st.ROLE === 'admin';
+  st.IS_MANAGER_OR_ADMIN = st.ROLE === 'admin' || st.ROLE === 'manager';
+
   const yearEl = document.getElementById('y');
   if (yearEl) yearEl.textContent = new Date().getFullYear();
+
   setUserBadge();
   await loadPhongBans();
   await loadChucVus();

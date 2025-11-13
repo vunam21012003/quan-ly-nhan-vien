@@ -1,0 +1,37 @@
+/* src/views/assets/css/phong-ban.css */
+
+/* 1. Thiết lập cho Mobile */
+@media (max-width: 600px) {
+  /* Ẩn bớt cột trong bảng để tránh tràn */
+  .table thead th:nth-child(1), /* Ẩn cột ID */
+    .table td:nth-child(1),
+    .table thead th:nth-child(3), /* Ẩn cột Mô tả */
+    .table td:nth-child(3) {
+    display: none;
+  }
+
+  /* Đảm bảo các cột còn lại hiển thị tốt */
+  .table th,
+  .table td {
+    padding: 8px 5px; /* Giảm padding */
+    font-size: 14px; /* Giảm cỡ chữ */
+  }
+
+  /* 2. Điều chỉnh thanh công cụ (Toolbar) */
+  .page-header .toolbar {
+    flex-direction: column; /* Xếp các phần tử theo cột */
+    gap: 8px; /* Khoảng cách giữa các phần tử */
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  .page-header .toolbar input[type='search'] {
+    width: 100%; /* Đảm bảo ô tìm kiếm chiếm toàn bộ chiều rộng */
+  }
+
+  /* Nhóm các nút lại thành một hàng nhỏ nếu cần */
+  .page-header .toolbar button {
+    flex-grow: 1;
+    width: 100%; /* Mở rộng nút tìm kiếm và tạo mới */
+  }
+}

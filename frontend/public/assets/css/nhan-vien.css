@@ -26,6 +26,13 @@
 .table-wrap {
   overflow: auto;
 }
+.page-btn.btn-sm {
+  padding: 2px 5px;
+  font-size: 12px;
+}
+.td-actions {
+  min-width: 150px; /* Đảm bảo đủ chỗ cho 3 nút */
+}
 
 /* Phân trang đơn giản */
 .pagination {
@@ -46,4 +53,89 @@
 .page-btn[disabled] {
   opacity: 0.5;
   cursor: default;
+}
+
+/* ------------------------------------- */
+/* Tối ưu Modal/Form Nhân viên */
+/* ------------------------------------- */
+#nv-modal .form {
+  padding: 20px !important;
+  min-width: 550px; /* Chiều rộng tối thiểu cho desktop */
+}
+
+/* Áp dụng Grid 2 cột cho các form group để xem chi tiết đẹp hơn */
+#nv-form {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px 25px; /* Giảm khoảng cách dọc, tăng khoảng cách ngang */
+}
+
+#nv-form h3 {
+  grid-column: 1 / -1; /* Tiêu đề chiếm trọn 2 cột */
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+  margin-bottom: 15px !important;
+}
+
+/* Đảm bảo Ghi chú, Lỗi, và nút hành động chiếm trọn 2 cột */
+#nv-form .form-group:has(textarea),
+#nv-form #nv-error,
+#nv-form > div:last-child {
+  grid-column: 1 / -1;
+}
+
+/* Đảm bảo form-group vẫn đúng quy chuẩn của bạn */
+#nv-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0; /* Loại bỏ margin-bottom mặc định của form-group */
+}
+
+/* ------------------------------------- */
+/* Responsive cho thiết bị di động (Mobile) */
+/* ------------------------------------- */
+@media (max-width: 900px) {
+  /* 1. Tối ưu Toolbar */
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .toolbar {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  .toolbar input,
+  .toolbar select,
+  .toolbar button {
+    flex-grow: 1;
+    min-width: 100px;
+  }
+
+  /* 2. Ẩn bớt cột trong bảng lớn */
+  .table thead th.col-id,
+  .table tbody td:nth-child(1),
+  .table thead th.col-gt,
+  .table tbody td:nth-child(3),
+  .table thead th.col-email,
+  .table tbody td:nth-child(6),
+  .table thead th.col-sdt,
+  .table tbody td:nth-child(7),
+  .table thead th.col-ngayvao,
+  .table tbody td:nth-child(8),
+  .table thead th.col-tt,
+  .table tbody td:nth-child(9) {
+    display: none;
+  }
+
+  /* 3. Tối ưu Modal trên Mobile */
+  #nv-modal .form {
+    min-width: unset;
+    width: 95vw;
+    max-width: 500px;
+  }
+  #nv-form {
+    grid-template-columns: 1fr; /* Trở về 1 cột trên mobile */
+    gap: 15px;
+  }
 }

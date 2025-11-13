@@ -5,7 +5,7 @@ import * as controller from "../controllers/chucvuController";
 
 const router = Router();
 
-router.get("/", requireAuth, requireRole(["admin", "manager", "employee"]), controller.list);
+router.get("/", requireAuth, requireRole(["admin", "manager"]), controller.list);
 router.post("/", requireAuth, requireRole(["admin"]), controller.create);
 router.put("/:id", requireAuth, requireRole(["admin"]), controller.update);
 router.delete("/:id", requireAuth, requireRole(["admin"]), controller.remove);

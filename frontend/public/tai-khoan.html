@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Tài khoản - Quản lý nhân viên</title>
     <link rel="stylesheet" href="./assets/css/styles.css" />
+    <link rel="stylesheet" href="./assets/css/tai-khoan.css" />
   </head>
 
   <body class="bg">
@@ -31,7 +32,6 @@
         </div>
       </div>
 
-      <!-- BẢNG TÀI KHOẢN -->
       <div class="table-wrap">
         <table class="table">
           <thead>
@@ -53,7 +53,6 @@
         </table>
       </div>
 
-      <!-- PHÂN TRANG -->
       <div class="pagination">
         <button id="prev" class="page-btn">«</button>
         <span id="pageInfo" class="text-muted">Trang 1/1</span>
@@ -61,14 +60,22 @@
       </div>
     </main>
 
-    <!-- MODAL -->
     <dialog id="modal" style="max-width: 500px">
       <form id="form" method="dialog" class="form" style="padding: 10px 2px">
         <h3 id="modal-title">Thêm tài khoản</h3>
 
         <div class="form-group">
-          <label for="m-nvId">ID nhân viên</label>
-          <input id="m-nvId" type="number" required />
+          <label for="m-nvName">Nhân viên</label>
+          <input
+            id="m-nvName"
+            type="text"
+            placeholder="Nhập ID hoặc tên nhân viên..."
+            autocomplete="off"
+            required
+          />
+          <input id="m-nvId" type="hidden" />
+
+          <div id="nv-autocomplete-list" class="autocomplete-dropdown"></div>
         </div>
 
         <div class="form-group">
@@ -76,18 +83,14 @@
           <input
             id="m-username"
             type="text"
-            placeholder="Tự tạo từ họ tên nếu để trống"
+            placeholder="Tên đăng nhập (ví dụ: nguyenvanb)"
+            required
           />
         </div>
 
         <div class="form-group">
           <label for="m-password">Mật khẩu</label>
           <input id="m-password" type="password" placeholder="123456" />
-        </div>
-
-        <div class="form-group">
-          <label for="m-chucVu">Chức vụ</label>
-          <select id="m-chucVu" required></select>
         </div>
 
         <div class="form-group">

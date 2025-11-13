@@ -3,85 +3,93 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Trang chính</title>
+    <title>Trang chính - Dashboard</title>
 
-    <!-- Bootstrap -->
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
       rel="stylesheet"
     />
-    <!-- CSS chung -->
     <link href="assets/css/styles.css" rel="stylesheet" />
   </head>
   <body>
-    <!-- YÊU CẦU LOGIN -->
     <script src="assets/js/app.js"></script>
     <script>
+      // Hàm requireAuth() phải được định nghĩa trong app.js
       requireAuth();
     </script>
 
-    <!-- Load menu từ navbar.html -->
     <div id="menuContainer"></div>
 
     <main class="container py-4">
-      <h1 class="h4 mb-3">Xin chào, <span id="helloName"></span> 👋</h1>
-      <div class="row g-3">
-        <div class="col-md-3">
-          <div class="card p-3">
-            <div class="fw-medium">Tổng nhân viên</div>
+      <h1 class="h4 mb-4">Xin chào, <span id="helloName"></span> 👋</h1>
+
+      <div
+        id="adminManagerDashboard"
+        class="row g-3 mb-5"
+        style="display: none"
+      >
+        <h2 class="h5">📊 Tổng quan hệ thống</h2>
+        <div class="col-md-4">
+          <div class="card p-3 shadow-sm border-start border-primary border-4">
+            <div class="fw-medium text-primary">Tổng nhân viên</div>
             <div id="statNV" class="display-6">—</div>
           </div>
         </div>
-        <div class="col-md-3">
-          <div class="card p-3">
-            <div class="fw-medium">Bảng lương kỳ gần nhất</div>
+        <div class="col-md-4">
+          <div class="card p-3 shadow-sm border-start border-success border-4">
+            <div class="fw-medium text-success">Yêu cầu cần duyệt</div>
+            <div id="statPending" class="display-6">—</div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card p-3 shadow-sm border-start border-danger border-4">
+            <div class="fw-medium text-danger">NV Vắng mặt hôm nay</div>
+            <div id="statAbsent" class="display-6">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="employeeDashboard" class="row g-3 mb-5" style="display: none">
+        <h2 class="h5">🧑‍💼 Thông tin cá nhân & Hành động nhanh</h2>
+        <div class="col-md-4">
+          <div class="card p-3 shadow-sm border-start border-info border-4">
+            <div class="fw-medium text-info">Số ngày phép còn lại</div>
+            <div id="statPhep" class="display-6">—</div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div
+            class="card p-3 shadow-sm border-start border-secondary border-4"
+          >
+            <div class="fw-medium text-secondary">Lương kỳ gần nhất</div>
             <div id="statLuong" class="display-6">—</div>
+          </div>
+        </div>
+        <div class="col-md-4 d-flex align-items-center">
+          <a href="./nghi-phep.html" class="btn btn-primary w-100 py-3 fw-bold"
+            >📅 Tạo Yêu cầu Nghỉ phép</a
+          >
+        </div>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-12">
+          <h2 class="h5">🔔 Thông báo & Lịch sử gần đây</h2>
+          <div class="card p-3">
+            <p class="text-muted">
+              Tính năng hiển thị các thông báo, lịch sử chấm công, hoặc tin tức
+              công ty sẽ được phát triển tại đây.
+            </p>
           </div>
         </div>
       </div>
     </main>
 
-    <!-- Tự động load navbar + xử lý logout -->
     <script src="./assets/js/danh-sach.js"></script>
+
+    <script type="module" src="./assets/js/api.js"></script>
     <script type="module" src="./assets/js/navbar.js"></script>
 
-    <!-- Logic riêng -->
-    <script>
-      (function init() {
-        const user = currentUser();
-        document.getElementById('helloName').textContent = user?.username || '';
-
-        // Thêm link điều hướng theo role
-        const nav = document.querySelector('.navbar-nav');
-        const links = [
-          {
-            href: './nhan-vien.html',
-            text: 'Nhân viên',
-            roles: ['admin', 'manager'],
-          },
-          {
-            href: './luong.html',
-            text: 'Lương',
-            roles: ['admin', 'manager', 'employee'],
-          },
-        ];
-        links.forEach((l) => {
-          if (!l.roles || l.roles.includes(user.role)) {
-            const li = document.createElement('li');
-            li.className = 'nav-item';
-            li.innerHTML = `<a class="nav-link" href="${l.href}">${l.text}</a>`;
-            nav?.appendChild(li);
-          }
-        });
-
-        // Gọi API thống kê (ví dụ)
-        api
-          .get('/nhan-vien?limit=1&page=1', { auth: true })
-          .then(() => {
-            document.getElementById('statNV').textContent = '...'; // giả lập
-          })
-          .catch(() => {});
-      })();
-    </script>
+    <script type="module" src="./assets/js/trang-chinh.js"></script>
   </body>
 </html>

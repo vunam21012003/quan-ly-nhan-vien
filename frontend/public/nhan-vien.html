@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Nhân viên - Quản lý nhân viên</title>
     <link rel="stylesheet" href="./assets/css/styles.css" />
+    <link rel="stylesheet" href="./assets/css/nhan-vien.css" />
   </head>
   <body class="bg">
     <div id="menuContainer"></div>
@@ -32,16 +33,16 @@
         <table class="table">
           <thead>
             <tr>
-              <th>ID</th>
+              <th class="col-id">ID</th>
               <th>Họ tên</th>
-              <th>Giới tính</th>
+              <th class="col-gt">Giới tính</th>
               <th>Phòng ban</th>
               <th>Chức vụ</th>
-              <th>Email</th>
-              <th>SĐT</th>
-              <th>Ngày vào</th>
-              <th>Trạng thái</th>
-              <th>Thao tác</th>
+              <th class="col-email">Email</th>
+              <th class="col-sdt">SĐT</th>
+              <th class="col-ngayvao">Ngày vào</th>
+              <th class="col-tt">Trạng thái</th>
+              <th class="col-act">Thao tác</th>
             </tr>
           </thead>
           <tbody id="nv-tbody">
@@ -55,9 +56,8 @@
       <div class="pagination" id="nv-pagination"></div>
     </main>
 
-    <!-- Modal -->
     <dialog id="nv-modal">
-      <form id="nv-form" method="dialog" class="form" style="padding: 10px 2px">
+      <form id="nv-form" method="" class="form" style="padding: 10px 2px">
         <h3 id="nv-modal-title" style="margin: 0">Thêm nhân viên</h3>
 
         <div class="form-group">

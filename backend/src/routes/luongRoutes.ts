@@ -15,4 +15,13 @@ router.delete("/:id", requireAuth, requireRole(["admin"]), controller.remove);
 // ✅ Tính lương tháng theo mô hình 3P
 router.post("/tinh-thang", requireAuth, requireRole(["admin"]), controller.calcSalary);
 
+// ✅ Duyệt và hủy duyệt lương tháng
+router.post("/duyet-thang", requireAuth, requireRole(["admin"]), controller.duyetLuongTheoThang);
+router.post(
+  "/huy-duyet-thang",
+  requireAuth,
+  requireRole(["admin"]),
+  controller.huyDuyetLuongTheoThang
+);
+
 export default router;

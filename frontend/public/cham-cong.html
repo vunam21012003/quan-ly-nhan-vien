@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Chấm công - Quản lý nhân viên</title>
     <link rel="stylesheet" href="./assets/css/styles.css" />
+    <link rel="stylesheet" href="./assets/css/phan-cong-lam-bu.css" />
     <style>
-      /* ===== TAB MENU ===== */
+      /* ===== TAB MENU (giữ nguyên) ===== */
       .tab-menu {
         display: flex;
         gap: 10px;
@@ -44,7 +45,6 @@
         <h1 class="page-title">Quản lý chấm công</h1>
       </div>
 
-      <!-- ===== TAB MENU ===== -->
       <div class="tab-menu">
         <button class="tab-btn active" data-tab="cham-cong-tab">
           🕒 Chấm công
@@ -57,7 +57,6 @@
         </button>
       </div>
 
-      <!-- ===== TAB 1: CHẤM CÔNG ===== -->
       <section id="cham-cong-tab" class="tab-content active">
         <div class="toolbar">
           <input id="nvId" type="number" placeholder="Nhân viên ID" />
@@ -92,7 +91,6 @@
           <button id="btn-export" class="btn">📊 Xuất Excel</button>
         </div>
 
-        <!-- BẢNG CHẤM CÔNG -->
         <div class="table-wrap">
           <table class="table">
             <thead>
@@ -121,7 +119,6 @@
           <button id="next" class="page-btn">»</button>
         </div>
 
-        <!-- MODAL THÊM/SỬA CHẤM CÔNG -->
         <dialog id="modal" style="max-width: 620px">
           <form
             id="form"
@@ -172,7 +169,6 @@
         </dialog>
       </section>
 
-      <!-- ===== TAB 2: NGÀY LỄ ===== -->
       <section id="ngay-le-tab" class="tab-content">
         <h2>🎉 Danh sách ngày lễ / làm bù</h2>
         <div style="margin-bottom: 10px">
@@ -206,13 +202,10 @@
         </table>
       </section>
 
-      <!-- ===== TAB 3: THƯỞNG PHẠT ===== -->
       <section id="thuong-phat-tab" class="tab-content">
         <h2>💰 Quản lý thưởng phạt</h2>
 
-        <!-- THANH CÔNG CỤ -->
         <div id="thuong-phat-toolbar" style="margin-bottom: 10px">
-          <!-- Gợi ý nhân viên sẽ được thêm bằng JS -->
           <select id="tp-loai">
             <option value="THUONG">Thưởng</option>
             <option value="PHAT">Phạt</option>
@@ -232,7 +225,6 @@
             style="width: 200px"
           />
 
-          <!-- Bộ lọc -->
           <select id="tp-thang">
             <option value="">-- Tháng --</option>
           </select>
@@ -246,7 +238,6 @@
           <button id="btn-export-tp" class="btn">📊 Xuất Excel</button>
         </div>
 
-        <!-- BẢNG DỮ LIỆU -->
         <table class="table">
           <thead>
             <tr>
@@ -267,6 +258,33 @@
           </tbody>
         </table>
       </section>
+
+      <dialog id="phanCongModal" style="max-width: 500px">
+        <h3 style="margin: 0">Phân công nhân viên làm bù</h3>
+        <p>Ngày: <strong id="pc-ngay"></strong></p>
+        <div
+          id="pc-list"
+          style="
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 5px;
+            border: 1px solid #ddd;
+          "
+        ></div>
+        <div
+          style="
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            margin-top: 15px;
+          "
+        >
+          <button id="btn-pc-cancel" type="button" class="btn">Hủy</button>
+          <button id="btn-pc-save" type="button" class="btn btn-primary">
+            Lưu Phân công
+          </button>
+        </div>
+      </dialog>
     </main>
 
     <footer class="footer">
@@ -275,12 +293,10 @@
       </div>
     </footer>
 
-    <!-- JS MODULES -->
     <script src="./assets/js/danh-sach.js"></script>
     <script type="module" src="./assets/js/cham-cong.js"></script>
     <script type="module" src="./assets/js/thuong-phat.js"></script>
-
-    <!-- JS đổi tab -->
+    <script type="module" src="./assets/js/phan-cong-lam-bu.js"></script>
     <script>
       document.addEventListener('DOMContentLoaded', () => {
         const tabs = document.querySelectorAll('.tab-btn');

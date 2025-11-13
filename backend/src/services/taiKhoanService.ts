@@ -11,7 +11,8 @@ export const getAll = async (req: Request) => {
     SELECT tk.*, nv.ho_ten, cv.ten_chuc_vu, pb.ten_phong_ban
     FROM tai_khoan tk
     LEFT JOIN nhan_vien nv ON nv.id = tk.nhan_vien_id
-    LEFT JOIN chuc_vu cv ON cv.id = nv.chuc_vu_id
+    -- Lấy chức vụ từ nhân viên, không còn từ tk.chuc_vu_id
+    LEFT JOIN chuc_vu cv ON cv.id = nv.chuc_vu_id 
     LEFT JOIN phong_ban pb ON pb.id = nv.phong_ban_id
     ORDER BY tk.id DESC
   `
@@ -26,7 +27,8 @@ export const getById = async (id: number) => {
     SELECT tk.*, nv.ho_ten, cv.ten_chuc_vu, pb.ten_phong_ban
     FROM tai_khoan tk
     LEFT JOIN nhan_vien nv ON nv.id = tk.nhan_vien_id
-    LEFT JOIN chuc_vu cv ON cv.id = nv.chuc_vu_id
+    -- Lấy chức vụ từ nhân viên, không còn từ tk.chuc_vu_id
+    LEFT JOIN chuc_vu cv ON cv.id = nv.chuc_vu_id 
     LEFT JOIN phong_ban pb ON pb.id = nv.phong_ban_id
     WHERE tk.id = ?
     LIMIT 1
@@ -38,7 +40,7 @@ export const getById = async (id: number) => {
 
 // ================== TẠO TÀI KHOẢN ==================
 export const create = async (body: TaiKhoan) => {
-  const { nhan_vien_id, ten_dang_nhap, mat_khau, trang_thai, chuc_vu_id } = body;
+  const { nhan_vien_id, ten_dang_nhap, mat_khau, trang_thai } = body; // Bỏ chuc_vu_id
 
   if (!nhan_vien_id || !ten_dang_nhap) return { error: "Thiếu thông tin bắt buộc" };
 
@@ -54,10 +56,10 @@ export const create = async (body: TaiKhoan) => {
 
   const [r]: any = await pool.query(
     `
-    INSERT INTO tai_khoan (nhan_vien_id, chuc_vu_id, ten_dang_nhap, mat_khau, trang_thai)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO tai_khoan (nhan_vien_id, ten_dang_nhap, mat_khau, trang_thai)
+    VALUES (?, ?, ?, ?)
   `,
-    [nhan_vien_id, chuc_vu_id || null, ten_dang_nhap, hashedPassword, trang_thai || "active"]
+    [nhan_vien_id, ten_dang_nhap, hashedPassword, trang_thai || "active"] // Bỏ chuc_vu_id
   );
 
   return { id: r.insertId };
@@ -66,6 +68,7 @@ export const create = async (body: TaiKhoan) => {
 // ================== TẠO TỰ ĐỘNG KHI THÊM NHÂN VIÊN ==================
 export const createDefaultForNhanVien = async (nhan_vien_id: number, ho_ten: string) => {
   const username = removeVietnameseTones(ho_ten).toLowerCase().replace(/\s+/g, "");
+  // 🔥 Sửa lỗi: Đảm bảo mật khẩu mặc định được mã hóa trước khi lưu
   const hashed = await bcrypt.hash("123456", 10);
 
   const [r]: any = await pool.query(
@@ -81,7 +84,7 @@ export const createDefaultForNhanVien = async (nhan_vien_id: number, ho_ten: str
 
 // ================== CẬP NHẬT ==================
 export const update = async (id: number, body: Partial<TaiKhoan>) => {
-  const { ten_dang_nhap, mat_khau, trang_thai, chuc_vu_id } = body;
+  const { ten_dang_nhap, mat_khau, trang_thai } = body; // Bỏ chuc_vu_id
 
   // Nếu có thay đổi mật khẩu → hash lại
   const hashed = mat_khau ? await bcrypt.hash(mat_khau.trim(), 10) : undefined;
@@ -90,14 +93,13 @@ export const update = async (id: number, body: Partial<TaiKhoan>) => {
     `
     UPDATE tai_khoan
     SET ten_dang_nhap = ?, 
-        ${hashed ? "mat_khau = ?," : ""}
-        trang_thai = ?, 
-        chuc_vu_id = ?
+      ${hashed ? "mat_khau = ?," : ""}
+      trang_thai = ?
     WHERE id = ?
   `,
     hashed
-      ? [ten_dang_nhap, hashed, trang_thai || "active", chuc_vu_id || null, id]
-      : [ten_dang_nhap, trang_thai || "active", chuc_vu_id || null, id]
+      ? [ten_dang_nhap, hashed, trang_thai || "active", id] // Bỏ chuc_vu_id
+      : [ten_dang_nhap, trang_thai || "active", id] // Bỏ chuc_vu_id
   );
 
   if (!r.affectedRows) return { error: "Không tìm thấy tài khoản" };
@@ -118,7 +120,8 @@ export const login = async (username: string, password: string) => {
     SELECT tk.*, nv.ho_ten, cv.ten_chuc_vu
     FROM tai_khoan tk
     LEFT JOIN nhan_vien nv ON nv.id = tk.nhan_vien_id
-    LEFT JOIN chuc_vu cv ON cv.id = tk.chuc_vu_id
+    -- Lấy chức vụ từ nhan_vien, không phải tk.chuc_vu_id
+    LEFT JOIN chuc_vu cv ON cv.id = nv.chuc_vu_id 
     WHERE tk.ten_dang_nhap = ?
     LIMIT 1
   `,

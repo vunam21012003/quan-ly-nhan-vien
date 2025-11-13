@@ -1,3 +1,4 @@
+import { openPhanCongModal } from './phan-cong-lam-bu.js';
 import {
   api,
   getUser,
@@ -229,19 +230,27 @@ $('#btn-export').addEventListener('click', async () => {
 async function fetchNgayLe() {
   const resp = await api('/ngay-le');
   const { items } = unwrap(resp);
+
   $('#tbody-le').innerHTML = items.length
     ? items
-        .map(
-          (x) => `<tr>
+        .map((x) => {
+          // 💡 PHẦN SỬA ĐỔI BẮT ĐẦU TỪ ĐÂY
+          let actionsHtml = `<button class="page-btn" data-id="${x.id}" data-act="del-le">Xoá</button>`;
+
+          // Thêm nút Phân công nếu là loại 'lam_bu'
+          if (x.loai === 'lam_bu') {
+            actionsHtml += ` <button class="page-btn btn-success" data-ngay="${x.ngay}" data-act="phan-cong">Phân công</button>`;
+          }
+          // 💡 PHẦN SỬA ĐỔI KẾT THÚC Ở ĐÂY
+
+          return `<tr>
           <td>${esc(fmtDate(x.ngay))}</td>
           <td>${esc(x.ten_ngay)}</td>
           <td>${esc(x.loai)}</td>
-          <td>${esc(x.so_ngay_nghi ?? '')}</td>  
-          <td><button class="page-btn" data-id="${
-            x.id
-          }" data-act="del-le">Xoá</button></td>
-        </tr>`
-        )
+          <td>${esc(x.so_ngay_nghi ?? '')}</td> 
+          <td>${actionsHtml}</td>
+        </tr>`;
+        })
         .join('')
     : `<tr><td colspan="5" class="text-muted">Không có dữ liệu</td></tr>`;
 }
@@ -335,12 +344,26 @@ function bind() {
   });
 
   $('#tbody-le').addEventListener('click', async (e) => {
-    const btn = e.target.closest("button[data-act='del-le']");
+    const btn = e.target.closest('button[data-act]'); // Thay đổi để bắt được tất cả nút có data-act
     if (!btn) return;
     const id = btn.dataset.id;
-    if (!confirm('Xoá ngày lễ này?')) return;
-    await api(`/ngay-le/${id}`, { method: 'DELETE' });
-    await fetchNgayLe();
+    const act = btn.dataset.act;
+
+    if (act === 'del-le') {
+      if (!confirm('Xoá ngày lễ này?')) return;
+      await api(`/ngay-le/${id}`, { method: 'DELETE' });
+      await fetchNgayLe();
+      return;
+    }
+
+    // 💡 PHẦN CẦN THÊM: Xử lý sự kiện Phân công
+    if (act === 'phan-cong') {
+      const ngay = btn.dataset.ngay;
+      await openPhanCongModal(ngay);
+      // Tải lại bảng sau khi lưu phân công
+      await fetchNgayLe();
+      return;
+    }
   });
 
   $('#logout-btn')?.addEventListener('click', () => {

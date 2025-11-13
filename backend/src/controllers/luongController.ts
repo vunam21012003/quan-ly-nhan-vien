@@ -87,3 +87,44 @@ export const calcSalary = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Server error" });
   }
 };
+
+// ===== DUYỆT LƯƠNG THEO THÁNG =====
+export const duyetLuongTheoThang = async (req: Request, res: Response) => {
+  try {
+    // ⚙️ Lấy user đăng nhập (giám đốc hoặc admin)
+    const user = (req as any).user;
+    const nhanVienId = user?.nhan_vien_id;
+
+    const { thang, nam } = req.query;
+    if (!thang || !nam) return res.status(400).json({ error: "Thiếu tham số thang hoặc nam" });
+
+    if (!nhanVienId)
+      return res.status(400).json({
+        error: "Tài khoản hiện tại chưa liên kết với nhân viên nào, không thể duyệt.",
+      });
+
+    const result = await service.duyetLuongTheoThang(req);
+    if ((result as any).error) return res.status(400).json({ error: (result as any).error });
+
+    res.json(result);
+  } catch (err) {
+    console.error("[POST /luong/duyet-thang] error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// ===== HỦY DUYỆT LƯƠNG THEO THÁNG =====
+export const huyDuyetLuongTheoThang = async (req: Request, res: Response) => {
+  try {
+    const { thang, nam } = req.query;
+    if (!thang || !nam) return res.status(400).json({ error: "Thiếu tham số thang hoặc nam" });
+
+    const result = await service.huyDuyetLuongTheoThang(Number(thang), Number(nam));
+    if ((result as any).error) return res.status(400).json({ error: (result as any).error });
+
+    res.json(result);
+  } catch (err) {
+    console.error("[POST /luong/huy-duyet-thang] error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+};

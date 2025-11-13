@@ -242,6 +242,72 @@ function bind() {
     }
   });
 
+  // ✅ THÊM NGAY SAU ĐOẠN TRÊN:
+  $('#btn-approve').addEventListener('click', async () => {
+    const thang = $('#thang').value,
+      nam = $('#nam').value;
+    if (!thang || !nam) {
+      alert('⚠️ Vui lòng chọn Tháng và Năm để duyệt!');
+      return;
+    }
+    if (!confirm(`Xác nhận duyệt toàn bộ lương tháng ${thang}/${nam}?`)) return;
+    try {
+      await api(`/luong/duyet-thang?thang=${thang}&nam=${nam}`, {
+        method: 'POST',
+      });
+      alert(`✅ Đã duyệt toàn bộ lương tháng ${thang}/${nam}!`);
+      await fetchList();
+    } catch (err) {
+      alert('❌ Lỗi duyệt: ' + (err?.message || 'Không xác định'));
+    }
+  });
+
+  $('#btn-unapprove').addEventListener('click', async () => {
+    const thang = $('#thang').value,
+      nam = $('#nam').value;
+    if (!thang || !nam) {
+      alert('⚠️ Vui lòng chọn Tháng và Năm để hủy duyệt!');
+      return;
+    }
+    if (!confirm(`Bạn có chắc muốn HỦY DUYỆT lương tháng ${thang}/${nam}?`))
+      return;
+    try {
+      await api(`/luong/huy-duyet-thang?thang=${thang}&nam=${nam}`, {
+        method: 'POST',
+      });
+      alert(`🔁 Đã hủy duyệt lương tháng ${thang}/${nam}!`);
+      await fetchList();
+    } catch (err) {
+      alert('❌ Lỗi hủy duyệt: ' + (err?.message || 'Không xác định'));
+    }
+  });
+
+  $('#btn-calc').addEventListener('click', async () => {
+    const thang = $('#thang').value,
+      nam = $('#nam').value;
+    if (!thang || !nam) {
+      alert('⚠️ Vui lòng chọn Tháng và Năm để tính lương!');
+      return;
+    }
+    const checkResp = await api(`/luong?thang=${thang}&nam=${nam}`);
+    const { items } = unwrap(checkResp);
+    const hasLuong = items && items.length > 0;
+    const msg = hasLuong
+      ? `Bạn có chắc muốn tính lại lương tháng ${thang}/${nam}?`
+      : `Bạn có chắc muốn tính lương tháng ${thang}/${nam}?`;
+    if (!confirm(msg)) return;
+
+    try {
+      await api(`/luong/tinh-thang?thang=${thang}&nam=${nam}`, {
+        method: 'POST',
+      });
+      await fetchList();
+      alert(`✅ Đã tính lương tháng ${thang}/${nam} thành công!`);
+    } catch (err) {
+      alert('❌ Lỗi khi tính lương: ' + (err?.message || 'Không xác định'));
+    }
+  });
+
   $('#btn-cancel').addEventListener('click', closeModal);
   $('#form').addEventListener('submit', onSave);
 

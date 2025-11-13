@@ -15,6 +15,29 @@ export const getByDate = async (ngay: string) => {
   return rows;
 };
 
+/** 💡 Lấy danh sách nhân viên. Nếu phongBanId là NULL (cho Admin), lấy tất cả. */
+export const getNhanVienChoPhanCong = async (phongBanId: number | null) => {
+  let query = `
+        SELECT 
+            nv.id, nv.ho_ten, 
+            pb.ten_phong_ban
+        FROM nhan_vien nv
+        LEFT JOIN phong_ban pb ON nv.phong_ban_id = pb.id
+    `;
+  const params = [];
+
+  // Lọc theo phongBanId nếu nó KHÔNG phải là null
+  if (phongBanId !== null) {
+    query += ` WHERE nv.phong_ban_id = ?`;
+    params.push(phongBanId);
+  }
+
+  query += ` ORDER BY nv.ho_ten ASC`;
+
+  const [rows]: any = await pool.query(query, params);
+  return { items: rows }; // Trả về dạng { items: [...] }
+};
+
 /** Lưu danh sách nhân viên được phân công làm bù */
 export const saveForDate = async (ngay: string, nhanVienIds: number[]) => {
   await pool.query(`DELETE FROM phan_cong_lam_bu WHERE ngay = ?`, [ngay]);

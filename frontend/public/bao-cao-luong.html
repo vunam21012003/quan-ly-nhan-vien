@@ -48,13 +48,14 @@
           <select id="thang">
             <option value="">Tháng</option>
             <script>
-              for (let i = 1; i <= 12; i++) {
+              for (let i = 1; i <= 12; i++)
                 document.write(`<option value="${i}">${i}</option>`);
-              }
             </script>
           </select>
-          <input id="nam" type="number" placeholder="Năm (vd: 2025)" />
+          <select id="nam"></select>
+          <input id="search" placeholder="Tìm theo tên nhân viên" />
           <button id="btn-run" class="btn btn-primary">Xem báo cáo</button>
+          <button id="btn-export" class="btn btn-success">⬇️ Xuất Excel</button>
         </div>
       </div>
 
@@ -72,7 +73,7 @@
               <th>Phụ cấp</th>
               <th>Thưởng</th>
               <th>Khác</th>
-              <th>Tổng</th>
+              <th>Thực nhận</th>
               <th style="width: 120px">Chi tiết</th>
             </tr>
           </thead>
@@ -108,4 +109,17 @@
     <script type="module" src="./assets/js/bao-cao-luong.js"></script>
     <script type="module" src="./assets/js/navbar.js"></script>
   </body>
+
+  <script>
+    // ✅ Năm tự động theo năm hiện tại
+    const yearSel = document.getElementById('nam');
+    const currentYear = new Date().getFullYear();
+    for (let i = currentYear - 5; i <= currentYear + 1; i++) {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = i;
+      if (i === currentYear) opt.selected = true;
+      yearSel.appendChild(opt);
+    }
+  </script>
 </html>

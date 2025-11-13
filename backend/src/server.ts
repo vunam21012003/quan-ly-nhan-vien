@@ -129,7 +129,7 @@ app.use("/luong", requireAuth, requireRole(["admin", "manager"]), luongRoutes);
 
 // ✅ Lịch sử trả lương, báo cáo, phân tích công
 app.use("/lich-su-tra-luong", requireAuth, requireRole(["admin", "manager"]), lichSuTraLuongRoutes);
-app.use("/bao-cao-luong", requireAuth, requireRole(["admin", "manager"]), baoCaoLuongRoutes);
+app.use("/bao-cao", requireAuth, requireRole(["admin", "manager"]), baoCaoLuongRoutes);
 app.use("/phan-tich-cong", requireAuth, requireRole(["admin", "manager"]), phanTichCongRoutes);
 
 // ✅ Tài khoản (Admin + Manager kế toán)
