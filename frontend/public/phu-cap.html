@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Phụ cấp - Quản lý nhân viên</title>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="./assets/css/styles.css" />
+    <link rel="stylesheet" href="./assets/css/phu-cap.css" />
+
+    <style>
+      /* ===== TAB MENU ===== */
+      .tab-menu {
+        display: flex;
+        gap: 10px;
+        margin: 15px 0;
+        border-bottom: 2px solid #ddd;
+        padding-bottom: 6px;
+      }
+      .tab-btn {
+        background: #f3f3f3;
+        border: 1px solid #ccc;
+        padding: 6px 16px;
+        border-radius: 6px 6px 0 0;
+        cursor: pointer;
+        font-weight: bold;
+      }
+      .tab-btn.active {
+        background: #007bff;
+        color: white;
+        border-color: #007bff;
+      }
+      .tab-content {
+        display: none;
+      }
+      .tab-content.active {
+        display: block;
+      }
+    </style>
+  </head>
+
+  <body class="bg">
+    <div id="menuContainer"></div>
+
+    <main class="container">
+      <div class="page-header">
+        <h1 class="page-title">Quản lý phụ cấp</h1>
+      </div>
+
+      <!-- TAB MENU -->
+      <div class="tab-menu">
+        <button class="tab-btn active" data-tab="loai-tab">
+          📂 Loại phụ cấp
+        </button>
+        <button class="tab-btn" data-tab="thang-tab">🗓️ Phụ cấp tháng</button>
+      </div>
+
+      <!-- ==================================================== -->
+      <!--  TAB 1 — LOẠI PHỤ CẤP                               -->
+      <!-- ==================================================== -->
+      <section id="loai-tab" class="tab-content active">
+        <div class="toolbar">
+          <button id="btn-add-loai" class="btn btn-primary">
+            ➕ Thêm loại phụ cấp
+          </button>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Tên loại</th>
+                <th>Mô tả</th>
+                <th>Loại</th>
+                <th>Tính BHXH</th>
+                <th>Mặc định (VNĐ)</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+
+            <tbody id="loai-body">
+              <tr>
+                <td colspan="7" class="text-muted">Đang tải…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Modal Loại Phụ Cấp -->
+        <dialog id="modal-loai" style="max-width: 420px">
+          <form id="form-loai" class="form" method="dialog">
+            <h3 id="loai-title">Thêm loại phụ cấp</h3>
+            <input type="hidden" id="loai-id" />
+
+            <div class="form-group">
+              <label for="loai-ten">Tên phụ cấp</label>
+              <input id="loai-ten" type="text" required />
+            </div>
+
+            <div class="form-group">
+              <label for="loai-mo-ta">Mô tả</label>
+              <textarea id="loai-mo-ta" rows="2"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="loai-is-fixed">Loại phụ cấp</label>
+              <select id="loai-is-fixed">
+                <option value="1">Cố định (gắn hợp đồng)</option>
+                <option value="0">Theo tháng</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label style="display: flex; align-items: center; gap: 6px">
+                <input type="checkbox" id="loai-tinh-bhxh" />
+                Tính BHXH
+              </label>
+            </div>
+
+            <div class="form-group">
+              <label for="loai-mac-dinh">Số tiền mặc định (VNĐ)</label>
+              <input type="number" id="loai-mac-dinh" min="0" value="0" />
+            </div>
+
+            <div class="alert alert-error" id="loai-error" hidden></div>
+
+            <div style="display: flex; gap: 8px; justify-content: flex-end">
+              <button id="btn-cancel-loai" type="button" class="btn">
+                Hủy
+              </button>
+              <button id="btn-save-loai" type="submit" class="btn btn-primary">
+                Lưu
+              </button>
+            </div>
+          </form>
+        </dialog>
+      </section>
+
+      <!-- ==================================================== -->
+      <!--  TAB 2 — PHỤ CẤP THÁNG                               -->
+      <!-- ==================================================== -->
+      <section id="thang-tab" class="tab-content">
+        <div class="toolbar">
+          <select id="filter-nv">
+            <option value="">-- Nhân viên --</option>
+          </select>
+
+          <select id="filter-thang">
+            <option value="">-- Tháng --</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+            <option value="10">10</option>
+            <option value="11">11</option>
+            <option value="12">12</option>
+          </select>
+
+          <input
+            type="number"
+            id="filter-nam"
+            placeholder="Năm"
+            style="width: 120px"
+          />
+
+          <button id="button-filter" class="btn">Lọc</button>
+
+          <button id="btn-show-all" type="button" class="btn btn-info">
+            📌 Hiển thị tất cả
+          </button>
+          <button id="btn-add-thang" class="btn btn-primary">
+            ➕ Thêm phụ cấp tháng
+          </button>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nhân viên</th>
+                <th>Tháng/Năm</th>
+                <th>Loại phụ cấp</th>
+                <th>Số tiền</th>
+                <th>Ghi chú</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="thang-body">
+              <tr>
+                <td colspan="7" class="text-muted">Đang tải…</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="pagination" id="pc-pagination" style="margin-top: 10px">
+            <button id="pc-prev" class="page-btn">«</button>
+            <span id="pc-pageInfo" class="text-muted">Trang 1/1</span>
+            <button id="pc-next" class="page-btn">»</button>
+          </div>
+        </div>
+
+        <!-- Modal Phụ Cấp Tháng - Chỉ cần cập nhật phần này -->
+        <dialog id="modal-thang">
+          <form id="form-thang" class="form" method="dialog">
+            <h3 id="thang-title">Thêm phụ cấp tháng</h3>
+            <input type="hidden" id="thang-id" />
+
+            <div class="form-group">
+              <label for="thang-nv">Nhân viên *</label>
+              <select id="thang-nv" required></select>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="thang-thang">Tháng</label>
+                <input
+                  type="number"
+                  id="thang-thang"
+                  min="1"
+                  max="12"
+                  placeholder="1-12"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="thang-nam">Năm</label>
+                <input type="number" id="thang-nam" placeholder="2025" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="thang-loai">Loại phụ cấp *</label>
+              <select id="thang-loai" multiple required></select>
+              <small
+                >💡 Ctrl+Click (Windows) hoặc Cmd+Click (Mac) để chọn nhiều
+                loại</small
+              >
+            </div>
+
+            <!-- ⭐ Số tiền theo từng loại phụ cấp (được sinh tự động) -->
+            <div class="form-group">
+              <label>Số tiền theo từng loại</label>
+              <div id="money-container"></div>
+            </div>
+
+            <div class="form-group">
+              <label for="thang-note">Ghi chú</label>
+              <textarea
+                id="thang-note"
+                rows="3"
+                placeholder="Nhập ghi chú (không bắt buộc)"
+              ></textarea>
+            </div>
+
+            <div class="alert alert-error" id="thang-error" hidden></div>
+
+            <div>
+              <button id="btn-cancel-thang" type="button" class="btn">
+                Hủy
+              </button>
+              <button id="btn-save-thang" type="submit" class="btn btn-primary">
+                Lưu
+              </button>
+            </div>
+          </form>
+        </dialog>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <small>© <span id="y"></span> HR System</small>
+      </div>
+    </footer>
+
+    <!-- JS -->
+    <script src="./assets/js/danh-sach.js"></script>
+    <script type="module" src="./assets/js/phu-cap-loai.js"></script>
+    <script type="module" src="./assets/js/phu-cap-thang.js"></script>
+    <script type="module" src="./assets/js/navbar.js"></script>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('y').textContent = new Date().getFullYear();
+
+        const tabs = document.querySelectorAll('.tab-btn');
+        const sections = document.querySelectorAll('.tab-content');
+
+        tabs.forEach((tab) => {
+          tab.addEventListener('click', () => {
+            tabs.forEach((t) => t.classList.remove('active'));
+            sections.forEach((s) => s.classList.remove('active'));
+
+            tab.classList.add('active');
+            document.getElementById(tab.dataset.tab)?.classList.add('active');
+          });
+        });
+      });
+    </script>
+  </body>
+</html>

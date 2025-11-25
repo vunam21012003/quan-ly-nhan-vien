@@ -1,3 +1,4 @@
+//phanCongLamBuRoutes.ts
 import { Router } from "express";
 import { requireAuth, requireRole } from "../middlewares/auth"; // 💡 Cần import 2 hàm này
 import * as controller from "../controllers/phanCongLamBuController";

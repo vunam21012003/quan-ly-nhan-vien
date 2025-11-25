@@ -1,0 +1,151 @@
+/* Định nghĩa màu sắc cơ bản được dùng trong trang này */
+:root {
+  --primary: #007bff;
+  --success: #28a745;
+  --danger: #dc3545;
+  --warning: #ffc107;
+  --muted: #6c757d;
+  --border: #e9ecef;
+}
+
+/* -------------------- KPI Cards CSS -------------------- */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+.card-kpi {
+  padding: 20px;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border-left: 5px solid var(--primary); /* Thêm gạch dọc màu */
+  transition: transform 0.2s;
+}
+.card-kpi:hover {
+  transform: translateY(-2px);
+}
+.card-kpi.danger {
+  border-left-color: var(--danger);
+}
+.kpi-title {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.kpi-value {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 8px 0 4px 0;
+  color: var(--primary);
+}
+.card-kpi.danger .kpi-value {
+  color: var(--danger);
+}
+.kpi-sub {
+  font-size: 12px;
+  color: #999;
+  margin-top: 4px;
+}
+
+/* -------------------- Tabs CSS -------------------- */
+.tab-group {
+  display: flex;
+  gap: 16px;
+  margin-top: 24px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #e9ecef; /* Đường kẻ dưới chung */
+}
+.tab-btn {
+  padding: 10px 0;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent; /* Gạch chân trong suốt */
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--muted);
+  transition: all 0.2s;
+  white-space: nowrap; /* Ngăn nút bị xuống dòng */
+}
+.tab-btn:hover {
+  color: #343a40;
+}
+.tab-btn.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  font-weight: 700;
+}
+
+/* -------------------- Status Badge CSS -------------------- */
+.badge-status {
+  display: inline-block;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.badge-ok {
+  background: #d4edda;
+  color: #155724;
+} /* Success */
+.badge-warning {
+  background: #fff3cd;
+  color: #856404;
+} /* Pending */
+.badge-danger {
+  background: #f8d7da;
+  color: #721c24;
+} /* Failed/Canceled */
+.badge-info {
+  background: #d1ecf1;
+  color: #0c5460;
+} /* Not Paid/Unknown */
+
+/* -------------------- Modal Detail Styling CSS -------------------- */
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 20px;
+}
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 0;
+  border-bottom: 1px dashed #e9ecef;
+}
+.detail-label {
+  font-weight: 500;
+  color: #495057;
+}
+.detail-value {
+  font-weight: 600;
+  color: #212529;
+}
+.detail-total {
+  font-size: 1.1em;
+  font-weight: 700;
+  padding-top: 10px;
+  border-top: 2px solid #ced4da;
+}
+
+dialog.modal-box {
+  border: none;
+  border-radius: 8px;
+  padding: 0;
+  max-width: 720px;
+  width: 90%;
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.modal-content {
+  padding: 20px;
+  max-height: 80vh;
+  overflow-y: auto;
+}

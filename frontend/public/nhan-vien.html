@@ -61,6 +61,22 @@
         <h3 id="nv-modal-title" style="margin: 0">Thêm nhân viên</h3>
 
         <div class="form-group">
+          <label>Ảnh đại diện</label>
+          <input id="nv-anh_dai_dien" type="file" accept="image/*" />
+          <img
+            id="nv-preview"
+            src=""
+            style="
+              width: 80px;
+              height: 80px;
+              border-radius: 8px;
+              margin-top: 6px;
+              display: none;
+            "
+          />
+        </div>
+
+        <div class="form-group">
           <label for="nv-ho_ten">Họ tên</label>
           <input id="nv-ho_ten" required />
         </div>
@@ -95,7 +111,7 @@
 
         <div class="form-group">
           <label for="nv-phong_ban_id">Phòng ban</label>
-          <select id="nv-phong_ban_id" required></select>
+          <select id="nv-phong_ban_id"></select>
         </div>
 
         <div class="form-group">

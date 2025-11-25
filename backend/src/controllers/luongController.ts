@@ -13,7 +13,7 @@ export const getAll = async (req: Request, res: Response) => {
   }
 };
 
-// ===== DANH SÁCH LƯƠNG CỦA CHÍNH NHÂN VIÊN =====
+// ===== LƯƠNG CỦA NGƯỜI ĐĂNG NHẬP =====
 export const getMine = async (req: Request, res: Response) => {
   try {
     const result = await service.getMine(req as any);
@@ -24,36 +24,42 @@ export const getMine = async (req: Request, res: Response) => {
   }
 };
 
-// ===== LẤY CHI TIẾT THEO ID =====
+// ===== LẤY CHI TIẾT =====
 export const getById = async (req: Request, res: Response) => {
   try {
-    const result = await service.getById(req);
-    if (!result) return res.status(404).json({ message: "Không tìm thấy" });
-    res.json(result);
+    const row = await service.getById(req);
+    if (!row) return res.status(404).json({ message: "Không tìm thấy" });
+
+    // 🟩 Bổ sung tự động P1, P2, P3 nếu thiếu (frontend cần)
+    row.luong_p1 = row.luong_thoa_thuan ?? 0;
+    row.luong_p2 = row.luong_p2 ?? 0;
+    row.luong_p3 = row.luong_p3 ?? 0;
+
+    res.json(row);
   } catch (err) {
     console.error("[GET /luong/:id] error:", err);
     res.status(500).json({ error: "Server error" });
   }
 };
 
-// ===== TẠO BẢN LƯƠNG =====
+// ===== TẠO =====
 export const create = async (req: Request, res: Response) => {
   try {
     const result = await service.create(req.body);
-    if ((result as any).error) return res.status(400).json({ error: (result as any).error });
-    res.status(201).json({ id: (result as any).id });
+    if (result.error) return res.status(400).json(result);
+    res.status(201).json(result);
   } catch (err) {
     console.error("[POST /luong] error:", err);
     res.status(500).json({ error: "Server error" });
   }
 };
 
-// ===== CẬP NHẬT BẢN LƯƠNG =====
+// ===== CẬP NHẬT =====
 export const update = async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     const result = await service.update(id, req.body);
-    if ((result as any).error) return res.status(400).json({ error: (result as any).error });
+    if (result.error) return res.status(400).json(result);
     res.json({ ok: true });
   } catch (err) {
     console.error("[PUT /luong/:id] error:", err);
@@ -61,7 +67,7 @@ export const update = async (req: Request, res: Response) => {
   }
 };
 
-// ===== XOÁ BẢN LƯƠNG =====
+// ===== XOÁ =====
 export const remove = async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
@@ -74,7 +80,7 @@ export const remove = async (req: Request, res: Response) => {
   }
 };
 
-// ===== TÍNH LƯƠNG THEO THÁNG =====
+// ===== TÍNH LƯƠNG =====
 export const calcSalary = async (req: Request, res: Response) => {
   try {
     const { thang, nam } = req.query;
@@ -88,43 +94,16 @@ export const calcSalary = async (req: Request, res: Response) => {
   }
 };
 
-// ===== DUYỆT LƯƠNG THEO THÁNG =====
-export const duyetLuongTheoThang = async (req: Request, res: Response) => {
+// ===== DUYỆT LƯƠNG/ HỦY DUYỆT =====
+export const toggleDuyet = async (req: Request, res: Response) => {
   try {
-    // ⚙️ Lấy user đăng nhập (giám đốc hoặc admin)
-    const user = (req as any).user;
-    const nhanVienId = user?.nhan_vien_id;
+    const result = await service.toggleDuyetLuong(req);
 
-    const { thang, nam } = req.query;
-    if (!thang || !nam) return res.status(400).json({ error: "Thiếu tham số thang hoặc nam" });
-
-    if (!nhanVienId)
-      return res.status(400).json({
-        error: "Tài khoản hiện tại chưa liên kết với nhân viên nào, không thể duyệt.",
-      });
-
-    const result = await service.duyetLuongTheoThang(req);
-    if ((result as any).error) return res.status(400).json({ error: (result as any).error });
+    if (result.error) return res.status(400).json(result);
 
     res.json(result);
   } catch (err) {
-    console.error("[POST /luong/duyet-thang] error:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-};
-
-// ===== HỦY DUYỆT LƯƠNG THEO THÁNG =====
-export const huyDuyetLuongTheoThang = async (req: Request, res: Response) => {
-  try {
-    const { thang, nam } = req.query;
-    if (!thang || !nam) return res.status(400).json({ error: "Thiếu tham số thang hoặc nam" });
-
-    const result = await service.huyDuyetLuongTheoThang(Number(thang), Number(nam));
-    if ((result as any).error) return res.status(400).json({ error: (result as any).error });
-
-    res.json(result);
-  } catch (err) {
-    console.error("[POST /luong/huy-duyet-thang] error:", err);
+    console.error("[POST /luong/toggle-duyet] error:", err);
     res.status(500).json({ error: "Server error" });
   }
 };

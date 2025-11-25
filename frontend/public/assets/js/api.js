@@ -33,20 +33,30 @@ export async function api(
   path,
   { method = 'GET', body, headers, formData = false } = {}
 ) {
+  const isFormData = formData || body instanceof FormData;
+
   const finalHeaders = {
     ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
     ...headers,
   };
 
-  if (!formData) {
+  if (!isFormData) {
     finalHeaders['Content-Type'] = 'application/json';
   }
 
-  const res = await fetch(API_BASE + path, {
+  const options = {
     method,
     headers: finalHeaders,
-    body: body ? (formData ? body : JSON.stringify(body)) : undefined,
-  });
+  };
+
+  // ⭐ FIX CHÍNH: KHÔNG BAO GIỜ set body trong GET hoặc HEAD
+  if (method !== 'GET' && method !== 'HEAD') {
+    if (body) {
+      options.body = isFormData ? body : JSON.stringify(body);
+    }
+  }
+
+  const res = await fetch(API_BASE + path, options);
 
   let data = {};
   try {

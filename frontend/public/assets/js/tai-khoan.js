@@ -215,7 +215,7 @@ async function handleDelete(id) {
 }
 
 // ================== KHỞI ĐỘNG ==================
-requireAuthOrRedirect('./dangnhap.html');
+requireAuthOrRedirect('./dang-nhap.html');
 
 if (canManage()) {
   loadTaiKhoan();

@@ -1,3 +1,4 @@
+//express.d.ts
 import type { JwtUser } from "../middlewares/auth";
 
 declare global {

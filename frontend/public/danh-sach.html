@@ -1,18 +1,73 @@
 <header class="navbar">
-  <div class="container">
-    <div class="nav-brand">Quản lý nhân viên</div>
-    <div class="nav-right" id="nav-links">
-      <!-- Các menu mặc định -->
-      <a class="btn" href="./trang-chinh.html">Trang chính</a>
-      <a class="btn" href="./nhan-vien.html">Nhân viên</a>
-      <a class="btn" href="./cham-cong.html">Chấm công</a>
-      <a class="btn" href="./luong.html">Lương</a>
-      <a class="btn" href="./bao-cao-luong.html">Báo cáo lương</a>
-      <a class="btn" href="./hop-dong.html">Hợp đồng</a>
+  <div class="container-navbar">
+    <div class="nav-left">
+      <div class="nav-brand">
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            d="M12 2L15.09 8.26H22L17.82 12.44L19.91 18.71L12 14.53L4.09 18.71L6.18 12.44L2 8.26H8.91L12 2Z"
+          />
+        </svg>
+        <span>HR System</span>
+      </div>
+      <nav class="nav-menu">
+        <a class="nav-link" href="./trang-chinh.html">Trang chính</a>
+        <a class="nav-link" href="./nhan-vien.html">Nhân viên</a>
+        <a class="nav-link" href="./cham-cong.html">Chấm công</a>
+        <a class="nav-link" href="./luong.html">Lương</a>
+        <a class="nav-link" href="./bao-cao-luong.html">Báo cáo lương</a>
+        <a class="nav-link" href="./hop-dong.html">Hợp đồng</a>
+        <a class="nav-link" href="./phu-cap.html">Phụ cấp</a>
 
-      <!-- JS sẽ chèn thêm Phòng ban + Chức vụ vào ngay trước user-badge -->
-      <span id="user-badge" class="badge badge-muted">Đang tải user…</span>
-      <button id="logout-btn" class="btn">Đăng xuất</button>
+        <!-- Admin Menu - Hiển thị cho tất cả user nhưng routes sẽ chặn nếu không phải admin -->
+        <div class="admin-menu">
+          <a class="nav-link nav-link-admin" href="./phong-ban.html"
+            >Phòng ban</a
+          >
+          <a class="nav-link nav-link-admin" href="./chuc-vu.html">Chức vụ</a>
+          <a class="nav-link nav-link-admin" href="./tai-khoan.html"
+            >Tài khoản</a
+          >
+        </div>
+      </nav>
+    </div>
+
+    <div class="nav-right">
+      <span id="user-badge" class="badge badge-primary">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
+        </svg>
+        <span id="user-info">Đang tải...</span>
+      </span>
+      <button id="logout-btn" class="btn btn-logout">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+          <polyline points="16 17 21 12 16 7" />
+          <line x1="21" y1="12" x2="9" y2="12" />
+        </svg>
+        Đăng xuất
+      </button>
     </div>
   </div>
 </header>

@@ -13,15 +13,11 @@ router.put("/:id", requireAuth, requireRole(["admin"]), controller.update);
 router.delete("/:id", requireAuth, requireRole(["admin"]), controller.remove);
 
 // ✅ Tính lương tháng theo mô hình 3P
-router.post("/tinh-thang", requireAuth, requireRole(["admin"]), controller.calcSalary);
+import { requireKetoanOrAdmin } from "../middlewares/auth";
+
+router.post("/tinh-thang", requireAuth, requireKetoanOrAdmin, controller.calcSalary);
 
 // ✅ Duyệt và hủy duyệt lương tháng
-router.post("/duyet-thang", requireAuth, requireRole(["admin"]), controller.duyetLuongTheoThang);
-router.post(
-  "/huy-duyet-thang",
-  requireAuth,
-  requireRole(["admin"]),
-  controller.huyDuyetLuongTheoThang
-);
+router.post("/toggle-duyet", requireAuth, requireRole(["admin"]), controller.toggleDuyet);
 
 export default router;

@@ -14,6 +14,23 @@ const esc = (s) =>
         "'": '&#039;',
       }[m])
   );
+
+// ===== PHÂN QUYỀN FRONTEND =====
+const USER = JSON.parse(localStorage.getItem('hr_user') || '{}');
+const ROLE = (USER?.role || 'employee').toLowerCase();
+const IS_ADMIN = ROLE === 'admin';
+const IS_MANAGER = ROLE === 'manager';
+const IS_EMPLOYEE = ROLE === 'employee';
+const IS_ACC_MANAGER = USER?.isAccountingManager === true;
+
+// ===== PHÂN TRANG =====
+const stTP = {
+  page: 1,
+  limit: 10,
+  total: 0,
+  items: [],
+};
+
 const money = (v) => Number(v ?? 0).toLocaleString('vi-VN');
 const fmtDate = (s) => (s ? new Date(s).toLocaleDateString('vi-VN') : '');
 
@@ -25,7 +42,7 @@ const st = {
   filters: { thang: '', nam: '', nhan_vien_id: '', phong_ban_id: '' },
 };
 
-// ==== TẢI DỮ LIỆU NHÂN VIÊN ====
+// ==== LẤY DỮ LIỆU NHÂN VIÊN ====
 async function fetchNhanVienList() {
   try {
     const res = await api('/nhan-vien?limit=1000');
@@ -33,6 +50,45 @@ async function fetchNhanVienList() {
   } catch (e) {
     st.nhanVienList = [];
   }
+}
+
+function renderThuongPhatTable() {
+  const start = (stTP.page - 1) * stTP.limit;
+  const end = start + stTP.limit;
+  const rows = stTP.items.slice(start, end);
+
+  $('#tbody-tp').innerHTML = rows.length
+    ? rows
+        .map(
+          (x) => `
+      <tr>
+        <td>${x.id}</td>
+        <td>${esc(x.ho_ten ?? '')}</td>
+        <td>${esc(x.loai)}</td>
+        <td>${money(x.so_tien)}</td>
+        <td>${esc(x.ly_do ?? '')}</td>
+        <td>${fmtDate(x.ngay_tao)}</td>
+        <td>${esc(x.nguoi_tao ?? '')}</td>
+        <td>
+          ${
+            IS_EMPLOYEE
+              ? ''
+              : `<button class="page-btn" data-act="del" data-id="${x.id}">🗑️</button>`
+          }
+        </td>
+      </tr>
+    `
+        )
+        .join('')
+    : `<tr><td colspan="8" class="text-muted">Không có dữ liệu</td></tr>`;
+
+  // ===== CẬP NHẬT PHÂN TRANG =====
+  stTP.total = stTP.items.length;
+  const totalPages = Math.max(1, Math.ceil(stTP.total / stTP.limit));
+
+  $('#tp-pageInfo').textContent = `Trang ${stTP.page}/${totalPages}`;
+  $('#tp-prev').disabled = stTP.page <= 1;
+  $('#tp-next').disabled = stTP.page >= totalPages;
 }
 
 // ==== GỢI Ý NHÂN VIÊN ====
@@ -131,6 +187,10 @@ async function loadPhongBan() {
 // ==== DANH SÁCH ====
 async function fetchList() {
   try {
+    // ⭐ Nếu là employee → fix phong_ban_id theo user
+    if (IS_EMPLOYEE && USER?.phong_ban_id) {
+      st.filters.phong_ban_id = USER.phong_ban_id;
+    }
     const { thang, nam, nhan_vien_id, phong_ban_id } = st.filters;
     const q = new URLSearchParams();
     if (thang) q.append('thang', thang);
@@ -141,32 +201,15 @@ async function fetchList() {
     const res = await api(`/thuong-phat?${q.toString()}`);
     const rows = res?.items || res?.data?.items || [];
 
-    $('#tbody-tp').innerHTML = rows.length
-      ? rows
-          .map(
-            (x) => `
-          <tr>
-            <td>${x.id}</td>
-            <td>${esc(x.ho_ten ?? '')}</td>
-            <td>${esc(x.loai)}</td>
-            <td>${money(x.so_tien)}</td>
-            <td>${esc(x.ly_do ?? '')}</td>
-            <td>${fmtDate(x.ngay_tao)}</td>
-            <td>${esc(x.nguoi_tao ?? '')}</td>
-            <td>
-              <button class="page-btn" data-act="del" data-id="${
-                x.id
-              }">🗑️</button>
-            </td>
-          </tr>`
-          )
-          .join('')
-      : `<tr><td colspan="8" class="text-muted">Không có dữ liệu</td></tr>`;
+    stTP.items = rows;
+    stTP.page = 1;
+
+    renderThuongPhatTable();
   } catch (e) {
     console.error('Lỗi khi tải thưởng phạt:', e);
     $(
       '#tbody-tp'
-    ).innerHTML = `<tr><td colspan="8" class="text-danger">Không tải được dữ liệu (Server lỗi)</td></tr>`;
+    ).innerHTML = `<tr><td colspan="8" class="text-danger">Lỗi server</td></tr>`;
   }
 }
 
@@ -181,16 +224,12 @@ async function addTP() {
   const so_tien = Number($('#tp-so-tien').value || 0);
   const ly_do = $('#tp-ly-do').value || '';
 
-  // ✅ Lấy tháng và năm từ giao diện
   const thang = $('#tp-thang').value;
   const nam = $('#tp-nam').value;
 
-  // ✅ Kiểm tra người dùng đã chọn tháng/năm chưa
   if (!thang || !nam) return alert('Vui lòng chọn tháng và năm');
-
   if (!so_tien) return alert('Số tiền không hợp lệ');
 
-  // ✅ Gửi thêm tháng và năm lên server
   await api('/thuong-phat', {
     method: 'POST',
     body: { nhan_vien_id, phong_ban_id, loai, so_tien, ly_do, thang, nam },
@@ -241,6 +280,29 @@ async function exportExcel() {
 
 // ==== KHỞI TẠO ====
 document.addEventListener('DOMContentLoaded', () => {
+  // ===== ẨN / HIỆN NÚT THÊM THEO QUYỀN =====
+  if (IS_EMPLOYEE) {
+    $('#btn-tp-add').style.display = 'none';
+  }
+
+  if (IS_MANAGER && !IS_ACC_MANAGER) {
+    $('#btn-tp-add').style.display = 'inline-block';
+  }
+
+  if (IS_ACC_MANAGER) {
+    $('#btn-tp-add').style.display = 'inline-block';
+  }
+
+  if (IS_ADMIN) {
+    $('#btn-tp-add').style.display = 'inline-block';
+  }
+
+  // ⭐⭐ NHÂN VIÊN → KHÔNG ĐƯỢC ĐỔI PHÒNG BAN ⭐⭐
+  if (IS_EMPLOYEE) {
+    const pbSelect = $('#tp-phong-ban');
+    if (pbSelect) pbSelect.disabled = true;
+  }
+
   // ---- Sinh danh sách tháng ----
   const thangSelect = document.getElementById('tp-thang');
   if (thangSelect) {
@@ -251,6 +313,22 @@ document.addEventListener('DOMContentLoaded', () => {
       thangSelect.appendChild(opt);
     }
   }
+
+  // ===== PHÂN TRANG =====
+  $('#tp-prev').addEventListener('click', () => {
+    if (stTP.page > 1) {
+      stTP.page--;
+      renderThuongPhatTable();
+    }
+  });
+
+  $('#tp-next').addEventListener('click', () => {
+    const totalPages = Math.ceil(stTP.total / stTP.limit);
+    if (stTP.page < totalPages) {
+      stTP.page++;
+      renderThuongPhatTable();
+    }
+  });
 
   // ---- Sinh danh sách năm ----
   const namSelect = document.getElementById('tp-nam');
@@ -267,17 +345,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     namSelect.value = currentYear;
-    st.filters.nam = currentYear; // set mặc định để tránh undefined
+    st.filters.nam = currentYear;
   }
 });
 
-// ==== KHỞI TẠO ====
+// ==== KHỞI CHẠY ====
 document.addEventListener('DOMContentLoaded', async () => {
   if (!$('#thuong-phat-tab')) return;
   await fetchNhanVienList();
   await loadPhongBan();
   setupNhanVienTypeahead();
   setupFilters();
+
   $('#btn-tp-add').addEventListener('click', addTP);
   $('#tbody-tp').addEventListener('click', (e) => {
     const btn = e.target.closest("button[data-act='del']");

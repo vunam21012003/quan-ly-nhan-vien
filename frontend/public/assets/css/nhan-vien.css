@@ -1,80 +1,105 @@
 /* Trang Nhân viên */
+
+/* ===================================== */
+/* 1. Thanh Công cụ & Bộ Lọc (Toolbar) */
+/* ===================================== */
 .page-header {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 12px;
-  margin: 18px 0;
+  align-items: center;
+  margin: 24px 0;
+  gap: 16px;
 }
 .page-title {
   margin: 0;
-  font-size: 20px;
+  font-size: 24px;
+  font-weight: 700;
 }
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   align-items: center;
-  gap: 8px;
+  width: auto;
 }
 .toolbar .form-group {
   margin: 0;
 }
-.toolbar input,
+.toolbar input {
+  max-width: 220px;
+}
 .toolbar select {
-  height: 36px;
+  min-width: 130px;
+}
+.toolbar input,
+.toolbar select,
+.toolbar button {
+  height: 38px;
+  font-size: 13px;
+  padding: 0 12px;
   border-radius: 8px;
 }
-.table-wrap {
-  overflow: auto;
-}
-.page-btn.btn-sm {
-  padding: 2px 5px;
-  font-size: 12px;
-}
+
 .td-actions {
-  min-width: 150px; /* Đảm bảo đủ chỗ cho 3 nút */
+  min-width: 160px;
+  white-space: nowrap;
+}
+.td-actions .btn {
+  margin-right: 4px;
 }
 
-/* Phân trang đơn giản */
 .pagination {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
   justify-content: flex-end;
-  margin-top: 12px;
+  margin: 20px 0 10px 0;
 }
 .page-btn {
-  height: 32px;
-  padding: 0 10px;
-  border: 1px solid var(--border);
-  background: #fff;
-  border-radius: 8px;
-  cursor: pointer;
+  height: 38px;
+  width: 38px;
+  font-weight: 600;
+  padding: 0;
 }
-.page-btn[disabled] {
-  opacity: 0.5;
-  cursor: default;
+.page-btn.btn-sm {
+  padding: 0;
 }
 
-/* ------------------------------------- */
-/* Tối ưu Modal/Form Nhân viên */
-/* ------------------------------------- */
+/* ===================================== */
+/* 2. Tối ưu Modal/Form Nhân viên (Đã Sửa Lỗi Tràn) */
+/* ===================================== */
+
+/* 💡 QUAN TRỌNG: GHI ĐÈ KÍCH THƯỚC CỦA MODAL (dialog) */
+#nv-modal {
+  /* Tăng max-width để form 2 cột có đủ chỗ. */
+  max-width: 800px;
+  width: 95%;
+  padding: 0;
+}
+
 #nv-modal .form {
-  padding: 20px !important;
-  min-width: 550px; /* Chiều rộng tối thiểu cho desktop */
+  padding: 30px !important;
+  /* Đặt 100% để form con chiếm hết không gian mới của #nv-modal. */
+  width: 100%;
+  min-width: unset;
 }
 
 /* Áp dụng Grid 2 cột cho các form group để xem chi tiết đẹp hơn */
 #nv-form {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 15px 25px; /* Giảm khoảng cách dọc, tăng khoảng cách ngang */
+  gap: 20px 30px;
+  min-width: 0;
 }
 
 #nv-form h3 {
-  grid-column: 1 / -1; /* Tiêu đề chiếm trọn 2 cột */
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 10px;
-  margin-bottom: 15px !important;
+  grid-column: 1 / -1;
+  font-size: 20px;
+  color: var(--primary);
+  border-bottom: 2px solid var(--primary-light);
+  padding-bottom: 15px;
+  margin: 0 0 20px 0 !important;
 }
 
 /* Đảm bảo Ghi chú, Lỗi, và nút hành động chiếm trọn 2 cột */
@@ -84,32 +109,38 @@
   grid-column: 1 / -1;
 }
 
-/* Đảm bảo form-group vẫn đúng quy chuẩn của bạn */
+/* Điều chỉnh lại khoảng cách của form-group con trong form */
 #nv-form .form-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin: 0; /* Loại bỏ margin-bottom mặc định của form-group */
+  gap: 6px;
+  margin: 0;
+  min-width: 0;
 }
 
-/* ------------------------------------- */
-/* Responsive cho thiết bị di động (Mobile) */
-/* ------------------------------------- */
+/* ===================================== */
+/* 3. Responsive cho thiết bị di động (Mobile) */
+/* ===================================== */
 @media (max-width: 900px) {
   /* 1. Tối ưu Toolbar */
   .page-header {
     flex-direction: column;
     align-items: flex-start;
+    margin: 16px 0;
   }
   .toolbar {
-    flex-wrap: wrap;
-    justify-content: flex-start;
+    width: 100%;
+    justify-content: space-between;
   }
   .toolbar input,
   .toolbar select,
   .toolbar button {
+    flex-basis: calc(50% - 5px);
+    min-width: unset;
     flex-grow: 1;
-    min-width: 100px;
+  }
+  #nv-btn-create {
+    flex-basis: 100%;
   }
 
   /* 2. Ẩn bớt cột trong bảng lớn */
@@ -128,14 +159,27 @@
     display: none;
   }
 
-  /* 3. Tối ưu Modal trên Mobile */
+  .td-actions {
+    min-width: 100px;
+  }
+
+  /* 💡 Đảm bảo Modal Responsive tốt trên Mobile */
+  #nv-modal {
+    max-width: calc(100% - 32px); /* Ghi đè lại để nhỏ gọn trên mobile */
+  }
+
   #nv-modal .form {
     min-width: unset;
-    width: 95vw;
-    max-width: 500px;
+    width: 100%;
+    padding: 20px !important;
   }
   #nv-form {
-    grid-template-columns: 1fr; /* Trở về 1 cột trên mobile */
+    grid-template-columns: 1fr;
     gap: 15px;
+  }
+  #nv-form h3 {
+    padding-bottom: 10px;
+    margin-bottom: 15px !important;
+    font-size: 18px;
   }
 }

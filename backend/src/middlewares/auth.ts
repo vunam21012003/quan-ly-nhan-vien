@@ -44,6 +44,23 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+// ============================================================
+// 🔥 CHỈ ADMIN HOẶC MANAGER KẾ TOÁN (phòng Kế toán)
+// Dùng cho: tính lương
+// ============================================================
+export function requireKetoanOrAdmin(req: Request, res: Response, next: NextFunction) {
+  const phamvi = (req as any).phamvi;
+
+  if (!phamvi) return res.status(401).json({ error: "Unauthorized" });
+
+  if (phamvi.role === "admin") return next();
+  if (phamvi.role === "manager" && phamvi.isAccountingManager) return next();
+
+  return res.status(403).json({
+    error: "Chỉ admin hoặc quản lý phòng kế toán được phép thực hiện",
+  });
+}
+
 export function requireRole(roles: Array<"admin" | "manager" | "employee">) {
   return async (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) return res.status(401).json({ error: "Unauthorized" });

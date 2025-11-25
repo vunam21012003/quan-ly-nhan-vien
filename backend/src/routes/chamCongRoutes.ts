@@ -17,7 +17,12 @@ router.get(
 );
 router.post("/", requireAuth, requireRole(["admin", "manager"]), chamCongController.create);
 router.put("/:id", requireAuth, requireRole(["admin"]), chamCongController.update);
-router.delete("/:id", requireAuth, requireRole(["admin"]), chamCongController.remove);
+router.delete(
+  "/:id",
+  requireAuth,
+  requireRole(["admin", "manager", "employee"]), // để controller tự xử lý phân quyền chi tiết
+  chamCongController.remove
+);
 
 // 👉 Route mới: upload Excel
 router.post(

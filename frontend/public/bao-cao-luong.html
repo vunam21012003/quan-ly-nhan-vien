@@ -52,8 +52,16 @@
                 document.write(`<option value="${i}">${i}</option>`);
             </script>
           </select>
+
           <select id="nam"></select>
-          <input id="search" placeholder="Tìm theo tên nhân viên" />
+
+          <!-- ✔ THÊM FILTER PHÒNG BAN -->
+          <select id="phong_ban">
+            <option value="">Phòng ban</option>
+          </select>
+
+          <input id="search" placeholder="Tìm theo tên hoặc ID nhân viên" />
+
           <button id="btn-run" class="btn btn-primary">Xem báo cáo</button>
           <button id="btn-export" class="btn btn-success">⬇️ Xuất Excel</button>
         </div>
@@ -62,21 +70,29 @@
       <div class="cards" id="cards">
         <!-- KPIs render here -->
       </div>
+      <div class="tab-group" id="statusTabs">
+        <button class="tab-btn active" data-status="">📋 Tất cả</button>
+        <button class="tab-btn" data-status="da_thanh_toan">✓ Đã trả</button>
+        <button class="tab-btn" data-status="cho_xu_ly">⏳ Chờ xử lý</button>
+        <button class="tab-btn" data-status="con_no">Còn nợ</button>
+      </div>
 
       <div class="table-wrap" style="margin-top: 12px">
         <table class="table" id="tbl">
           <thead>
             <tr>
+              <th style="width: 50px">Chi tiết</th>
               <th style="width: 70px">NV ID</th>
               <th>Họ tên</th>
-              <th>Lương thỏa thuận</th>
-              <th>Phụ cấp</th>
-              <th>Thưởng</th>
-              <th>Khác</th>
-              <th>Thực nhận</th>
-              <th style="width: 120px">Chi tiết</th>
+              <th>Phòng ban</th>
+              <th>Tháng</th>
+              <th style="text-align: right">Thực nhận</th>
+              <th style="text-align: right">Đã trả</th>
+              <th>Ngày trả</th>
+              <th>Trạng thái</th>
             </tr>
           </thead>
+
           <tbody id="tbody">
             <tr>
               <td colspan="8" class="text-muted">
@@ -89,7 +105,7 @@
     </main>
 
     <!-- Modal chi tiết -->
-    <dialog id="modal" style="max-width: 720px">
+    <dialog id="modal" class="modal-box">
       <div style="padding: 10px 2px">
         <h3 id="m-title" style="margin: 0 0 8px 0">Chi tiết lương</h3>
         <div id="m-body" class="text-muted">Đang tải…</div>

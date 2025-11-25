@@ -42,3 +42,19 @@ export const getChiTietLuongNhanVien = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+// 📌 Lấy lịch sử trả lương đầy đủ theo từng lần trả
+export const getLichSuTraLuong = async (req: Request, res: Response) => {
+  try {
+    const nhan_vien_id = Number(req.params.nhan_vien_id);
+    const thang = Number(req.query.thang);
+    const nam = Number(req.query.nam);
+
+    const items = await service.getLichSuTraLuong(nhan_vien_id, thang, nam);
+
+    return res.json({ items });
+  } catch (err) {
+    console.error("[GET /bao-cao/luong/lich-su] error:", err);
+    return res.status(500).json({ error: "Lỗi server" });
+  }
+};

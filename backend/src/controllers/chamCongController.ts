@@ -51,25 +51,14 @@ export const update = async (req: Request, res: Response) => {
   }
 };
 
-// ================== XOÁ ==================
+// trong chamCongController.remove
 export const remove = async (req: Request, res: Response) => {
   try {
-    const id = Number(req.params.id);
-    if (!Number.isFinite(id) || id <= 0)
-      return res.status(400).json({ message: "ID không hợp lệ" });
-
-    const [[record]]: any = await pool.query(
-      "SELECT nhan_vien_id, ngay_lam FROM cham_cong WHERE id = ?",
-      [id]
-    );
-    if (!record) return res.status(404).json({ message: "Không tìm thấy bản ghi" });
-
-    await pool.query("DELETE FROM cham_cong WHERE id = ?", [id]);
-
-    // ⬅️ cập nhật lại thống kê tháng thay cho tong_gio_lam
-    await capNhatPhanTichCong(Number(record.nhan_vien_id), String(record.ngay_lam));
-
-    res.json({ message: "Đã xoá và cập nhật lại thống kê tháng" });
+    const result = await service.deleteChamCong(req);
+    if ((result as any).error) {
+      return res.status((result as any).status || 400).json({ message: (result as any).error });
+    }
+    res.json(result);
   } catch (err) {
     console.error("DELETE /cham-cong/:id error:", err);
     res.status(500).json({ message: "Server error" });

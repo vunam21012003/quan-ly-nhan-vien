@@ -12,4 +12,5 @@ export interface NhanVien {
   ngay_vao_lam: string | null;
   trang_thai: string;
   ghi_chu: string | null;
+  so_nguoi_phu_thuoc?: number;
 }

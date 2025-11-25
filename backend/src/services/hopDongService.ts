@@ -57,9 +57,12 @@ export const getAll = async (req: Request) => {
 
   const { employeeId, managedDepartmentIds, role } = await getUserScope(req);
 
+  const { nhan_vien_id, loai_hop_dong, trang_thai, tu_ngay, den_ngay } = req.query as any;
+
   const whereParts: string[] = [];
   const params: any[] = [];
 
+  /* ====== PHẠM VI THEO QUYỀN ====== */
   if (role === "manager") {
     if (managedDepartmentIds.length === 0) return [];
     whereParts.push(`nv.phong_ban_id IN (${managedDepartmentIds.map(() => "?").join(",")})`);
@@ -69,6 +72,7 @@ export const getAll = async (req: Request) => {
     whereParts.push(`hd.nhan_vien_id = ?`);
     params.push(employeeId);
   } else {
+    // admin → nếu mine=1 thì chỉ lấy theo user
     if ((req.query as any).mine === "1" && (req as any).user) {
       const [[me]]: any = await pool.query(
         "SELECT nhan_vien_id AS employeeId FROM tai_khoan WHERE id = ?",
@@ -81,9 +85,35 @@ export const getAll = async (req: Request) => {
     }
   }
 
+  /* ====== FILTER BỔ SUNG ====== */
+  if (nhan_vien_id) {
+    whereParts.push(`hd.nhan_vien_id = ?`);
+    params.push(nhan_vien_id);
+  }
+
+  if (loai_hop_dong) {
+    whereParts.push(`hd.loai_hop_dong = ?`);
+    params.push(loai_hop_dong);
+  }
+
+  if (trang_thai) {
+    whereParts.push(`hd.trang_thai = ?`);
+    params.push(trang_thai);
+  }
+
+  if (tu_ngay) {
+    whereParts.push(`hd.ngay_ky >= ?`);
+    params.push(tu_ngay);
+  }
+
+  if (den_ngay) {
+    whereParts.push(`hd.ngay_ky <= ?`);
+    params.push(den_ngay);
+  }
+
   const whereSql = whereParts.length ? `WHERE ${whereParts.join(" AND ")}` : "";
 
-  const [rows] = await pool.query(
+  const [rows]: any[] = await pool.query(
     `
     SELECT hd.*, nv.ho_ten
     FROM hop_dong hd
@@ -94,7 +124,40 @@ export const getAll = async (req: Request) => {
     params
   );
 
-  return rows;
+  if (!rows.length) return rows;
+
+  /* ======= LẤY PHỤ CẤP ======= */
+  const hopDongIds = rows.map((r: any) => r.id);
+  const [pcRows]: any[] = await pool.query(
+    `
+      SELECT 
+        pct.hop_dong_id,
+        pct.loai_id,
+        pct.so_tien,
+        loai.ten AS ten_phu_cap
+      FROM phu_cap_chi_tiet pct
+      JOIN phu_cap_loai loai ON loai.id = pct.loai_id
+      WHERE pct.hop_dong_id IN (${hopDongIds.map(() => "?").join(",")})
+    `,
+    hopDongIds
+  );
+
+  const pcByContract: Record<number, any[]> = {};
+  for (const pc of pcRows) {
+    const hid = pc.hop_dong_id;
+    if (!pcByContract[hid]) pcByContract[hid] = [];
+    pcByContract[hid].push({
+      id: pc.id,
+      loai_id: pc.loai_id,
+      ten_phu_cap: pc.ten_phu_cap,
+      so_tien: Number(pc.so_tien || 0),
+    });
+  }
+
+  return rows.map((r: any) => ({
+    ...r,
+    phu_caps: pcByContract[r.id] || [],
+  }));
 };
 
 /* ==================== DETAIL ==================== */
@@ -127,17 +190,68 @@ export const getDetail = async (req: Request) => {
     FROM hop_dong hd
     JOIN nhan_vien nv ON nv.id = hd.nhan_vien_id
     ${whereSql}
-  `,
+    `,
     params
   );
 
-  return rows[0] || null;
+  const hopDong = rows[0];
+  if (!hopDong) return null;
+
+  // 🔥 LẤY PHỤ CẤP CỐ ĐỊNH THEO HỢP ĐỒNG
+  const [phuCaps] = await pool.query(
+    `
+      SELECT 
+        pct.id,
+        pct.loai_id,
+        loai.ten AS ten_phu_cap,
+        pct.so_tien
+      FROM phu_cap_chi_tiet pct
+      JOIN phu_cap_loai loai ON loai.id = pct.loai_id
+      WHERE pct.hop_dong_id = ?
+    `,
+    [id]
+  );
+
+  return {
+    ...hopDong,
+    phu_caps: phuCaps || [],
+  };
 };
 
-/* ==================== CREATE ==================== */
+/* ==================== Helper: parse phu_caps từ req.body ==================== */
+function parsePhuCaps(raw: any): { loai_id: number; so_tien: number }[] {
+  if (!raw) return [];
+  let data: any = raw;
+
+  // Trường hợp gửi từ FormData: phu_caps là chuỗi JSON
+  if (typeof raw === "string") {
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      return [];
+    }
+  }
+
+  if (!Array.isArray(data)) return [];
+
+  return data
+    .map((x) => ({
+      loai_id: Number(x.loai_id),
+      so_tien: Number(x.so_tien),
+    }))
+    .filter((x) => x.loai_id && !Number.isNaN(x.so_tien));
+}
+
+/* ==================== TẠO MỚI ==================== */
 export const create = async (req: Request) => {
-  const { role } = await getUserScope(req);
-  if (role !== "admin") return { error: "Chỉ admin mới được tạo hợp đồng" };
+  const { role, managedDepartmentIds } = await getUserScope(req);
+
+  // 1. Kiểm tra Quyền Tạo
+  const IS_KE_TOAN_MANAGER = role === "manager" && managedDepartmentIds.includes(5);
+
+  if (role !== "admin" && !IS_KE_TOAN_MANAGER) {
+    return { error: "Chỉ Admin hoặc Manager Phòng Kế Toán mới được tạo hợp đồng" };
+  }
 
   const {
     nhan_vien_id,
@@ -147,94 +261,113 @@ export const create = async (req: Request) => {
     ngay_bat_dau,
     ngay_ket_thuc,
     luong_thoa_thuan,
-    phu_cap_co_dinh,
-    phu_cap_tham_nien,
-    phu_cap_nang_luc, // ✅ thêm mới
-    phu_cap_trach_nhiem, // ✅ thêm mới
-    ghi_chu,
     trang_thai,
-    file_hop_dong,
+    ghi_chu,
   } = req.body;
 
-  if (!nhan_vien_id || !so_hop_dong) return { error: "nhan_vien_id, so_hop_dong là bắt buộc" };
-  if (!ngay_bat_dau) return { error: "Ngày bắt đầu hợp đồng là bắt buộc" };
+  const filePath = (req as any).file?.path || req.body.file_hop_dong;
 
-  if (loai_hop_dong === "Không xác định thời hạn" && ngay_ket_thuc) {
-    return { error: "Hợp đồng không xác định thời hạn không được có ngày kết thúc" };
+  // 2. Kiểm tra dữ liệu bắt buộc
+  if (!nhan_vien_id || !loai_hop_dong || !ngay_bat_dau || !luong_thoa_thuan) {
+    return { error: "Vui lòng nhập đầy đủ thông tin bắt buộc" };
   }
 
-  const [existing]: any = await pool.query(
-    `SELECT id FROM hop_dong WHERE nhan_vien_id = ? AND trang_thai = 'con_hieu_luc'`,
-    [nhan_vien_id]
-  );
-  if (existing.length > 0) return { error: "Nhân viên này đã có hợp đồng còn hiệu lực." };
+  // 3. Xử lý logic loại hợp đồng
+  let final_ngay_ket_thuc = null;
+  if (loai_hop_dong === "Xác định thời hạn") {
+    if (!ngay_ket_thuc) return { error: "Hợp đồng xác định thời hạn phải có ngày kết thúc" };
+    final_ngay_ket_thuc = ngay_ket_thuc;
+  }
 
+  // 4. Transaction
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
 
-    // 🟢 Thêm đủ 5 cột phụ cấp
-    const [r]: any = await conn.query(
-      `INSERT INTO hop_dong
-       (nhan_vien_id, so_hop_dong, loai_hop_dong, ngay_ky, ngay_bat_dau, ngay_ket_thuc,
-        luong_thoa_thuan, phu_cap_co_dinh, phu_cap_tham_nien, phu_cap_nang_luc, phu_cap_trach_nhiem,
-        ghi_chu, trang_thai, file_hop_dong)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    // 4.1. Chèn hợp đồng mới
+    const [result]: any = await conn.query(
+      `
+      INSERT INTO hop_dong (
+        nhan_vien_id, so_hop_dong, loai_hop_dong,
+        ngay_ky, ngay_bat_dau, ngay_ket_thuc,
+        luong_thoa_thuan, trang_thai, file_hop_dong, ghi_chu
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
       [
         nhan_vien_id,
-        so_hop_dong,
-        loai_hop_dong || null,
-        ngay_ky || null,
+        so_hop_dong ?? null,
+        loai_hop_dong,
+        ngay_ky ?? null,
         ngay_bat_dau,
-        loai_hop_dong === "Không xác định thời hạn" ? null : ngay_ket_thuc || null,
-        luong_thoa_thuan || 0,
-        phu_cap_co_dinh || 0,
-        phu_cap_tham_nien || 0,
-        phu_cap_nang_luc || 0, // ✅ mới
-        phu_cap_trach_nhiem || 0, // ✅ mới
-        ghi_chu || null,
-        trang_thai || "con_hieu_luc",
-        file_hop_dong || null,
+        final_ngay_ket_thuc,
+        luong_thoa_thuan,
+        trang_thai ?? "con_hieu_luc",
+        filePath ?? null,
+        ghi_chu ?? null,
       ]
     );
 
-    await conn.query(
-      `UPDATE nhan_vien
-       SET ngay_vao_lam = COALESCE(ngay_vao_lam, ?)
-       WHERE id = ?`,
-      [ngay_bat_dau, nhan_vien_id]
+    const newId = result.insertId;
+
+    // ⭐⭐⭐ AUTO UPDATE: Nếu nhân viên chưa có ngày vào làm → gán bằng ngày bắt đầu hợp đồng
+    const [[nv]]: any = await conn.query(
+      `SELECT ngay_vao_lam FROM nhan_vien WHERE id = ? LIMIT 1`,
+      [nhan_vien_id]
     );
 
+    if (!nv?.ngay_vao_lam) {
+      await conn.query(`UPDATE nhan_vien SET ngay_vao_lam = ? WHERE id = ?`, [
+        ngay_bat_dau,
+        nhan_vien_id,
+      ]);
+    }
+    // ⭐⭐⭐ Hết đoạn thêm
+
     await conn.commit();
-    return { data: { id: r.insertId, message: "Đã tạo hợp đồng thành công" } };
-  } catch (err) {
+    return { success: true, id: newId };
+  } catch (e) {
     await conn.rollback();
-    console.error("❌ Lỗi khi tạo hợp đồng:", err);
-    return { error: "Không thể tạo hợp đồng" };
+    console.error("Create hop_dong error:", e);
+    return { error: "Lỗi hệ thống khi tạo hợp đồng" };
   } finally {
     conn.release();
   }
 };
 
-/* ==================== UPDATE ==================== */
+/* ==================== CẬP NHẬT ==================== */
 export const update = async (id: number, req: Request) => {
-  if (!Number.isFinite(id) || id <= 0) return null;
+  if (!Number.isFinite(id) || id <= 0) {
+    return { error: "ID hợp đồng không hợp lệ" };
+  }
 
   const { role, managedDepartmentIds } = await getUserScope(req);
-  if (role === "employee") return { error: "Nhân viên không có quyền sửa hợp đồng" };
 
-  if (role === "manager") {
+  // 1. Kiểm tra Quyền
+  if (role !== "admin") {
+    const IS_KE_TOAN_MANAGER = role === "manager" && managedDepartmentIds.includes(5);
+    if (!IS_KE_TOAN_MANAGER) {
+      return { error: "Chỉ Admin hoặc Manager Phòng Kế Toán mới được sửa hợp đồng" };
+    }
+
     const [rows]: any = await pool.query(
-      `SELECT nv.phong_ban_id
-       FROM hop_dong hd
-       JOIN nhan_vien nv ON nv.id = hd.nhan_vien_id
-       WHERE hd.id = ?`,
+      `
+      SELECT nv.phong_ban_id
+      FROM hop_dong hd
+      JOIN nhan_vien nv ON nv.id = hd.nhan_vien_id
+      WHERE hd.id = ?
+      `,
       [id]
     );
-    if (!rows.length || !managedDepartmentIds.includes(rows[0].phong_ban_id)) {
-      return { error: "Bạn không có quyền sửa hợp đồng này" };
+
+    if (!rows.length || rows[0].phong_ban_id !== 5) {
+      return { error: "Manager Kế toán chỉ được sửa hợp đồng của nhân viên Phòng Kế Toán" };
     }
   }
+
+  // 2. Lấy dữ liệu cũ để tránh bị ghi đè
+  const [[old]]: any = await pool.query(`SELECT * FROM hop_dong WHERE id = ?`, [id]);
+  if (!old) return { error: "Không tìm thấy hợp đồng" };
 
   const {
     nhan_vien_id,
@@ -244,62 +377,94 @@ export const update = async (id: number, req: Request) => {
     ngay_bat_dau,
     ngay_ket_thuc,
     luong_thoa_thuan,
-    phu_cap_co_dinh,
-    phu_cap_tham_nien,
-    phu_cap_nang_luc, // ✅ thêm mới
-    phu_cap_trach_nhiem, // ✅ thêm mới
-    ghi_chu,
     trang_thai,
-    file_hop_dong,
+    ghi_chu,
   } = req.body;
 
-  if (loai_hop_dong === "Không xác định thời hạn" && ngay_ket_thuc) {
-    return { error: "Hợp đồng không xác định thời hạn không được có ngày kết thúc" };
+  // 3. Xử lý file hợp đồng
+  let finalFile = old.file_hop_dong; // ⭐ giữ file cũ nếu không upload mới
+  if ((req as any).file) {
+    finalFile = (req as any).file.path; // nếu upload mới → dùng file mới
   }
 
-  if (trang_thai === "con_hieu_luc") {
-    const [existing]: any = await pool.query(
-      `SELECT id FROM hop_dong 
-       WHERE nhan_vien_id = ? AND trang_thai = 'con_hieu_luc' AND id <> ?`,
-      [nhan_vien_id, id]
-    );
-    if (existing.length > 0) return { error: "Nhân viên này đã có hợp đồng còn hiệu lực khác." };
+  // 4. Xử lý ngày kết thúc
+  let final_ngay_ket_thuc = null;
+  if (loai_hop_dong === "Xác định thời hạn") {
+    final_ngay_ket_thuc = ngay_ket_thuc;
   }
 
+  // 5. Validate tối thiểu
+  if (!nhan_vien_id || !loai_hop_dong || !ngay_bat_dau || luong_thoa_thuan == null) {
+    return { error: "Vui lòng nhập đầy đủ thông tin bắt buộc" };
+  }
+
+  // 6. Cập nhật
   const [r]: any = await pool.query(
-    `UPDATE hop_dong SET
-        nhan_vien_id=?, so_hop_dong=?, loai_hop_dong=?, ngay_ky=?, ngay_bat_dau=?, ngay_ket_thuc=?,
-        luong_thoa_thuan=?, phu_cap_co_dinh=?, phu_cap_tham_nien=?, phu_cap_nang_luc=?, phu_cap_trach_nhiem=?,
-        ghi_chu=?, trang_thai=?, file_hop_dong=?
-     WHERE id=?`,
+    `
+    UPDATE hop_dong SET
+      nhan_vien_id = ?,
+      so_hop_dong = ?,
+      loai_hop_dong = ?,
+      ngay_ky = ?,
+      ngay_bat_dau = ?,
+      ngay_ket_thuc = ?,
+      luong_thoa_thuan = ?,
+      ghi_chu = ?,
+      trang_thai = ?,
+      file_hop_dong = ?
+    WHERE id = ?
+  `,
     [
-      nhan_vien_id || null,
-      so_hop_dong || null,
-      loai_hop_dong || null,
-      ngay_ky || null,
-      ngay_bat_dau || null,
-      loai_hop_dong === "Không xác định thời hạn" ? null : ngay_ket_thuc || null,
-      luong_thoa_thuan || 0,
-      phu_cap_co_dinh || 0,
-      phu_cap_tham_nien || 0,
-      phu_cap_nang_luc || 0, // ✅ mới
-      phu_cap_trach_nhiem || 0, // ✅ mới
-      ghi_chu || null,
-      trang_thai || null,
-      file_hop_dong || null,
+      nhan_vien_id,
+      so_hop_dong ?? old.so_hop_dong,
+      loai_hop_dong,
+      ngay_ky ?? old.ngay_ky,
+      ngay_bat_dau,
+      loai_hop_dong === "Không xác định thời hạn" ? null : final_ngay_ket_thuc,
+      luong_thoa_thuan,
+      ghi_chu ?? old.ghi_chu,
+      trang_thai ?? old.trang_thai,
+      finalFile, // ⭐ giữ file cũ nếu không upload mới
       id,
     ]
   );
 
-  return r.affectedRows > 0;
+  if (r.affectedRows === 0) return { error: "Không tìm thấy hợp đồng" };
+
+  return { success: true };
 };
 
 /* ==================== XOÁ ==================== */
 export const remove = async (id: number, req: Request) => {
-  if (!Number.isFinite(id) || id <= 0) return false;
-  const { role } = await getUserScope(req);
-  if (role !== "admin") return false;
+  if (!Number.isFinite(id) || id <= 0) return { success: false };
 
-  const [r]: any = await pool.query(`DELETE FROM hop_dong WHERE id=?`, [id]);
-  return r.affectedRows > 0;
+  const { role } = await getUserScope(req);
+
+  // 1. Kiểm tra Quyền Xóa: CHỈ ADMIN
+  if (role !== "admin") return { error: "Chỉ Admin mới có quyền xóa hợp đồng" };
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // 2. Xoá phụ cấp liên quan trước
+    await conn.query(`DELETE FROM phu_cap_chi_tiet WHERE hop_dong_id = ?`, [id]);
+
+    // 3. Xoá hợp đồng
+    const [r]: any = await conn.query(`DELETE FROM hop_dong WHERE id = ?`, [id]);
+
+    if (r.affectedRows === 0) {
+      await conn.rollback();
+      return { error: "Không tìm thấy hợp đồng" };
+    }
+
+    await conn.commit();
+    return { success: true };
+  } catch (e) {
+    await conn.rollback();
+    console.error("Remove hop_dong error:", e);
+    return { error: "Lỗi hệ thống khi xóa hợp đồng" };
+  } finally {
+    conn.release();
+  }
 };

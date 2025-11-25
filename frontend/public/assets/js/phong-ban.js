@@ -75,7 +75,7 @@ function rowHtml(x) {
 
   return `<tr>
         <td>${esc(x.id)}</td>
-        <td>${esc(x.ten)}</td>
+        <td>${esc(x.ten_phong_ban)}</td>
         <td>${esc(x.mo_ta || '')}</td>
         <td>${esc(x.manager_name || '')}</td>
         ${actionButtons}
@@ -155,7 +155,7 @@ function openModal(edit = null) {
   $('#pb-modal-title').textContent = edit
     ? `Sửa phòng ban #${edit.id}`
     : 'Thêm phòng ban';
-  $('#pb-ten').value = edit?.ten ?? '';
+  $('#pb-ten').value = edit?.ten_phong_ban ?? '';
   $('#pb-mo_ta').value = edit?.mo_ta ?? '';
   $('#pb-error').hidden = true;
 
@@ -192,7 +192,7 @@ async function onSave(e) {
   // Lấy ID từ chuỗi: "ID - Tên"
   const idStr = val.split(' ')[0];
   const payload = {
-    ten: $('#pb-ten').value.trim(),
+    ten_phong_ban: $('#pb-ten').value.trim(),
     mo_ta: $('#pb-mo_ta').value.trim() || null,
     // Ép kiểu ID thành số (manager_taikhoan_id)
     manager_taikhoan_id: idStr && !isNaN(Number(idStr)) ? Number(idStr) : null,
@@ -259,13 +259,13 @@ function bind() {
   // ✅ Đăng xuất
   $('#logout-btn').addEventListener('click', () => {
     clearAuth();
-    location.href = './dangnhap.html';
+    location.href = './dang-nhap.html';
   });
 }
 
 // Gán st.USER và st.IS_ADMIN ở đây để tránh lỗi ReferenceError
 async function init() {
-  requireAuthOrRedirect('./dangnhap.html');
+  requireAuthOrRedirect('./dang-nhap.html');
   if (!getToken()) return;
 
   // Gán USER và IS_ADMIN sau khi xác thực

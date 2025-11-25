@@ -1,18 +1,21 @@
+// hop-dong.js - THÊM PHÂN TRANG
 import { api, getUser, requireAuthOrRedirect, logout } from './api.js';
+
+const ITEMS_PER_PAGE = 8;
 
 const state = {
   items: [],
+  nhanViens: [],
   editing: null,
   saving: false,
-  nhanViens: [],
+  currentPage: 1,
+  totalItems: 0,
 };
 
-function $(sel, root = document) {
-  return root.querySelector(sel);
-}
-function esc(s) {
-  return (s ?? '').toString().replace(
-    /[&<>"']/g,
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (s) =>
+  (s ?? '').toString().replace(
+    /[&<>\"']/g,
     (m) =>
       ({
         '&': '&amp;',
@@ -22,351 +25,489 @@ function esc(s) {
         "'": '&#039;',
       }[m])
   );
-}
-function formatDate(d) {
+
+const formatDate = (d) => {
   if (!d) return '';
   const date = new Date(d);
-  if (isNaN(date.getTime())) return d;
+  if (isNaN(date)) return '';
   return date.toLocaleDateString('vi-VN');
-}
-function unwrap(resp) {
+};
+
+const unwrap = (resp) => {
   if (!resp) return [];
   if (Array.isArray(resp)) return resp;
   if (Array.isArray(resp.data)) return resp.data;
   return [];
+};
+
+/* ===========================================================
+   LOAD DỮ LIỆU CHUNG
+   =========================================================== */
+async function loadNhanVienList() {
+  try {
+    const resp = await api('/nhan-vien');
+    state.nhanViens = unwrap(resp);
+  } catch (e) {
+    console.error('Error loading Nhan Vien list:', e);
+  }
 }
 
-// ===== Render bảng =====
+async function fetchList(user) {
+  try {
+    const qs = new URLSearchParams();
+
+    const loai = $('#filter_loai').value;
+    const tt = $('#filter_trang_thai').value;
+    const tu = $('#filter_tu_ngay').value;
+    const den = $('#filter_den_ngay').value;
+
+    if (loai) qs.append('loai_hop_dong', loai);
+    if (tt) qs.append('trang_thai', tt);
+    if (tu) qs.append('tu_ngay', tu);
+    if (den) qs.append('den_ngay', den);
+
+    const resp = await api(`/hop-dong?${qs.toString()}`);
+    const allItems = unwrap(resp);
+
+    state.items = allItems;
+    state.totalItems = allItems.length;
+
+    state.currentPage = 1;
+    renderTable(user);
+    updatePagination();
+  } catch (e) {
+    console.error('Error:', e);
+  }
+}
+
+/* ===========================================================
+   PHÂN TRANG - HÀM HỖ TRỢ
+   =========================================================== */
+function getPaginatedItems() {
+  const start = (state.currentPage - 1) * ITEMS_PER_PAGE;
+  const end = start + ITEMS_PER_PAGE;
+  return state.items.slice(start, end);
+}
+
+function getTotalPages() {
+  return Math.ceil(state.totalItems / ITEMS_PER_PAGE);
+}
+
+function updatePagination() {
+  const totalPages = getTotalPages();
+  const pageInfo = $('#pageInfo');
+  const btnPrev = $('#btnPrev');
+  const btnNext = $('#btnNext');
+
+  if (pageInfo)
+    pageInfo.textContent = `Trang ${state.currentPage}/${totalPages}`;
+  if (btnPrev) btnPrev.disabled = state.currentPage === 1;
+  if (btnNext) btnNext.disabled = state.currentPage === totalPages;
+}
+
+/* ===========================================================
+   RENDER TABLE
+   =========================================================== */
 function renderTable(user) {
   const body = $('#contractsBody');
+  const paginatedItems = getPaginatedItems();
+
   if (!state.items.length) {
-    body.innerHTML = `<tr><td colspan="15" class="text-muted">Không có dữ liệu</td></tr>`;
+    body.innerHTML = `<tr><td colspan="13" class="text-muted">Không có dữ liệu</td></tr>`;
     return;
   }
-  body.innerHTML = state.items
-    .map(
-      (c) => `
-    <tr>
-      <td>${esc(c.id)}</td>
-      <td>${esc(c.ho_ten || c.nhan_vien_id)}</td>
-      <td>${esc(c.so_hop_dong || '')}</td>
-      <td>${esc(c.loai_hop_dong || '')}</td>
-      <td>${esc(formatDate(c.ngay_ky))}</td>
-      <td>${esc(formatDate(c.ngay_bat_dau))}</td>
-      <td>${esc(formatDate(c.ngay_ket_thuc))}</td>
-      <td>${esc(Number(c.luong_thoa_thuan ?? 0).toLocaleString('vi-VN'))}</td>
-      <td>${esc(Number(c.phu_cap_co_dinh ?? 0).toLocaleString('vi-VN'))}</td>
-      <td>${esc(Number(c.phu_cap_tham_nien ?? 0).toLocaleString('vi-VN'))}</td>
-      <td>${esc(Number(c.phu_cap_nang_luc ?? 0).toLocaleString('vi-VN'))}</td>
-      <td>${esc(
-        Number(c.phu_cap_trach_nhiem ?? 0).toLocaleString('vi-VN')
-      )}</td>
-      <td>${esc(c.trang_thai || '')}</td>
-      <td>${esc(c.ghi_chu || '')}</td>
-      <td>${
-        c.file_hop_dong
-          ? `<a href="${esc(c.file_hop_dong)}" target="_blank">📄 Xem</a>`
-          : ''
+
+  if (!paginatedItems.length) {
+    body.innerHTML = `<tr><td colspan="13" class="text-muted">Không có dữ liệu trang này</td></tr>`;
+    return;
+  }
+
+  const isAdmin = user.role === 'admin';
+
+  body.innerHTML = paginatedItems
+    .map((c) => {
+      const sumPC =
+        c.tong_phu_cap !== undefined
+          ? c.tong_phu_cap
+          : (c.phu_caps || []).reduce(
+              (s, it) => s + Number(it.so_tien || 0),
+              0
+            );
+
+      return `
+      <tr>
+        <td data-label="ID">${c.id}</td>
+        <td data-label="Nhân viên">${esc(c.ho_ten || '')}</td>
+        <td data-label="Số HĐ">${esc(c.so_hop_dong || '')}</td>
+        <td data-label="Loại HĐ">${esc(c.loai_hop_dong || '')}</td>
+        <td data-label="Ngày ký">${esc(formatDate(c.ngay_ky))}</td>
+        <td data-label="Bắt đầu">${esc(formatDate(c.ngay_bat_dau))}</td>
+        <td data-label="Kết thúc">${esc(formatDate(c.ngay_ket_thuc))}</td>
+        <td data-label="Lương" class="salary-cell">
+          ${Number(c.luong_thoa_thuan || 0).toLocaleString('vi-VN')} ₫
+        </td>
+        <td data-label="Phụ cấp" class="allowance-cell">
+          ${sumPC.toLocaleString('vi-VN')} ₫
+        </td>
+        <td data-label="Trạng thái" class="status-cell">
+          <span class="status-badge status-${
+            c.trang_thai.replace(/ /g, '-') || 'con_hieu_luc'
+          }">
+            ${esc(c.trang_thai || '')}
+          </span>
+        </td>
+        <td data-label="Ghi chú">${esc(c.ghi_chu || '').substring(0, 30)}${
+        c.ghi_chu?.length > 30 ? '...' : ''
       }</td>
-      <td>
-        ${
-          user.role === 'admin' || user.role === 'manager'
-            ? `<button class="btn btn-sm btn-edit" data-action="edit" data-id="${c.id}">✏️</button>`
+        <td data-label="Tài liệu">${
+          c.file_hop_dong
+            ? `<a href="${esc(c.file_hop_dong)}" target="_blank">📄 Xem</a>`
             : ''
-        }
-        ${
-          user.role === 'admin'
-            ? `<button class="btn btn-sm btn-del" data-action="del" data-id="${c.id}">🗑️</button>`
-            : ''
-        }
-      </td>
-    </tr>
-  `
-    )
+        }</td>
+        <td data-label="Hành động" class="action-cell">
+          <button class="btn btn-sm btn-view" data-action="view" data-id="${
+            c.id
+          }">👀</button>
+          ${
+            isAdmin
+              ? `
+                <button class="btn btn-sm btn-edit" data-action="edit" data-id="${c.id}">✏️</button>
+                <button class="btn btn-sm btn-del" data-action="del" data-id="${c.id}">🗑️</button>
+                `
+              : ''
+          }
+        </td>
+      </tr>
+    `;
+    })
     .join('');
 }
 
-// ===== Dropdown nhân viên =====
-async function loadNhanVienList() {
-  try {
-    const res = await api('/nhan-vien?limit=1000');
-    const data = res?.data?.items || res.items || [];
-    state.nhanViens = data;
-
-    const input = $('#nhan_vien_search');
-    const dropdown = $('#nhan_vien_dropdown');
-
-    function showList(filter = '') {
-      const keyword = filter.toLowerCase().trim();
-      const filtered = !keyword
-        ? data
-        : data.filter(
-            (nv) =>
-              (nv.ho_ten || '').toLowerCase().includes(keyword) ||
-              String(nv.id).includes(keyword)
-          );
-
-      dropdown.innerHTML = filtered.length
-        ? filtered
-            .map(
-              (nv) =>
-                `<div data-id="${nv.id}">${nv.id} - ${esc(
-                  nv.ho_ten || ''
-                )}</div>`
-            )
-            .join('')
-        : '<div class="text-muted" style="padding:6px;">Không tìm thấy</div>';
-      dropdown.style.display = 'block';
-    }
-    function hideList() {
-      dropdown.style.display = 'none';
-    }
-
-    input.addEventListener('focus', () => showList(input.value));
-    input.addEventListener('input', (e) => showList(e.target.value));
-
-    dropdown.addEventListener('click', (e) => {
-      const item = e.target.closest('div[data-id]');
-      if (!item) return;
-      input.dataset.selectedId = item.dataset.id;
-      input.value = item.textContent.replace(/^\d+\s*-\s*/, '');
-      hideList();
-    });
-
-    document.addEventListener('click', (e) => {
-      if (!dropdown.contains(e.target) && e.target !== input) hideList();
-    });
-
-    input.getSelectedId = () => input.dataset.selectedId || null;
-  } catch (err) {
-    console.error('Không tải được danh sách nhân viên', err);
-  }
-}
-
-// ===== Gợi ý lương theo chức vụ (placeholder) =====
-async function autoSuggestSalary() {
-  const input = $('#nhan_vien_search');
-  input.addEventListener('change', async () => {
-    const nhanVienId = input.getSelectedId?.();
-    if (!nhanVienId) return;
-
-    try {
-      const nv = await api(`/nhan-vien/${nhanVienId}`, { auth: true });
-      if (!nv || !nv.chuc_vu_id) return;
-      const chucVu = await api(`/chuc-vu/${nv.chuc_vu_id}`, { auth: true });
-      if (chucVu?.muc_luong_co_ban) {
-        $('#luong_thoa_thuan').placeholder = `${Number(
-          chucVu.muc_luong_co_ban
-        ).toLocaleString('vi-VN')} ₫ (theo chức vụ)`;
-      }
-    } catch (err) {
-      console.error('Không thể lấy mức lương cơ bản:', err);
-    }
-  });
-}
-
-// ===== Danh sách hợp đồng =====
-async function fetchList(user) {
-  const url = user.role === 'employee' ? '/hop-dong?mine=1' : '/hop-dong';
-  const resp = await api(url, { auth: true });
-  state.items = unwrap(resp);
-  renderTable(user);
-}
-
-// ===== Mở modal =====
+/* ===========================================================
+   MODAL TẠO/SỬA
+   =========================================================== */
 function openModal(contract, user) {
-  state.editing = contract || null;
-  $('#modalTitle').textContent = contract
-    ? `Sửa hợp đồng #${contract.id}`
-    : 'Thêm hợp đồng';
+  const modal = $('#contractModal');
+  const form = $('#contractForm');
+  state.editing = contract;
 
-  $('#contractId').value = contract?.id || '';
-  const nvInput = $('#nhan_vien_search');
-  if (nvInput) {
-    nvInput.value = contract?.ho_ten || '';
-    nvInput.dataset.selectedId = contract?.nhan_vien_id || '';
+  $('#modalTitle').textContent = contract ? 'Sửa Hợp đồng' : 'Tạo Hợp đồng Mới';
+  form.reset();
+
+  $('#loai_hop_dong').addEventListener('change', (e) => {
+    $('#ngayKetThucGroup').style.display =
+      e.target.value === 'Xác định thời hạn' ? 'block' : 'none';
+    $('#ngay_ket_thuc').required = e.target.value === 'Xác định thời hạn';
+  });
+
+  const nvInput = $('#nhan_vien_id_input');
+  const nvIdHidden = $('#nhan_vien_id');
+  const nvDropdown = $('#nhanVienDropdown');
+
+  nvInput.disabled = !!contract;
+
+  nvInput.oninput = () => {
+    const query = nvInput.value.toLowerCase();
+    nvDropdown.innerHTML = state.nhanViens
+      .filter(
+        (nv) =>
+          nv.ho_ten.toLowerCase().includes(query) ||
+          String(nv.id).includes(query)
+      )
+      .slice(0, 10)
+      .map(
+        (nv) =>
+          `<div data-id="${nv.id}" data-name="${esc(nv.ho_ten)}">${esc(
+            nv.ho_ten
+          )} (${nv.ma_nhan_vien})</div>`
+      )
+      .join('');
+    nvDropdown.style.display = query.length > 0 ? 'block' : 'none';
+  };
+
+  nvDropdown.onclick = (e) => {
+    const div = e.target.closest('div[data-id]');
+    if (div) {
+      nvInput.value = div.dataset.name;
+      nvIdHidden.value = div.dataset.id;
+      nvDropdown.style.display = 'none';
+    }
+  };
+
+  if (contract) {
+    nvInput.value = contract.ho_ten || '';
+    nvIdHidden.value = contract.nhan_vien_id || '';
+    $('#so_hop_dong').value = contract.so_hop_dong || '';
+    $('#loai_hop_dong').value = contract.loai_hop_dong || 'Thử việc';
+    $('#ngay_ky').value = contract.ngay_ky
+      ? contract.ngay_ky.substring(0, 10)
+      : '';
+    $('#ngay_bat_dau').value = contract.ngay_bat_dau
+      ? contract.ngay_bat_dau.substring(0, 10)
+      : '';
+    $('#ngay_ket_thuc').value = contract.ngay_ket_thuc
+      ? contract.ngay_ket_thuc.substring(0, 10)
+      : '';
+    $('#luong_thoa_thuan').value = contract.luong_thoa_thuan || 0;
+    $('#trang_thai').value = contract.trang_thai || 'con_hieu_luc';
+    $('#ghi_chu').value = contract.ghi_chu || '';
+  } else {
+    $('#loai_hop_dong').value = 'Thử việc';
+    $('#ngay_ket_thuc').required = false;
   }
 
-  $('#so_hop_dong').value = contract?.so_hop_dong || '';
-  $('#loai_hop_dong').value = contract?.loai_hop_dong || '';
-  $('#ngay_ky').value = contract?.ngay_ky
-    ? new Date(contract.ngay_ky).toISOString().split('T')[0]
-    : '';
-  $('#ngay_bat_dau').value = contract?.ngay_bat_dau
-    ? new Date(contract.ngay_bat_dau).toISOString().split('T')[0]
-    : '';
-  $('#ngay_ket_thuc').value = contract?.ngay_ket_thuc
-    ? new Date(contract.ngay_ket_thuc).toISOString().split('T')[0]
-    : '';
-  $('#luong_thoa_thuan').value = contract?.luong_thoa_thuan || '';
-
-  $('#phu_cap_co_dinh').value = contract?.phu_cap_co_dinh || '';
-  $('#phu_cap_tham_nien').value = contract?.phu_cap_tham_nien || '';
-  $('#phu_cap_nang_luc').value = contract?.phu_cap_nang_luc || '';
-  $('#phu_cap_trach_nhiem').value = contract?.phu_cap_trach_nhiem || '';
-
-  $('#trang_thai').value = contract?.trang_thai || 'con_hieu_luc';
-  $('#ghi_chu').value = contract?.ghi_chu || '';
-
-  document
-    .querySelectorAll('.admin-only')
-    .forEach(
-      (el) => (el.style.display = user.role === 'admin' ? 'block' : 'none')
-    );
-
-  $('#contractModal').showModal();
+  $('#loai_hop_dong').dispatchEvent(new Event('change'));
+  modal.showModal();
 }
+
 function closeModal() {
   $('#contractModal').close();
+  state.editing = null;
 }
 
-// ===== Hiển thị form xác nhận =====
-function showConfirmModal(user) {
-  const modal = $('#confirmModal');
-  const content = $('#confirmContent');
+/* ===========================================================
+   HANDLE SUBMIT
+   =========================================================== */
+async function handleSubmit(user) {
+  if (state.saving) return;
+
+  const method = state.editing ? 'PUT' : 'POST';
+  const url = state.editing ? `/hop-dong/${state.editing.id}` : '/hop-dong';
+
+  const formData = new FormData();
+  formData.append('nhan_vien_id', $('#nhan_vien_id').value);
+  formData.append('so_hop_dong', $('#so_hop_dong').value);
+  formData.append('loai_hop_dong', $('#loai_hop_dong').value);
+  formData.append('ngay_ky', $('#ngay_ky').value);
+  formData.append('ngay_bat_dau', $('#ngay_bat_dau').value);
+  formData.append('luong_thoa_thuan', $('#luong_thoa_thuan').value);
+  formData.append('trang_thai', $('#trang_thai').value);
+  formData.append('ghi_chu', $('#ghi_chu').value);
+
+  if ($('#loai_hop_dong').value === 'Xác định thời hạn') {
+    formData.append('ngay_ket_thuc', $('#ngay_ket_thuc').value);
+  } else {
+    formData.append('ngay_ket_thuc', '');
+  }
+
+  const fileInput = $('#file_hop_dong');
+  if (fileInput.files.length > 0) {
+    formData.append('file_hop_dong', fileInput.files[0]);
+  }
+
+  state.saving = true;
+  $('#btnSave').textContent = 'Đang lưu...';
+  $('#btnSave').disabled = true;
+
+  try {
+    const resp = await api(url, {
+      method,
+      auth: true,
+      body: formData,
+    });
+
+    if (resp?.error) {
+      alert(`Lỗi: ${resp.error}`);
+      return;
+    }
+
+    closeModal();
+    await fetchList(user);
+  } catch (e) {
+    console.error('Save error:', e);
+    alert('Lỗi hệ thống khi lưu hợp đồng.');
+  } finally {
+    state.saving = false;
+    $('#btnSave').textContent = 'Lưu';
+    $('#btnSave').disabled = false;
+  }
+}
+
+function showConfirm(user) {
+  const isEditing = !!state.editing;
+  const actionText = isEditing ? 'Sửa' : 'Tạo mới';
+
+  if (confirm(`Bạn có chắc chắn muốn ${actionText} hợp đồng này không?`)) {
+    handleSubmit(user);
+  }
+}
+
+/* ===========================================================
+   MODAL XEM CHI TIẾT
+   =========================================================== */
+function openViewModal(contract) {
+  const modal = $('#viewModal');
+  const content = $('#contractDetailContent');
+
+  const phuCapsHtml = (contract.phu_caps || [])
+    .map(
+      (pc) => `
+        <tr class="detail-row">
+            <td class="detail-label" style="width:50%;"> - ${esc(
+              pc.ten_phu_cap || 'Chưa đặt tên'
+            )}</td>
+            <td class="detail-value" style="text-align: right;">${Number(
+              pc.so_tien ?? 0
+            ).toLocaleString('vi-VN')} ₫</td>
+        </tr>
+      `
+    )
+    .join('');
 
   const data = {
-    'Nhân viên': $('#nhan_vien_search').value,
-    'Số hợp đồng': $('#so_hop_dong').value,
-    'Loại hợp đồng': $('#loai_hop_dong').value,
-    'Ngày ký': $('#ngay_ky').value,
-    'Ngày bắt đầu': $('#ngay_bat_dau').value,
-    'Ngày kết thúc': $('#ngay_ket_thuc').value,
+    'ID Hợp đồng': contract.id,
+    'Nhân viên': contract.ho_ten || contract.nhan_vien_id,
+    'Số hợp đồng': contract.so_hop_dong || 'N/A',
+    'Loại hợp đồng': contract.loai_hop_dong || 'N/A',
+    'Ngày ký': formatDate(contract.ngay_ky) || 'N/A',
+    'Ngày bắt đầu': formatDate(contract.ngay_bat_dau) || 'N/A',
+    'Ngày kết thúc': formatDate(contract.ngay_ket_thuc) || 'Không xác định',
     'Lương thỏa thuận':
-      $('#luong_thoa_thuan').value || $('#luong_thoa_thuan').placeholder,
-    'Phụ cấp cố định': $('#phu_cap_co_dinh').value,
-    'Phụ cấp thâm niên': $('#phu_cap_tham_nien').value,
-    'Phụ cấp năng lực': $('#phu_cap_nang_luc').value,
-    'Phụ cấp trách nhiệm': $('#phu_cap_trach_nhiem').value,
-    'Trạng thái': $('#trang_thai').value,
-    'Ghi chú': $('#ghi_chu').value,
+      Number(contract.luong_thoa_thuan ?? 0).toLocaleString('vi-VN') + ' ₫',
+    'Trạng thái': `<span class="status-badge status-${
+      contract.trang_thai.replace(/ /g, '-') || 'con_hieu_luc'
+    }">${contract.trang_thai}</span>`,
+    'Ghi chú': esc(contract.ghi_chu) || 'Không có',
+    'Tài liệu': contract.file_hop_dong
+      ? `<a href="${esc(
+          contract.file_hop_dong
+        )}" target="_blank" class="btn-sm btn-link">Tải về</a>`
+      : 'Không có',
   };
 
   content.innerHTML = `
-    <table class="table" style="width:100%"><tbody>
-      ${Object.entries(data)
-        .map(
-          ([label, value]) => `
-        <tr><td style="width:40%;font-weight:bold;">${label}</td><td>${esc(
-            value || ''
-          )}</td></tr>
-      `
-        )
-        .join('')}
-    </tbody></table>
-  `;
-
+      <table class="detail-table"><tbody>
+        ${Object.entries(data)
+          .map(
+            ([label, value]) => `
+            <tr class="detail-row">
+                <td class="detail-label">${label}</td>
+                <td class="detail-value">${value}</td>
+            </tr>
+          `
+          )
+          .join('')}
+        
+        <tr class="detail-row header-row">
+          <td colspan="2" class="detail-label" style="font-weight: bold; padding-top: 15px;">Phụ cấp chi tiết (Tổng: ${Number(
+            contract.tong_phu_cap ?? 0
+          ).toLocaleString('vi-VN')} ₫):</td>
+        </tr>
+        <tr>
+          <td colspan="2" style="padding: 0;">
+            <table class="nested-table">
+              <tbody>${
+                phuCapsHtml ||
+                '<tr><td colspan="2" style="text-align: center; font-style: italic; border: none;">Không có phụ cấp chi tiết</td></tr>'
+              }</tbody>
+            </table>
+          </td>
+        </tr>
+      </tbody></table>
+    `;
   modal.showModal();
-  $('#btnConfirmCancel').onclick = () => modal.close();
-  $('#btnConfirmOk').onclick = async () => {
-    modal.close();
-    await saveContract(user);
-  };
 }
 
-// ===== Lưu hợp đồng =====
-async function saveContract(user) {
-  if (state.saving) return;
-  state.saving = true;
-  const btnSave = $('#btnSave');
-  btnSave.disabled = true;
-  btnSave.textContent = 'Đang lưu...';
-
-  const id = $('#contractId').value;
-  const formData = new FormData();
-  formData.append('so_hop_dong', $('#so_hop_dong').value || '');
-  formData.append('phu_cap_co_dinh', $('#phu_cap_co_dinh').value || '');
-  formData.append('phu_cap_tham_nien', $('#phu_cap_tham_nien').value || '');
-  formData.append('phu_cap_nang_luc', $('#phu_cap_nang_luc').value || '');
-  formData.append('phu_cap_trach_nhiem', $('#phu_cap_trach_nhiem').value || '');
-  formData.append('ghi_chu', $('#ghi_chu').value || '');
-  formData.append('trang_thai', $('#trang_thai').value || '');
-
-  const file = $('#file_hop_dong')?.files[0];
-  if (file) formData.append('file_hop_dong', file);
-
-  if (user.role === 'admin') {
-    formData.append(
-      'nhan_vien_id',
-      $('#nhan_vien_search').getSelectedId?.() || ''
-    );
-    formData.append('loai_hop_dong', $('#loai_hop_dong').value || '');
-    formData.append('ngay_ky', $('#ngay_ky').value || '');
-    formData.append('ngay_bat_dau', $('#ngay_bat_dau').value || '');
-    formData.append('ngay_ket_thuc', $('#ngay_ket_thuc').value || '');
-    formData.append('luong_thoa_thuan', $('#luong_thoa_thuan').value || '');
+document.addEventListener('DOMContentLoaded', function () {
+  const closeButton = document.getElementById('nut-dong-modal');
+  if (closeButton) {
+    closeButton.addEventListener('click', function () {
+      const viewModal = document.getElementById('viewModal');
+      if (viewModal) {
+        viewModal.close();
+      }
+    });
   }
+});
 
-  try {
-    if (id)
-      await api(`/hop-dong/${id}`, {
-        method: 'PUT',
-        body: formData,
-        auth: true,
-        formData: true,
-      });
-    else
-      await api(`/hop-dong`, {
-        method: 'POST',
-        body: formData,
-        auth: true,
-        formData: true,
-      });
-    closeModal();
-    await fetchList(user);
-  } catch (err) {
-    alert(err?.message || 'Lưu thất bại');
-  } finally {
-    state.saving = false;
-    btnSave.disabled = false;
-    btnSave.textContent = 'Lưu';
-  }
-}
-
-// ===== Bind sự kiện =====
+/* ===========================================================
+   BIND EVENTS
+   =========================================================== */
 function bindEvents(user) {
   $('#btnCancel').addEventListener('click', closeModal);
   $('#contractForm').addEventListener('submit', (e) => {
     e.preventDefault();
-    showConfirmModal(user);
+    showConfirm(user);
   });
-  $('#btnAdd').addEventListener('click', () => openModal(null, user));
+
+  if (user.role === 'admin' || user.role === 'manager') {
+    $('#btnAdd').classList.remove('hidden');
+    $('#btnAdd').addEventListener('click', () => openModal(null, user));
+  } else {
+    $('#btnAdd').classList.add('hidden');
+  }
+
+  $('#btnFilter').addEventListener('click', () => fetchList(user));
+
+  $('#btnReset').addEventListener('click', () => {
+    $('#filter_loai').value = '';
+    $('#filter_trang_thai').value = '';
+    $('#filter_tu_ngay').value = '';
+    $('#filter_den_ngay').value = '';
+    fetchList(user);
+  });
 
   $('#contractsBody').addEventListener('click', async (e) => {
     const btn = e.target.closest('button[data-action]');
     if (!btn) return;
+
     const id = btn.dataset.id;
     const action = btn.dataset.action;
-    const contract = state.items.find((c) => String(c.id) === String(id));
-    if (action === 'edit') openModal(contract, user);
+    const ct = state.items.find((c) => String(c.id) === String(id));
+
+    if (action === 'view') {
+      if (ct) openViewModal(ct);
+    }
+
+    if (action === 'edit' && user.role === 'admin') openModal(ct, user);
+
     if (action === 'del' && user.role === 'admin') {
       if (!confirm(`Xoá hợp đồng #${id}?`)) return;
       await api(`/hop-dong/${id}`, { method: 'DELETE', auth: true });
       await fetchList(user);
     }
   });
+
+  // 🔥 PHÂN TRANG EVENTS
+  const btnPrev = $('#btnPrev');
+  const btnNext = $('#btnNext');
+
+  if (btnPrev) {
+    btnPrev.addEventListener('click', () => {
+      if (state.currentPage > 1) {
+        state.currentPage--;
+        renderTable(user);
+        updatePagination();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+  }
+
+  if (btnNext) {
+    btnNext.addEventListener('click', () => {
+      const totalPages = getTotalPages();
+      if (state.currentPage < totalPages) {
+        state.currentPage++;
+        renderTable(user);
+        updatePagination();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+  }
 }
 
-// ===== Khởi tạo =====
+/* ===========================================================
+   INIT
+   =========================================================== */
 async function init() {
   requireAuthOrRedirect('./dang-nhap.html');
+
   const user = getUser();
   if (!user) return;
 
-  if (user.role === 'admin') $('#btnAdd').classList.remove('hidden');
-  else $('#actionsCol').textContent = 'Thao tác';
-
   await loadNhanVienList();
-  await autoSuggestSalary();
   await fetchList(user);
   bindEvents(user);
-
-  $('#user-badge').textContent = user.username || user.full_name || 'User';
-  $('#logout-btn').addEventListener('click', () => {
-    logout();
-    window.location.href = './dang-nhap.html';
-  });
-  $('#y').textContent = new Date().getFullYear();
 }
 
-document.addEventListener('DOMContentLoaded', init);
+init();

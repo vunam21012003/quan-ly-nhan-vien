@@ -5,6 +5,8 @@ import cors from "cors";
 import morgan from "morgan";
 import helmet from "helmet";
 import path from "path";
+import cron from "node-cron";
+import { autoCopyAllowance } from "./services/phuCapAutoCopy";
 
 import phongBanRoutes from "./routes/phongBanRoutes";
 import chucvuRoutes from "./routes/chucvuRoutes";
@@ -18,15 +20,27 @@ import taiKhoanRoutes from "./routes/taiKhoanRoutes";
 import baoCaoLuongRoutes from "./routes/baoCaoLuongRoutes";
 import authRoutes from "./routes/auth";
 import thuongPhatRoutes from "./routes/thuongPhatRoutes";
+import trangChinhRoutes from "./routes/trangChinhRoutes";
+import phuCapLoaiRoutes from "./routes/phuCapLoaiRoutes";
+import phuCapThangRoutes from "./routes/phuCapThangRoutes";
+import uploadRoutes from "./routes/upload";
 
 import ngayLeRoutes from "./routes/ngayLeRoutes";
 import phanCongLamBuRoutes from "./routes/phanCongLamBuRoutes";
 import "./scripts/capNhatHopDongHetHan";
+import luongPayRoutes from "./routes/luongPayRoutes";
 
 import { requireAuth, requireRole } from "./middlewares/auth";
 import { pool } from "./db";
 
 const app = express();
+
+// Chạy 00:05 sáng ngày 1 mỗi tháng
+cron.schedule("5 0 1 * *", async () => {
+  console.log("🔄 Đang tự động sao chép phụ cấp tháng mới...");
+  const rs = await autoCopyAllowance();
+  console.log(`✅ Đã sao chép ${rs.copied} phụ cấp.`);
+});
 
 /* ----------------------------------------------
  * 🔒 Cấu hình bảo mật Helmet
@@ -121,6 +135,11 @@ app.use("/thuong-phat", requireAuth, requireRole(["admin", "manager"]), thuongPh
 
 // ✅ Nhân viên (CRUD + auto tạo tài khoản)
 app.use("/nhan-vien", requireAuth, requireRole(["admin", "manager", "employee"]), nhanVienRoutes);
+// Serve static uploads
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+
+// API upload ảnh
+app.use("/upload", uploadRoutes);
 
 // ✅ Chấm công, hợp đồng, lương
 app.use("/cham-cong", requireAuth, requireRole(["admin", "manager", "employee"]), chamCongRoutes);
@@ -131,10 +150,16 @@ app.use("/luong", requireAuth, requireRole(["admin", "manager"]), luongRoutes);
 app.use("/lich-su-tra-luong", requireAuth, requireRole(["admin", "manager"]), lichSuTraLuongRoutes);
 app.use("/bao-cao", requireAuth, requireRole(["admin", "manager"]), baoCaoLuongRoutes);
 app.use("/phan-tich-cong", requireAuth, requireRole(["admin", "manager"]), phanTichCongRoutes);
+app.use("/tra-luong", requireAuth, requireRole(["admin", "manager"]), luongPayRoutes);
 
 // ✅ Tài khoản (Admin + Manager kế toán)
 app.use("/tai-khoan", requireAuth, requireRole(["admin", "manager"]), taiKhoanRoutes);
 
+app.use("/phu-cap-loai", requireAuth, requireRole(["admin", "manager"]), phuCapLoaiRoutes);
+app.use("/phu-cap-thang", requireAuth, requireRole(["admin", "manager"]), phuCapThangRoutes);
+
+// trang chính
+app.use("/api/trang-chinh", trangChinhRoutes);
 /* ----------------------------------------------
  * ⚠️ Xử lý lỗi & 404
  * ---------------------------------------------- */

@@ -15,7 +15,8 @@ export const getAll = async (search: string, page: number, limit: number) => {
   const [rows]: any = await pool.query(
     `SELECT 
         pb.id, 
-        pb.ten_phong_ban AS ten, 
+        pb.ten_phong_ban,              -- tên chuẩn
+        pb.ten_phong_ban AS ten,       -- alias để tương thích code cũ
         pb.mo_ta, 
         pb.manager_taikhoan_id,
         nv.ho_ten AS manager_name
@@ -55,8 +56,8 @@ export const update = async (
 ) => {
   const [r]: any = await pool.query(
     `UPDATE phong_ban
-     SET ten_phong_ban=?, mo_ta=?, manager_taikhoan_id=?
-     WHERE id=?`,
+     SET ten_phong_ban = ?, mo_ta = ?, manager_taikhoan_id = ?
+     WHERE id = ?`,
     [ten_phong_ban || null, mo_ta || null, managerId || null, id]
   );
   return { ok: r.affectedRows > 0 };
@@ -64,6 +65,6 @@ export const update = async (
 
 // Xoá
 export const remove = async (id: number) => {
-  const [r]: any = await pool.query(`DELETE FROM phong_ban WHERE id=?`, [id]);
+  const [r]: any = await pool.query(`DELETE FROM phong_ban WHERE id = ?`, [id]);
   return { ok: r.affectedRows > 0 };
 };

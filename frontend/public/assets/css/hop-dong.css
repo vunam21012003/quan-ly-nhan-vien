@@ -1,153 +1,591 @@
-body {
-  font-family: Arial, sans-serif;
-  background: #f5f6fa;
-  margin: 0;
-  padding: 20px;
-}
-
-.container {
-  background: #fff;
-  padding: 20px;
-  border-radius: 8px;
-}
-
-h1 {
-  margin: 10px 0;
-  text-align: center;
-}
-
-button {
-  background: #2563eb;
-  color: #fff;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-button:hover {
-  background: #1d4ed8;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 15px;
-}
-
-table,
-th,
-td {
-  border: 1px solid #ddd;
-}
-
-th,
-td {
-  padding: 10px;
-  text-align: center;
-}
-
-.modal {
-  display: none;
-  position: fixed;
-  z-index: 1;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-}
-
-.modal-content {
-  background: #fff;
-  padding: 20px;
-  margin: 10% auto;
-  width: 400px;
-  border-radius: 8px;
-}
-
-.close {
-  float: right;
-  cursor: pointer;
-  font-size: 20px;
-}
-
-/* Container full width */
+/* =========================================================================
+   CONTAINER + HEADER
+   ========================================================================= */
 .container.wide {
-  max-width: 1800px;
+  max-width: 1400px;
   min-height: 80vh;
   margin: 0 auto;
   background: #fff;
-  padding: 20px;
+  padding: 20px 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.05);
+}
+
+h1 {
+  font-size: 26px;
+  color: #222;
+  font-weight: 600;
+  margin-bottom: 22px;
+}
+
+/* =========================================================================
+   FILTER PANEL (ÄẸP NHƯ ẢNH MẪU)
+   ========================================================================= */
+.header-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.filter-panel {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.filter-panel select,
+.filter-panel input[type='date'] {
+  padding: 9px 12px;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  font-size: 14px;
+  background-color: #fff;
+  min-width: 160px;
+  transition: border-color 0.25s;
+}
+
+.filter-panel select:focus,
+.filter-panel input[type='date']:focus {
+  border-color: #1f6feb;
+  outline: none;
+}
+
+#btnFilter {
+  background: #1f6feb;
+  color: white;
+  padding: 9px 18px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+#btnReset {
+  background: #f3f4f6;
+  color: #444;
+  padding: 9px 18px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+#btnFilter:hover {
+  background: #0d62e0;
+}
+
+#btnReset:hover {
+  background: #e5e7eb;
+}
+
+/* =========================================================================
+   TABLE
+   ========================================================================= */
+.table-wrap {
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  background: white;
+  margin-top: 10px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.table thead tr {
+  background: #f8fafc;
+}
+
+.table thead th {
+  padding: 14px 10px;
+  color: #374151;
+  font-weight: 600;
+  text-transform: uppercase;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.table tbody tr {
+  height: 56px;
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.2s;
+}
+
+.table tbody tr:hover {
+  background: #f6f8fa;
+}
+
+.table td {
+  padding: 14px 10px;
+  vertical-align: middle;
+  color: #333;
+}
+
+.table td.status-cell {
+  text-align: center;
+}
+
+/* =========================================================================
+   STATUS BADGE – chuẩn đẹp như mẫu
+   ========================================================================= */
+.status-badge {
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 20px;
+  display: inline-block;
+}
+
+.status-con_hieu_luc,
+.status-con-hieu-luc,
+.status-badge.status-con_hieu_luc {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.status-het_han,
+.status-badge.status-het_han {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.status-da_cham_dut,
+.status-da-cham-dut,
+.status-badge.status-da_cham_dut {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* =========================================================================
+   ACTION BUTTONS (đều – căn giữa)
+   ========================================================================= */
+.action-cell {
+  white-space: nowrap;
+  text-align: center;
+}
+
+.btn-sm {
+  padding: 6px 8px;
+  font-size: 15px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 3px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-view {
+  background: #0d6efd;
+  color: white;
+}
+
+.btn-edit {
+  background: #facc15;
+  color: black;
+}
+
+.btn-del {
+  background: #ef4444;
+  color: white;
+}
+
+/* =========================================================================
+   PAGINATION – chuẩn đẹp như ảnh thứ 2
+   ========================================================================= */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 0;
+}
+
+.pagination button {
+  padding: 8px 14px;
+  background: #1f6feb;
+  color: white;
   border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
 }
 
-/* Cột hành động */
-.table td button {
-  margin: 0 2px;
+.pagination button:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
 }
 
-/* Link file */
-.file-link {
-  color: #2563eb;
-  text-decoration: underline;
+#pageInfo {
+  font-size: 15px;
+  font-weight: 600;
+  color: #374151;
+}
+
+/* =========================================================================
+   MODAL - CẢI TIẾN GIAO DIỆN ĐẸP HƠN
+   ========================================================================= */
+.modal {
+  max-width: 680px;
+  padding: 0;
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.modal::backdrop {
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+/* Modal Header */
+.modal h3 {
+  margin: 0;
+  padding: 24px 28px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f2937;
+  border-bottom: 2px solid #f3f4f6;
+  background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+  border-radius: 16px 16px 0 0;
+}
+
+/* Modal Form Container */
+.modal form {
+  padding: 28px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+/* Custom Scrollbar cho Modal */
+.modal form::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal form::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.modal form::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.modal form::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Form Groups trong Modal */
+.modal .form-group {
+  margin-bottom: 20px;
+}
+
+.modal .form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.modal .form-group input,
+.modal .form-group select,
+.modal .form-group textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 14px;
+  background-color: #ffffff;
+  transition: all 0.3s ease;
+  font-family: inherit;
+}
+
+.modal .form-group input:focus,
+.modal .form-group select:focus,
+.modal .form-group textarea:focus {
+  border-color: #1f6feb;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(31, 111, 235, 0.1);
+  background-color: #fafbff;
+}
+
+.modal .form-group textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.modal .form-group input[type='file'] {
+  padding: 10px;
+  border-style: dashed;
   cursor: pointer;
 }
-.file-link:hover {
-  color: #1d4ed8;
+
+.modal .form-group input[type='file']:hover {
+  border-color: #1f6feb;
+  background-color: #f0f4ff;
 }
 
-.table-wrap {
-  width: 1200px;
-  margin: 0 auto;
+/* Form Actions */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 2px solid #f3f4f6;
+  background: #fafbfc;
+  border-radius: 0 0 16px 16px;
+  margin: 0 -28px -28px -28px;
 }
 
-/* Áp dụng cho cả 2 nút */
-.btn-edit,
-.btn-del {
-  font-size: 18px; /* kích thước icon/text */
-  padding: 2px 15px; /* khoảng cách bên trong */
-  width: 50px; /* chiều rộng cố định */
-  height: 30px; /* chiều cao cố định */
-  border-radius: 8px; /* bo góc */
-  margin: auto 16px;
+.form-actions button {
+  padding: 11px 24px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  min-width: 100px;
 }
 
-/* Tùy chỉnh từng loại nút nếu muốn */
-.btn-edit {
-  background-color: #facc15; /* vàng */
-  color: #000;
+.form-actions .btn-primary {
+  background: linear-gradient(135deg, #1f6feb 0%, #0d62e0 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(31, 111, 235, 0.3);
+}
+
+.form-actions .btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(31, 111, 235, 0.4);
+}
+
+.btn-secondary {
   margin-bottom: 6px;
 }
 
-.btn-del {
-  background-color: #ef4444; /* đỏ */
-  color: #fff;
+.form-actions .btn-secondary {
+  background: #ffffff;
+  color: #6b7280;
+  border: 2px solid #e5e7eb;
 }
 
-.pad {
-  padding: 0;
-  display: flex;
-  height: 76px;
+.form-actions .btn-secondary:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  color: #374151;
 }
 
+/* =========================================================================
+   VIEW MODAL - MODAL XEM CHI TIẾT
+   ========================================================================= */
+.view-modal {
+  max-width: 730px;
+}
+
+.view-modal {
+  padding: 16px 24px;
+  max-height: 85vh;
+}
+.detail-content {
+  padding: 20px 24px;
+  max-height: 65vh;
+  overflow-y: auto;
+}
+
+#viewModalTitle {
+  padding: 16px;
+  height: 60px;
+}
+.view-modal .detail-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.view-modal .detail-content::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.view-modal .detail-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+/* Detail Table trong View Modal */
+.detail-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.detail-table tr {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.detail-table tr:last-child {
+  border-bottom: none;
+}
+
+.detail-table td {
+  padding: 14px 12px;
+  font-size: 14px;
+  vertical-align: top;
+}
+
+.detail-table td:first-child {
+  font-weight: 600;
+  color: #6b7280;
+  width: 35%;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+.detail-table td:last-child {
+  color: #1f2937;
+  font-weight: 500;
+}
+
+/* Dropdown List */
 .dropdown-list {
   position: absolute;
-  top: 60px;
+  top: calc(100% + 4px);
   left: 0;
   right: 0;
-  background: #fff;
-  border: 1px solid #ccc;
-  max-height: 180px;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  max-height: 240px;
   overflow-y: auto;
-  z-index: 9999; /* Đảm bảo nổi lên trên */
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  display: none;
 }
-.dropdown-list div {
-  padding: 6px 10px;
+
+.dropdown-list.show {
+  display: block;
+}
+
+.dropdown-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dropdown-list::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.dropdown-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.dropdown-item {
+  padding: 12px 14px;
   cursor: pointer;
+  border-bottom: 1px solid #f3f4f6;
+  transition: all 0.2s ease;
+  font-size: 14px;
 }
-.dropdown-list div:hover {
-  background-color: #f2f2f2;
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.dropdown-item:hover {
+  background: #f0f4ff;
+  color: #1f6feb;
+}
+
+/* =========================================================================
+   MOBILE
+   ========================================================================= */
+@media (max-width: 768px) {
+  .filter-panel {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .modal {
+    max-width: 95%;
+    margin: 10px;
+  }
+
+  .modal h3 {
+    padding: 20px;
+    font-size: 18px;
+  }
+
+  .modal form {
+    padding: 20px;
+    max-height: 60vh;
+  }
+
+  .form-actions {
+    padding: 16px 20px;
+    margin: 0 -20px -20px -20px;
+    flex-direction: column-reverse;
+  }
+
+  .form-actions button {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .view-modal .detail-content {
+    padding: 20px;
+  }
+
+  .detail-table td {
+    padding: 12px 8px;
+    display: block;
+    width: 100% !important;
+  }
+
+  .detail-table td:first-child {
+    padding-bottom: 4px;
+    font-size: 11px;
+  }
+
+  .detail-table td:last-child {
+    padding-top: 0;
+    padding-bottom: 16px;
+  }
+}
+
+/* =========================================================================
+   ALL
+   ========================================================================= */
+.table td.status-cell .status-badge {
+  border-radius: 25px !important;
+  font-size: 12px !important;
+  padding: 4px 14px !important;
+}
+
+/* =========================================================================
+   UPDATE CỘT LƯƠNG THỎA THUẬN – ĐẬM + FONT NHỎ HƠN
+   ========================================================================= */
+.table td.salary-cell {
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  color: #111;
+  white-space: nowrap;
+}
+
+/* =========================================================================
+   UPDATE CỘT PHỤ CẤP – TO HƠN + ĐỨNG XUỐNG DÒNG
+   ========================================================================= */
+.table td.allowance-cell {
+  font-size: 13px !important;
+  padding: 14px 12px !important;
+  white-space: nowrap !important;
 }

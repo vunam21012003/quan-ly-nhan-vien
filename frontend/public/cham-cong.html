@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Chấm công - Quản lý nhân viên</title>
     <link rel="stylesheet" href="./assets/css/styles.css" />
+    <link rel="stylesheet" href="./assets/css/ngay-le.css" />
     <link rel="stylesheet" href="./assets/css/phan-cong-lam-bu.css" />
     <style>
       /* ===== TAB MENU (giữ nguyên) ===== */
@@ -171,7 +172,7 @@
 
       <section id="ngay-le-tab" class="tab-content">
         <h2>🎉 Danh sách ngày lễ / làm bù</h2>
-        <div style="margin-bottom: 10px">
+        <div id="ngay-le-add-block" style="margin-bottom: 10px">
           <input id="le-ngay" type="date" />
           <input id="le-ten" placeholder="Tên ngày lễ" />
           <select id="le-loai">
@@ -188,6 +189,24 @@
           />
           <button id="btn-add-le" class="btn btn-primary">Thêm</button>
         </div>
+        <!-- ====== BỘ LỌC NGÀY LỄ ====== -->
+        <div
+          id="filter-le"
+          style="margin: 10px 0; display: flex; gap: 10px; flex-wrap: wrap"
+        >
+          <input id="le-filter-ngay" type="date" />
+          <input id="le-filter-ten" type="text" placeholder="Tên ngày lễ" />
+          <select id="le-filter-loai">
+            <option value="">-- Tất cả loại --</option>
+            <option value="le">Lễ</option>
+            <option value="tet">Tết</option>
+            <option value="lam_bu">Làm bù</option>
+            <option value="cuoi_tuan">Cuối tuần</option>
+          </select>
+          <button id="btn-filter-le" class="btn">Lọc</button>
+          <button id="btn-reset-le" class="btn">Làm mới</button>
+        </div>
+
         <table class="table">
           <thead>
             <tr>
@@ -200,8 +219,14 @@
           </thead>
           <tbody id="tbody-le"></tbody>
         </table>
+        <div class="pagination" id="pagination-le" style="margin-top: 10px">
+          <button id="le-prev" class="page-btn">«</button>
+          <span id="le-pageInfo" class="text-muted">Trang 1/1</span>
+          <button id="le-next" class="page-btn">»</button>
+        </div>
       </section>
 
+      <!-- QUẢN LÝ THƯỞNG PHẠT -->
       <section id="thuong-phat-tab" class="tab-content">
         <h2>💰 Quản lý thưởng phạt</h2>
 
@@ -257,6 +282,11 @@
             </tr>
           </tbody>
         </table>
+        <div class="pagination" id="tp-pagination" style="margin-top: 10px">
+          <button id="tp-prev" class="page-btn">«</button>
+          <span id="tp-pageInfo" class="text-muted">Trang 1/1</span>
+          <button id="tp-next" class="page-btn">»</button>
+        </div>
       </section>
 
       <dialog id="phanCongModal" style="max-width: 500px">
@@ -297,6 +327,7 @@
     <script type="module" src="./assets/js/cham-cong.js"></script>
     <script type="module" src="./assets/js/thuong-phat.js"></script>
     <script type="module" src="./assets/js/phan-cong-lam-bu.js"></script>
+    <script type="module" src="./assets/js/navbar.js"></script>
     <script>
       document.addEventListener('DOMContentLoaded', () => {
         const tabs = document.querySelectorAll('.tab-btn');

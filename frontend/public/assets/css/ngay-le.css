@@ -1,0 +1,126 @@
+/* ngay-le.css */
+
+/* === 1. ĐẶT HAI KHỐI NẰM SONG SONG BẰNG FLOAT === */
+
+/* Khối Thêm mới (Div đầu tiên sau H2) */
+#ngay-le-tab > div:nth-child(2) {
+  float: left;
+  width: 49%; /* Chiếm gần 1 nửa */
+  margin-right: 2%; /* Khoảng cách */
+
+  /* Style Card cơ bản */
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  padding: 15px;
+  border: 1px solid #e1e4e8;
+  margin-bottom: 20px !important;
+
+  /* Tối ưu hóa các input bên trong khối Thêm mới */
+  display: block; /* Giữ layout input theo dòng dọc */
+}
+
+/* Khối Lọc (có ID) */
+#filter-le {
+  float: right;
+  width: 49%; /* Chiếm gần 1 nửa */
+
+  /* Style Card cơ bản */
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  padding: 15px;
+  border: 1px solid #e1e4e8;
+  margin-bottom: 20px;
+
+  /* Tối ưu hóa các input bên trong khối Lọc */
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 10px !important;
+  align-items: center;
+}
+
+/* ÉP CÁC THÀNH PHẦN SAU FLOAT XUỐNG DÒNG */
+.table {
+  clear: both; /* Bắt buộc bảng phải xuống dòng dưới 2 khối float */
+
+  /* Trang trí bảng */
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  margin-top: 15px;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+/* === 2. TỐI ƯU HÓA INPUT TRONG KHỐI THÊM (Vì dùng Float nên không gian hẹp) === */
+#ngay-le-tab > div:nth-child(2) input,
+#ngay-le-tab > div:nth-child(2) select {
+  width: 100%; /* Buộc các input chiếm 100% chiều rộng của khối cha hẹp */
+  margin-bottom: 10px; /* Thêm khoảng cách giữa các input */
+  box-sizing: border-box; /* Đảm bảo padding không làm tăng width */
+}
+
+/* Nút Thêm: Đặt ở cuối cùng, chiếm toàn bộ chiều rộng */
+#btn-add-le {
+  width: 35%;
+  display: block;
+  margin-top: 10px;
+}
+
+/* === 3. TRANG TRÍ CHUNG (Giữ lại từ lần trước) === */
+
+#ngay-le-tab h2 {
+  text-align: center;
+  color: #2c3e50;
+  margin-bottom: 20px;
+}
+
+input[type='date'],
+input[type='text'],
+input[type='number'],
+select {
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  transition: border-color 0.2s;
+}
+
+.btn {
+  padding: 8px 16px;
+  border: 1px !important;
+  border-color: #0b5ed7;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+  font-size: 0.9rem;
+  background-color: #feffff;
+}
+
+.btn:hover {
+  background-color: #0b5ed7;
+}
+
+.btn-primary {
+  background-color: #0d6efd;
+  color: white;
+}
+.btn-primary:hover {
+  background-color: #0b5ed7;
+}
+
+/* ... (Thêm các style cho thead, tbody, pagination như đã cung cấp trước đó) ... */
+
+/* Trở lại Bố cục thông thường khi màn hình nhỏ (Responsive) */
+@media (max-width: 768px) {
+  #ngay-le-tab > div:nth-child(2),
+  #filter-le {
+    float: none; /* Hủy float */
+    width: 100%;
+    margin-right: 0;
+  }
+}

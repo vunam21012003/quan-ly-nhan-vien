@@ -4,43 +4,45 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Hợp đồng lao động - Quản lý nhân viên</title>
+
     <link rel="stylesheet" href="./assets/css/styles.css" />
     <link rel="stylesheet" href="./assets/css/hop-dong.css" />
-    <style>
-      .dropdown-list {
-        position: absolute;
-        top: 58px;
-        left: 0;
-        right: 0;
-        background: #fff;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        max-height: 180px;
-        overflow-y: auto;
-        z-index: 9999;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-      }
-      .dropdown-list div {
-        padding: 6px 10px;
-        cursor: pointer;
-      }
-      .dropdown-list div:hover {
-        background: #f3f3f3;
-      }
-    </style>
   </head>
-
   <body class="bg">
     <div id="menuContainer"></div>
+    <header></header>
 
     <main class="container wide">
-      <div class="page-header">
-        <h1 class="page-title">Hợp đồng lao động</h1>
-        <div class="toolbar">
-          <button id="btnAdd" class="btn btn-primary hidden">
-            ➕ Thêm hợp đồng
-          </button>
+      <h1>Quản lý Hợp đồng Lao động</h1>
+
+      <div class="header-controls">
+        <div class="filter-panel">
+          <select id="filter_loai">
+            <option value="">-- Loại hợp đồng --</option>
+            <option value="Thử việc">Thử việc</option>
+            <option value="Xác định thời hạn">Xác định thời hạn</option>
+            <option value="Không xác định thời hạn">
+              Không xác định thời hạn
+            </option>
+          </select>
+
+          <select id="filter_trang_thai">
+            <option value="">-- Trạng thái --</option>
+            <option value="con_hieu_luc">Còn hiệu lực</option>
+            <option value="het_han">Hết hạn</option>
+            <option value="da_cham_dut">Đã chấm dứt</option>
+          </select>
+
+          <input type="date" id="filter_tu_ngay" />
+          <input type="date" id="filter_den_ngay" />
+
+          <button id="btnFilter" class="btn btn-secondary">Lọc</button>
+          <button id="btnReset" class="btn btn-light">Reset</button>
         </div>
+
+        <button id="btnAdd" class="btn btn-primary hidden">
+          ➕ Thêm Hợp đồng
+        </button>
       </div>
 
       <div class="table-wrap">
@@ -55,126 +57,112 @@
               <th>Ngày bắt đầu</th>
               <th>Ngày kết thúc</th>
               <th>Lương thỏa thuận</th>
-              <th>Phụ cấp cố định</th>
-              <th>Phụ cấp thâm niên</th>
-              <th>Phụ cấp năng lực</th>
-              <th>Phụ cấp trách nhiệm</th>
+              <th>Phụ cấp</th>
               <th>Trạng thái</th>
               <th>Ghi chú</th>
               <th>Tài liệu</th>
-              <th id="actionsCol">Hành động</th>
+              <th id="actionsCol" class="action-header">Hành động</th>
             </tr>
           </thead>
-          <tbody id="contractsBody"></tbody>
+          <tbody id="contractsBody">
+            <tr>
+              <td colspan="13" class="text-muted">Đang tải dữ liệu...</td>
+            </tr>
+          </tbody>
         </table>
+        <div class="pagination">
+          <button id="btnPrev" class="btn btn-secondary">Trước</button>
+          <span id="pageInfo">Trang 1/1</span>
+          <button id="btnNext" class="btn btn-secondary">Sau</button>
+        </div>
       </div>
     </main>
 
-    <!-- Modal xác nhận -->
-    <dialog id="confirmModal" style="max-width: 600px; padding: 20px">
-      <h3>Xác nhận thông tin hợp đồng</h3>
-      <div id="confirmContent" style="margin-top: 10px"></div>
-      <div
-        style="
-          display: flex;
-          justify-content: flex-end;
-          gap: 8px;
-          margin-top: 20px;
-        "
-      >
-        <button id="btnConfirmCancel" class="btn">Hủy</button>
-        <button id="btnConfirmOk" class="btn btn-primary">Xác nhận</button>
-      </div>
-    </dialog>
-
-    <!-- Modal -->
-    <dialog id="contractModal" style="max-width: 620px">
-      <form id="contractForm" class="form" style="padding: 10px 2px">
-        <h3 id="modalTitle" style="margin: 0">Thêm hợp đồng</h3>
-        <input type="hidden" id="contractId" />
-
-        <!-- Chỉ admin -->
-        <div class="form-group admin-only" style="position: relative">
-          <label for="nhan_vien_search">Nhân viên</label>
+    <dialog id="contractModal" class="modal">
+      <h3 id="modalTitle">Tạo Hợp đồng Mới</h3>
+      <form id="contractForm">
+        <div class="form-group">
+          <label for="nhan_vien_id_input">Nhân viên</label>
           <input
             type="text"
-            id="nhan_vien_search"
-            placeholder="Nhập tên hoặc ID để tìm..."
+            id="nhan_vien_id_input"
+            required
             autocomplete="off"
+            placeholder="Tìm kiếm nhân viên..."
           />
-          <div
-            id="nhan_vien_dropdown"
-            class="dropdown-list"
-            style="display: none"
-          ></div>
+          <input type="hidden" id="nhan_vien_id" name="nhan_vien_id" />
+          <div id="nhanVienDropdown" class="dropdown-list"></div>
         </div>
 
-        <div class="form-group admin-only">
+        <div class="form-group">
           <label for="so_hop_dong">Số hợp đồng</label>
-          <input type="text" id="so_hop_dong" />
+          <input type="text" id="so_hop_dong" name="so_hop_dong" />
         </div>
-        <div class="form-group admin-only">
+
+        <div class="form-group">
           <label for="loai_hop_dong">Loại hợp đồng</label>
-          <input type="text" id="loai_hop_dong" />
+          <select id="loai_hop_dong" name="loai_hop_dong" required>
+            <option value="Thử việc">Thử việc</option>
+            <option value="Xác định thời hạn">Xác định thời hạn</option>
+            <option value="Không xác định thời hạn">
+              Không xác định thời hạn
+            </option>
+          </select>
         </div>
-        <div class="form-group admin-only">
+
+        <div class="form-group">
           <label for="ngay_ky">Ngày ký</label>
-          <input type="date" id="ngay_ky" />
+          <input type="date" id="ngay_ky" name="ngay_ky" />
         </div>
-        <div class="form-group admin-only">
+
+        <div class="form-group">
           <label for="ngay_bat_dau">Ngày bắt đầu</label>
-          <input type="date" id="ngay_bat_dau" />
+          <input type="date" id="ngay_bat_dau" name="ngay_bat_dau" required />
         </div>
-        <div class="form-group admin-only">
+
+        <div class="form-group" id="ngayKetThucGroup">
           <label for="ngay_ket_thuc">Ngày kết thúc</label>
-          <input type="date" id="ngay_ket_thuc" />
-        </div>
-        <div class="form-group admin-only">
-          <label for="luong_thoa_thuan">Lương thỏa thuận</label>
-          <input type="number" id="luong_thoa_thuan" />
-        </div>
-
-        <!-- Admin + Manager -->
-        <div class="form-group">
-          <label for="phu_cap_co_dinh">Phụ cấp cố định</label>
-          <input type="number" id="phu_cap_co_dinh" />
-        </div>
-        <div class="form-group">
-          <label for="phu_cap_tham_nien">Phụ cấp thâm niên</label>
-          <input type="number" id="phu_cap_tham_nien" />
-        </div>
-        <div class="form-group">
-          <label for="phu_cap_nang_luc">Phụ cấp năng lực</label>
-          <input type="number" id="phu_cap_nang_luc" />
-        </div>
-        <div class="form-group">
-          <label for="phu_cap_trach_nhiem">Phụ cấp trách nhiệm</label>
-          <input type="number" id="phu_cap_trach_nhiem" />
+          <input type="date" id="ngay_ket_thuc" name="ngay_ket_thuc" />
         </div>
 
         <div class="form-group">
-          <label for="file_hop_dong">Tệp hợp đồng</label>
+          <label for="luong_thoa_thuan">Lương thỏa thuận (VNĐ)</label>
+          <input
+            type="number"
+            id="luong_thoa_thuan"
+            name="luong_thoa_thuan"
+            required
+            min="0"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="file_hop_dong">Tệp hợp đồng (PDF, Doc, Image)</label>
           <input
             type="file"
             id="file_hop_dong"
-            accept=".pdf,.doc,.docx,.jpg,.png"
+            accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
           />
         </div>
+
         <div class="form-group">
           <label for="trang_thai">Trạng thái</label>
-          <select id="trang_thai">
+          <select id="trang_thai" name="trang_thai">
             <option value="con_hieu_luc">Còn hiệu lực</option>
             <option value="het_han">Hết hạn</option>
             <option value="da_cham_dut">Đã chấm dứt</option>
           </select>
         </div>
+
         <div class="form-group">
           <label for="ghi_chu">Ghi chú</label>
-          <textarea id="ghi_chu"></textarea>
+          <textarea id="ghi_chu" name="ghi_chu"></textarea>
         </div>
 
-        <div style="display: flex; gap: 8px; justify-content: flex-end">
-          <button type="button" id="btnCancel" class="btn">Hủy</button>
+        <div class="form-actions">
+          <button type="button" id="btnCancel" class="btn btn-secondary">
+            Hủy
+          </button>
           <button type="submit" id="btnSave" class="btn btn-primary">
             Lưu
           </button>
@@ -182,14 +170,23 @@
       </form>
     </dialog>
 
-    <footer class="footer">
-      <div class="container">
-        <small>© <span id="y"></span> HR System</small>
+    <dialog id="viewModal" class="modal view-modal">
+      <h3 id="viewModalTitle">Chi tiết Hợp đồng</h3>
+      <div id="contractDetailContent" class="detail-content"></div>
+      <div class="form-actions">
+        <button type="button" id="nut-dong-modal" class="btn btn-secondary">
+          Đóng
+        </button>
       </div>
-    </footer>
+    </dialog>
 
-    <script src="./assets/js/danh-sach.js"></script>
+    <div id="pagination" class="pagination"></div>
+
     <script type="module" src="./assets/js/hop-dong.js"></script>
     <script type="module" src="./assets/js/navbar.js"></script>
+    <script src="./assets/js/danh-sach.js"></script>
+    <footer class="footer">
+      <div class="container">&copy; 2024 Quản lý Nhân sự</div>
+    </footer>
   </body>
 </html>

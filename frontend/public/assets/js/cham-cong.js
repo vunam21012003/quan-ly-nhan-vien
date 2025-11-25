@@ -16,6 +16,15 @@ const st = {
   filtered: false,
 };
 
+const stLe = {
+  page: 1,
+  limit: 10,
+  total: 0,
+  items: [],
+  filtered: false,
+  filterParams: {},
+};
+
 const $ = (s, r = document) => r.querySelector(s);
 const esc = (s) =>
   (s ?? '').toString().replace(/[&<>"']/g, (m) => {
@@ -41,8 +50,43 @@ function unwrap(r) {
 function setUserBadge() {
   const u = getUser();
   if (!u) return;
-  const role = u.role ?? u.quyen ?? 'user';
-  if (role === 'employee') $('#btn-create').style.display = 'none';
+
+  const role = (u.role || '').toLowerCase();
+  const dep = (u.ten_phong_ban || '').toLowerCase();
+
+  const isAdmin = role === 'admin';
+  const isKeToanManager = role === 'manager' && dep.includes('kế toán');
+
+  // ========== 1) Ẩn nút tạo chấm công cho employee ==========
+  if (role === 'employee') {
+    $('#btn-create').style.display = 'none';
+    document
+      .querySelectorAll('button[data-act="edit"]')
+      .forEach((b) => b.remove());
+    document
+      .querySelectorAll('button[data-act="del"]')
+      .forEach((b) => b.remove());
+  }
+
+  // ===========================
+  // ẨN KHỐI THÊM NGÀY LỄ
+  // Cho manager & employee
+  // ===========================
+  if (role === 'manager' || role === 'employee') {
+    // 1) Ẩn toàn bộ khối thêm ngày lễ
+    const addBlock = document.getElementById('ngay-le-add-block');
+    if (addBlock) addBlock.style.display = 'none';
+
+    // 2) Ẩn nút Thêm ngày lễ (phòng trường hợp không nằm trong block)
+    const addBtn = document.getElementById('btn-add-le');
+    if (addBtn) addBtn.style.display = 'none';
+
+    // 3) Disable toàn bộ input (đề phòng người dùng CSS custom)
+    ['le-ngay', 'le-ten', 'le-loai', 'le-so-ngay-nghi'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = true;
+    });
+  }
 }
 
 function pageInfo() {
@@ -227,32 +271,33 @@ $('#btn-export').addEventListener('click', async () => {
 });
 
 // ================== NGÀY LỄ ==================
-async function fetchNgayLe() {
+async function fetchNgayLe(params = {}) {
+  stLe.filterParams = params;
+  stLe.filtered = !!(params.ngay || params.ten || params.loai);
+
   const resp = await api('/ngay-le');
   const { items } = unwrap(resp);
 
-  $('#tbody-le').innerHTML = items.length
-    ? items
-        .map((x) => {
-          // 💡 PHẦN SỬA ĐỔI BẮT ĐẦU TỪ ĐÂY
-          let actionsHtml = `<button class="page-btn" data-id="${x.id}" data-act="del-le">Xoá</button>`;
+  let data = items;
 
-          // Thêm nút Phân công nếu là loại 'lam_bu'
-          if (x.loai === 'lam_bu') {
-            actionsHtml += ` <button class="page-btn btn-success" data-ngay="${x.ngay}" data-act="phan-cong">Phân công</button>`;
-          }
-          // 💡 PHẦN SỬA ĐỔI KẾT THÚC Ở ĐÂY
+  // --- Lọc ---
+  if (params.ngay) {
+    data = data.filter((x) => fmtDate(x.ngay) === params.ngay);
+  }
+  if (params.ten) {
+    const kw = params.ten.toLowerCase();
+    data = data.filter((x) => (x.ten_ngay || '').toLowerCase().includes(kw));
+  }
+  if (params.loai) {
+    data = data.filter((x) => x.loai === params.loai);
+  }
 
-          return `<tr>
-          <td>${esc(fmtDate(x.ngay))}</td>
-          <td>${esc(x.ten_ngay)}</td>
-          <td>${esc(x.loai)}</td>
-          <td>${esc(x.so_ngay_nghi ?? '')}</td> 
-          <td>${actionsHtml}</td>
-        </tr>`;
-        })
-        .join('')
-    : `<tr><td colspan="5" class="text-muted">Không có dữ liệu</td></tr>`;
+  // Lưu vào state
+  stLe.items = data;
+  stLe.page = 1;
+
+  // Render phân trang
+  renderNgayLeTable();
 }
 
 async function addNgayLe() {
@@ -274,6 +319,37 @@ async function showTodayOnly() {
   const today = new Date().toISOString().slice(0, 10);
   st.filtered = false; // chưa lọc thủ công
   await fetchList({ from: today, to: today });
+}
+
+function renderNgayLeTable() {
+  const start = (stLe.page - 1) * stLe.limit;
+  const end = start + stLe.limit;
+  const pageItems = stLe.items.slice(start, end);
+
+  stLe.total = stLe.items.length;
+
+  $('#tbody-le').innerHTML = pageItems.length
+    ? pageItems
+        .map((x) => {
+          let actionsHtml = `<button class="page-btn" data-id="${x.id}" data-act="del-le">Xoá</button>`;
+          if (x.loai === 'lam_bu') {
+            actionsHtml += ` <button class="page-btn btn-success" data-ngay="${x.ngay}" data-act="phan-cong">Phân công</button>`;
+          }
+          return `<tr>
+            <td>${esc(fmtDate(x.ngay))}</td>
+            <td>${esc(x.ten_ngay)}</td>
+            <td>${esc(x.loai)}</td>
+            <td>${esc(x.so_ngay_nghi ?? '')}</td> 
+            <td>${actionsHtml}</td>
+          </tr>`;
+        })
+        .join('')
+    : `<tr><td colspan="5" class="text-muted">Không có dữ liệu phù hợp</td></tr>`;
+
+  const totalPages = Math.max(1, Math.ceil(stLe.total / stLe.limit));
+  $('#le-pageInfo').textContent = `Trang ${stLe.page}/${totalPages}`;
+  $('#le-prev').disabled = stLe.page <= 1;
+  $('#le-next').disabled = stLe.page >= totalPages;
 }
 
 // ================== BIND ==================
@@ -319,6 +395,42 @@ function bind() {
     }
   });
 
+  // ====== BỘ LỌC NGÀY LỄ ======
+  $('#btn-filter-le').addEventListener('click', () => {
+    const ngay = $('#le-filter-ngay').value || null;
+    const ten = $('#le-filter-ten').value.trim() || null;
+    const loai = $('#le-filter-loai').value || null;
+
+    fetchNgayLe({
+      ngay,
+      ten,
+      loai,
+    });
+  });
+
+  // ===== PHÂN TRANG NGÀY LỄ =====
+  $('#le-prev').addEventListener('click', () => {
+    if (stLe.page > 1) {
+      stLe.page--;
+      renderNgayLeTable();
+    }
+  });
+
+  $('#le-next').addEventListener('click', () => {
+    const totalPages = Math.ceil(stLe.total / stLe.limit);
+    if (stLe.page < totalPages) {
+      stLe.page++;
+      renderNgayLeTable();
+    }
+  });
+
+  $('#btn-reset-le').addEventListener('click', () => {
+    $('#le-filter-ngay').value = '';
+    $('#le-filter-ten').value = '';
+    $('#le-filter-loai').value = '';
+    fetchNgayLe();
+  });
+
   $('#next').addEventListener('click', () => {
     st.page++;
     if (st.filtered) {
@@ -358,10 +470,31 @@ function bind() {
 
     // 💡 PHẦN CẦN THÊM: Xử lý sự kiện Phân công
     if (act === 'phan-cong') {
+      const u = getUser();
+      const role = u.role;
+      const phongBan = (u.ten_phong_ban || '').toLowerCase();
+
+      const isAdmin = role === 'admin';
+      const isKeToan = role === 'manager' && phongBan.includes('kế toán');
+      const isManager = role === 'manager';
+
       const ngay = btn.dataset.ngay;
-      await openPhanCongModal(ngay);
-      // Tải lại bảng sau khi lưu phân công
-      await fetchNgayLe();
+
+      // Admin + Manager kế toán → phân công toàn bộ nhân viên
+      if (isAdmin || isKeToan) {
+        await openPhanCongModal(ngay, { restrictPhongBan: null });
+        await fetchNgayLe();
+        return;
+      }
+
+      // Manager phòng khác → CHỈ phân công nhân viên phòng ban mình
+      if (isManager) {
+        await openPhanCongModal(ngay, { restrictPhongBan: u.phong_ban_id });
+        await fetchNgayLe();
+        return;
+      }
+
+      alert('Bạn không có quyền phân công làm bù.');
       return;
     }
   });
