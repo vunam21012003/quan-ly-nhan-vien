@@ -131,7 +131,12 @@ app.use("/phong-ban", phongBanRoutes);
 app.use("/chuc-vu", chucvuRoutes);
 app.use("/phan-cong-lam-bu", phanCongLamBuRoutes);
 // ✅ Quản lý thưởng phạt
-app.use("/thuong-phat", requireAuth, requireRole(["admin", "manager"]), thuongPhatRoutes);
+app.use(
+  "/thuong-phat",
+  requireAuth,
+  requireRole(["admin", "manager", "employee"]),
+  thuongPhatRoutes
+);
 
 // ✅ Nhân viên (CRUD + auto tạo tài khoản)
 app.use("/nhan-vien", requireAuth, requireRole(["admin", "manager", "employee"]), nhanVienRoutes);

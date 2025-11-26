@@ -1,18 +1,17 @@
-//thuongPhatService
-import { Request } from "express";
+// src/services/thuongPhatService.ts (FULL CODE ĐÃ CHỈNH SỬA)
 import { pool } from "../db";
 import { isSalaryLocked } from "../utils/checkPaid";
 
 export const getList = async (req: any) => {
-  const { nhan_vien_id, loai, thang, nam, phong_ban_id } = req.query as any;
-  const scope = req.phamvi; // thông tin quyền
+  const { nhan_vien_id, loai, thang, nam, phong_ban_id } = req.query;
+  const scope = req.phamvi; // ⭐ LẤY PHẠM VI ĐÃ XỬ LÝ TRONG auth.ts
 
   const where: string[] = [];
   const params: any[] = [];
 
-  /* ----------------------------
-   * 1. GIỮ LOGIC LỌC CŨ
-   * ---------------------------- */
+  // ------------------------------
+  // 1) LỌC CƠ BẢN
+  // ------------------------------
   if (nhan_vien_id) {
     where.push("tp.nhan_vien_id = ?");
     params.push(nhan_vien_id);
@@ -34,36 +33,33 @@ export const getList = async (req: any) => {
     params.push(phong_ban_id);
   }
 
-  /* ----------------------------
-   * 2. ⭐ PHÂN QUYỀN
-   * ---------------------------- */
-
-  // ❌ Employee → chỉ xem phòng ban của họ
+  // ------------------------------
+  // 2) PHÂN QUYỀN
+  // ------------------------------
   if (scope.role === "employee") {
-    where.push("tp.phong_ban_id = ?");
-    params.push(scope.departmentId);
+    // ⭐ ĐÃ SỬA: Nhân viên chỉ xem thưởng/phạt của phòng ban họ
+    // Lọc theo phong_ban_id của nhân viên hiện tại
+    where.push("tp.phong_ban_id = (SELECT phong_ban_id FROM nhan_vien WHERE id = ?)");
+    params.push(scope.employeeId);
   }
 
-  // ⭐ Manager kế toán → xem tất cả PB (không thêm where)
+  // ⭐ Manager kế toán xem tất cả
   if (scope.role === "manager" && scope.isAccountingManager) {
-    // Không thêm điều kiện phòng ban
+    // không thêm điều kiện PB
   }
-  // ⭐ Manager thường → chỉ xem các phòng ban mình quản lý
+  // ⭐ Manager thường → chỉ PB họ quản lý
   else if (scope.role === "manager") {
-    if (!scope.managedDepartmentIds || scope.managedDepartmentIds.length === 0) {
+    if (!scope.managedDepartmentIds.length) {
       return { items: [] };
     }
     where.push(`tp.phong_ban_id IN (${scope.managedDepartmentIds.map(() => "?").join(",")})`);
     params.push(...scope.managedDepartmentIds);
   }
 
-  // ⭐ Admin → full quyền (không giới hạn)
+  // Admin → xem tất cả
 
   const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
-  /* ----------------------------
-   * 3. TRẢ DỮ LIỆU
-   * ---------------------------- */
   const [rows]: any = await pool.query(
     `
       SELECT tp.*, nv.ho_ten, pb.ten_phong_ban
@@ -79,63 +75,43 @@ export const getList = async (req: any) => {
   return { items: rows };
 };
 
-export const getById = async (id: number) => {
-  const [rows]: any = await pool.query("SELECT * FROM thuong_phat WHERE id=?", [id]);
-  return rows[0] || null;
-};
-
+// =======================================================================
+// CREATE
+// =======================================================================
 export const create = async (req: any) => {
   const { nhan_vien_id, phong_ban_id, loai, ly_do, so_tien, ghi_chu, thang, nam } = req.body;
-
-  const user = req.user;
   const scope = req.phamvi;
+  const user = req.user;
 
-  /* ----------------------------
-   * 🔒 1. KHÓA LƯƠNG
-   * ---------------------------- */
   if (await isSalaryLocked(nhan_vien_id, thang, nam)) {
     return { error: "Tháng này đã trả lương — không thể thêm thưởng/phạt!" };
   }
 
-  /* ----------------------------
-   * ⭐ 2. PHÂN QUYỀN
-   * ---------------------------- */
-
-  // ❌ Employee → không được thêm
   if (scope.role === "employee") {
     return { error: "Nhân viên không thể thêm thưởng/phạt" };
   }
 
-  // ⭐ Manager kế toán → thêm cho tất cả phòng ban
   const isKeToanManager = scope.role === "manager" && scope.isAccountingManager;
 
-  // Manager thường → chỉ thêm phòng ban mình
   if (scope.role === "manager" && !isKeToanManager) {
     if (!scope.managedDepartmentIds.includes(phong_ban_id)) {
       return { error: "Bạn không có quyền thêm của phòng ban này" };
     }
   }
 
-  // Admin → full quyền
-
-  /* ----------------------------
-   * ⭐ 3. THÊM (GIỮ LOGIC CŨ)
-   * ---------------------------- */
   const [r]: any = await pool.query(
     `INSERT INTO thuong_phat 
-     (nhan_vien_id, phong_ban_id, thang, nam, loai, ly_do, so_tien, ghi_chu, nguoi_tao_id, ngay_tao)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      (nhan_vien_id, phong_ban_id, thang, nam, loai, ly_do, so_tien, ghi_chu, nguoi_tao_id, ngay_tao)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
     [nhan_vien_id, phong_ban_id, thang, nam, loai, ly_do, so_tien, ghi_chu, user.id]
   );
 
   return { id: r.insertId };
 };
 
-export const update = async (id: number, req: any) => {
-  // (Bạn nói không dùng update → mình giữ nguyên, không chỉnh)
-  return { error: "Hệ thống không hỗ trợ sửa thưởng/phạt" };
-};
-
+// =======================================================================
+// REMOVE
+// =======================================================================
 export const remove = async (id: number, req: any) => {
   const scope = req.phamvi;
 
@@ -144,37 +120,24 @@ export const remove = async (id: number, req: any) => {
     [id]
   );
 
-  if (!row) return false;
+  if (!row) return { error: "Không tìm thấy" };
 
-  /* ----------------------------
-   * 🔒 KHÓA LƯƠNG
-   * ---------------------------- */
   if (await isSalaryLocked(row.nhan_vien_id, row.thang, row.nam)) {
-    return { error: "Tháng này đã trả lương — không thể xoá!", status: 400 };
+    return { error: "Tháng này đã trả lương — không thể xoá!" };
   }
 
-  /* ----------------------------
-   * ⭐ PHÂN QUYỀN XOÁ
-   * ---------------------------- */
+  const isKeToan = scope.role === "manager" && scope.isAccountingManager;
 
-  // Employee → không xoá
   if (scope.role === "employee") {
-    return { error: "Bạn không có quyền xoá", status: 403 };
+    return { error: "Bạn không có quyền xoá" };
   }
 
-  // Manager kế toán → xoá tất cả
-  const isKeToanManager = scope.role === "manager" && scope.isAccountingManager;
-
-  if (scope.role === "manager" && !isKeToanManager) {
+  if (scope.role === "manager" && !isKeToan) {
     if (!scope.managedDepartmentIds.includes(row.phong_ban_id)) {
-      return {
-        error: "Không thể xoá bản ghi phòng ban khác",
-        status: 403,
-      };
+      return { error: "Không thể xoá bản ghi phòng ban khác" };
     }
   }
 
-  // Admin + Manager kế toán → xoá tự do
   const [r]: any = await pool.query("DELETE FROM thuong_phat WHERE id=?", [id]);
-  return r.affectedRows > 0;
+  return r.affectedRows > 0 ? { ok: true } : { error: "Xoá thất bại" };
 };

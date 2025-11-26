@@ -1,3 +1,4 @@
+// thuong-phat.js (FULL CODE ĐÃ CHỈNH SỬA)
 // === THƯỞNG / PHẠT ===
 import { api } from './api.js';
 
@@ -73,9 +74,15 @@ function renderThuongPhatTable() {
           ${
             IS_EMPLOYEE
               ? ''
-              : `<button class="page-btn" data-act="del" data-id="${x.id}">🗑️</button>`
+              : IS_ADMIN ||
+                IS_ACC_MANAGER ||
+                (IS_MANAGER &&
+                  USER.managedDepartmentIds?.includes(x.phong_ban_id))
+              ? `<button class="page-btn" data-act="del" data-id="${x.id}">🗑️</button>`
+              : ''
           }
         </td>
+
       </tr>
     `
         )
@@ -187,15 +194,18 @@ async function loadPhongBan() {
 // ==== DANH SÁCH ====
 async function fetchList() {
   try {
-    // ⭐ Nếu là employee → fix phong_ban_id theo user
+    // ⭐ ĐÃ SỬA: Tự động gán phong_ban_id của user vào bộ lọc nếu là employee
     if (IS_EMPLOYEE && USER?.phong_ban_id) {
       st.filters.phong_ban_id = USER.phong_ban_id;
     }
+
     const { thang, nam, nhan_vien_id, phong_ban_id } = st.filters;
     const q = new URLSearchParams();
     if (thang) q.append('thang', thang);
     if (nam) q.append('nam', nam);
+    // Gửi nhan_vien_id chỉ khi người dùng nhập vào thanh tìm kiếm (manager/admin)
     if (nhan_vien_id) q.append('nhan_vien_id', nhan_vien_id);
+    // Gửi phong_ban_id (sẽ là ID cố định của employee, hoặc ID do manager/admin chọn)
     if (phong_ban_id) q.append('phong_ban_id', phong_ban_id);
 
     const res = await api(`/thuong-phat?${q.toString()}`);
@@ -257,6 +267,7 @@ function setupFilters() {
     st.filters.nam = e.target.value;
     fetchList();
   });
+  // Nhân viên vẫn có thể kích hoạt fetchList, nhưng select đã bị disabled
   $('#tp-phong-ban').addEventListener('change', (e) => {
     st.filters.phong_ban_id = e.target.value;
     fetchList();
@@ -281,26 +292,24 @@ async function exportExcel() {
 // ==== KHỞI TẠO ====
 document.addEventListener('DOMContentLoaded', () => {
   // ===== ẨN / HIỆN NÚT THÊM THEO QUYỀN =====
+  const addBtn = $('#btn-tp-add');
+
   if (IS_EMPLOYEE) {
-    $('#btn-tp-add').style.display = 'none';
-  }
-
-  if (IS_MANAGER && !IS_ACC_MANAGER) {
-    $('#btn-tp-add').style.display = 'inline-block';
-  }
-
-  if (IS_ACC_MANAGER) {
-    $('#btn-tp-add').style.display = 'inline-block';
-  }
-
-  if (IS_ADMIN) {
-    $('#btn-tp-add').style.display = 'inline-block';
+    addBtn.style.display = 'none';
+  } else if (IS_ADMIN || IS_ACC_MANAGER) {
+    addBtn.style.display = 'inline-block';
+  } else if (IS_MANAGER) {
+    addBtn.style.display = 'inline-block'; // nhưng backend sẽ chặn nếu khác phòng ban
   }
 
   // ⭐⭐ NHÂN VIÊN → KHÔNG ĐƯỢC ĐỔI PHÒNG BAN ⭐⭐
   if (IS_EMPLOYEE) {
     const pbSelect = $('#tp-phong-ban');
-    if (pbSelect) pbSelect.disabled = true;
+    if (pbSelect) {
+      // Set cố định ID phòng ban của họ (đã fix trong fetchList)
+      pbSelect.value = USER.phong_ban_id;
+      pbSelect.disabled = true;
+    }
   }
 
   // ---- Sinh danh sách tháng ----
