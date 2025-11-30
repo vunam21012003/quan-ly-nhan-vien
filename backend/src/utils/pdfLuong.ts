@@ -19,8 +19,8 @@ export async function buildPdfLuong({ nhanVien, luong, lich_su = [] }: any) {
     // =========================
     // Load font Roboto
     // =========================
-    const fontRegular = path.join(process.cwd(), "fonts", "Roboto-Regular.ttf");
-    const fontBold = path.join(process.cwd(), "fonts", "Roboto-Bold.ttf");
+    const fontRegular = path.join(__dirname, "..", "fonts", "Roboto-Regular.ttf");
+    const fontBold = path.join(__dirname, "..", "fonts", "Roboto-Bold.ttf");
 
     doc.registerFont("regular", fontRegular);
     doc.registerFont("bold", fontBold);

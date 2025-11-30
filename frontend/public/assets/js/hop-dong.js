@@ -10,7 +10,12 @@ const state = {
   saving: false,
   currentPage: 1,
   totalItems: 0,
+  perm: {
+    isAccountingManager: false,
+  },
 };
+
+//window.__HD_STATE__ = state;
 
 const $ = (s, r = document) => r.querySelector(s);
 const esc = (s) =>
@@ -35,8 +40,16 @@ const formatDate = (d) => {
 
 const unwrap = (resp) => {
   if (!resp) return [];
+
+  // Trường hợp resp là mảng
   if (Array.isArray(resp)) return resp;
+
+  // Trường hợp resp.data là mảng
   if (Array.isArray(resp.data)) return resp.data;
+
+  // Trường hợp resp.data.items là mảng (theo log của bạn)
+  if (resp.data && Array.isArray(resp.data.items)) return resp.data.items;
+
   return [];
 };
 
@@ -45,10 +58,26 @@ const unwrap = (resp) => {
    =========================================================== */
 async function loadNhanVienList() {
   try {
-    const resp = await api('/nhan-vien');
-    state.nhanViens = unwrap(resp);
+    const resp = await api('/nhan-vien', { auth: true }); // thêm { auth: true } cho chắc
+    console.log('Nhan vien API resp:', resp); // DEBUG
+    const data = unwrap(resp);
+    console.log('Nhan vien after unwrap:', data); // DEBUG
+    state.nhanViens = Array.isArray(data) ? data : [];
+    window.__HD_STATE__ = state; // cập nhật lại debug
   } catch (e) {
     console.error('Error loading Nhan Vien list:', e);
+  }
+}
+
+async function loadPermissions() {
+  try {
+    const resp = await api('/hop-dong/_permissions/me', { auth: true });
+    if (resp && typeof resp.isAccountingManager !== 'undefined') {
+      state.perm.isAccountingManager = !!resp.isAccountingManager;
+    }
+  } catch (e) {
+    console.error('Error loading hop-dong permissions:', e);
+    state.perm.isAccountingManager = false;
   }
 }
 
@@ -123,6 +152,7 @@ function renderTable(user) {
   }
 
   const isAdmin = user.role === 'admin';
+  const isManager = user.role === 'manager';
 
   body.innerHTML = paginatedItems
     .map((c) => {
@@ -151,29 +181,35 @@ function renderTable(user) {
         </td>
         <td data-label="Trạng thái" class="status-cell">
           <span class="status-badge status-${
-            c.trang_thai.replace(/ /g, '-') || 'con_hieu_luc'
+            c.trang_thai?.replace(/ /g, '-') || 'con_hieu_luc'
           }">
             ${esc(c.trang_thai || '')}
           </span>
         </td>
-        <td data-label="Ghi chú">${esc(c.ghi_chu || '').substring(0, 30)}${
+        <td data-label="Ghi chú">
+          ${esc(c.ghi_chu || '').substring(0, 30)}${
         c.ghi_chu?.length > 30 ? '...' : ''
-      }</td>
-        <td data-label="Tài liệu">${
-          c.file_hop_dong
-            ? `<a href="${esc(c.file_hop_dong)}" target="_blank">📄 Xem</a>`
-            : ''
-        }</td>
+      }
+        </td>
+        <td data-label="Tài liệu">
+          ${
+            c.file_hop_dong
+              ? `<a href="${esc(c.file_hop_dong)}" target="_blank">📄 Xem</a>`
+              : ''
+          }
+        </td>
         <td data-label="Hành động" class="action-cell">
           <button class="btn btn-sm btn-view" data-action="view" data-id="${
             c.id
           }">👀</button>
           ${
             isAdmin
-              ? `
-                <button class="btn btn-sm btn-edit" data-action="edit" data-id="${c.id}">✏️</button>
-                <button class="btn btn-sm btn-del" data-action="del" data-id="${c.id}">🗑️</button>
-                `
+              ? `<button class="btn btn-sm btn-edit" data-action="edit" data-id="${c.id}">✏️</button>`
+              : ''
+          }
+          ${
+            isAdmin
+              ? `<button class="btn btn-sm btn-del" data-action="del" data-id="${c.id}">🗑️</button>`
               : ''
           }
         </td>
@@ -206,23 +242,58 @@ function openModal(contract, user) {
 
   nvInput.disabled = !!contract;
 
+  nvInput.disabled = !!contract;
+
   nvInput.oninput = () => {
-    const query = nvInput.value.toLowerCase();
-    nvDropdown.innerHTML = state.nhanViens
-      .filter(
-        (nv) =>
-          nv.ho_ten.toLowerCase().includes(query) ||
-          String(nv.id).includes(query)
-      )
-      .slice(0, 10)
-      .map(
-        (nv) =>
-          `<div data-id="${nv.id}" data-name="${esc(nv.ho_ten)}">${esc(
-            nv.ho_ten
-          )} (${nv.ma_nhan_vien})</div>`
-      )
+    const query = (nvInput.value || '').toLowerCase().trim();
+
+    // DEBUG: kiểm tra dữ liệu nhân viên
+    //console.log('NhanViens:', state.nhanViens);
+    //console.log('Query:', query);
+
+    if (!query) {
+      nvDropdown.innerHTML = '';
+      nvDropdown.style.display = 'none';
+      return;
+    }
+
+    // Nếu chưa load được danh sách nhân viên
+    if (!Array.isArray(state.nhanViens) || state.nhanViens.length === 0) {
+      nvDropdown.innerHTML =
+        '<div style="padding:4px 8px; color:#888;">Không có dữ liệu nhân viên</div>';
+      nvDropdown.style.display = 'block';
+      return;
+    }
+
+    const items = state.nhanViens
+      .filter((nv) => {
+        const name = (nv.ho_ten || '').toLowerCase();
+        const idStr = String(nv.id ?? '');
+        const code = (nv.ma_nhan_vien || '').toLowerCase();
+        return (
+          name.includes(query) || idStr.includes(query) || code.includes(query)
+        );
+      })
+      .slice(0, 10);
+
+    if (!items.length) {
+      nvDropdown.innerHTML =
+        '<div style="padding:4px 8px; color:#888;">Không tìm thấy nhân viên phù hợp</div>';
+      nvDropdown.style.display = 'block';
+      return;
+    }
+
+    nvDropdown.innerHTML = items
+      .map((nv) => {
+        const name = esc(nv.ho_ten || 'Không tên');
+        const code = esc(nv.ma_nhan_vien || '');
+        return `<div data-id="${nv.id}" data-name="${name}">
+          ${name}${code ? ` (${code})` : ''}
+        </div>`;
+      })
       .join('');
-    nvDropdown.style.display = query.length > 0 ? 'block' : 'none';
+
+    nvDropdown.style.display = 'block';
   };
 
   nvDropdown.onclick = (e) => {
@@ -430,7 +501,8 @@ function bindEvents(user) {
     showConfirm(user);
   });
 
-  if (user.role === 'admin' || user.role === 'manager') {
+  // Nút Thêm: tạm thời chỉ cho Admin để test
+  if (user.role === 'admin') {
     $('#btnAdd').classList.remove('hidden');
     $('#btnAdd').addEventListener('click', () => openModal(null, user));
   } else {
@@ -447,6 +519,7 @@ function bindEvents(user) {
     fetchList(user);
   });
 
+  // CLICK TRONG BẢNG
   $('#contractsBody').addEventListener('click', async (e) => {
     const btn = e.target.closest('button[data-action]');
     if (!btn) return;
@@ -455,20 +528,27 @@ function bindEvents(user) {
     const action = btn.dataset.action;
     const ct = state.items.find((c) => String(c.id) === String(id));
 
+    if (!ct && action !== 'del') return;
+
     if (action === 'view') {
-      if (ct) openViewModal(ct);
+      openViewModal(ct);
+      return;
     }
 
-    if (action === 'edit' && user.role === 'admin') openModal(ct, user);
+    if (action === 'edit' && user.role === 'admin') {
+      openModal(ct, user);
+      return;
+    }
 
     if (action === 'del' && user.role === 'admin') {
       if (!confirm(`Xoá hợp đồng #${id}?`)) return;
       await api(`/hop-dong/${id}`, { method: 'DELETE', auth: true });
       await fetchList(user);
+      return;
     }
   });
 
-  // 🔥 PHÂN TRANG EVENTS
+  // PHÂN TRANG
   const btnPrev = $('#btnPrev');
   const btnNext = $('#btnNext');
 
@@ -504,6 +584,8 @@ async function init() {
 
   const user = getUser();
   if (!user) return;
+
+  await loadPermissions();
 
   await loadNhanVienList();
   await fetchList(user);

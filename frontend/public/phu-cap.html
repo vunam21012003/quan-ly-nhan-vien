@@ -214,7 +214,15 @@
 
             <div class="form-group">
               <label for="thang-nv">Nhân viên *</label>
-              <select id="thang-nv" required></select>
+              <div class="nv-search-box">
+                <input
+                  id="nv-search-input"
+                  type="text"
+                  placeholder="Tìm theo tên hoặc ID..."
+                />
+
+                <div id="nv-search-list" class="nv-search-dropdown"></div>
+              </div>
             </div>
 
             <div class="form-row">
@@ -302,6 +310,32 @@
             document.getElementById(tab.dataset.tab)?.classList.add('active');
           });
         });
+      });
+
+      document.addEventListener('DOMContentLoaded', () => {
+        // Lấy user
+        let CURRENT_USER = {};
+        try {
+          CURRENT_USER = JSON.parse(localStorage.getItem('hr_user')) || {};
+        } catch (e) {}
+
+        const ROLE = (CURRENT_USER.role || 'employee').toLowerCase();
+
+        // Nếu là employee → ẩn tab Loại phụ cấp
+        if (ROLE === 'employee') {
+          const tabLoaiBtn = document.querySelector('[data-tab="loai-tab"]');
+          const tabLoaiSection = document.getElementById('loai-tab');
+
+          if (tabLoaiBtn) tabLoaiBtn.style.display = 'none';
+          if (tabLoaiSection) tabLoaiSection.style.display = 'none';
+
+          // Nếu tab hiện tại đang active là tab loại → chuyển sang tab tháng
+          const thangBtn = document.querySelector('[data-tab="thang-tab"]');
+          const thangTab = document.getElementById('thang-tab');
+
+          thangBtn?.classList.add('active');
+          thangTab?.classList.add('active');
+        }
       });
     </script>
   </body>

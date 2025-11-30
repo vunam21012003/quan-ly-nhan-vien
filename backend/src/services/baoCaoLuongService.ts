@@ -13,34 +13,65 @@ import fs from "fs";
  * ===============================================
  */
 export const getBaoCaoLuong = async (req: any) => {
-  const page = Number(req.query.page || 1);
-  const limit = Number(req.query.limit || 20);
+  const phamvi = req.phamvi;
+  if (!phamvi) {
+    throw new Error("Thiếu thông tin phạm vi người dùng");
+  }
+
+  // Ép kiểu query về any để không bị TS soi
+  const q: any = req.query || {};
+
+  const page = Number(q.page || 1);
+  const limit = Number(q.limit || 20);
   const offset = (page - 1) * limit;
 
-  const rawThang = req.query?.thang;
+  const rawThang = q.thang;
   const thang = rawThang !== undefined && rawThang !== "" ? Number(rawThang) : undefined;
 
-  const nam = Number(req.query?.nam) || new Date().getFullYear();
-  const phong_ban_id = Number(req.query?.phong_ban_id);
-  const keyword = req.query?.q?.trim();
-  const trang_thai = req.query?.trang_thai?.trim();
+  const nam = Number(q.nam) || new Date().getFullYear();
+  const phong_ban_id = Number(q.phong_ban_id);
+  const keyword = typeof q.q === "string" ? q.q.trim() : undefined;
+  const trang_thai = typeof q.trang_thai === "string" ? q.trang_thai.trim() : undefined;
 
   const params: any[] = [nam];
   let where = "WHERE l.nam = ? AND l.trang_thai_duyet = 'da_duyet'";
 
-  // lọc tháng
+  // ===== GIỚI HẠN THEO PHẠM VI NGƯỜI DÙNG =====
+  if (phamvi.role === "admin") {
+    // admin: xem toàn bộ
+  } else if (phamvi.role === "manager") {
+    if (phamvi.isAccountingManager) {
+      // manager phòng Kế toán: xem toàn bộ
+    } else {
+      // manager thường: chỉ xem nhân viên thuộc các phòng ban mà họ quản lý
+      if (!phamvi.managedDepartmentIds || !phamvi.managedDepartmentIds.length) {
+        where += " AND 1 = 0";
+      } else {
+        where += ` AND nv.phong_ban_id IN (${phamvi.managedDepartmentIds
+          .map(() => "?")
+          .join(",")})`;
+        params.push(...phamvi.managedDepartmentIds);
+      }
+    }
+  } else if (phamvi.role === "employee") {
+    if (!phamvi.employeeId) {
+      throw new Error("Tài khoản không gắn nhân viên");
+    }
+    where += " AND l.nhan_vien_id = ?";
+    params.push(phamvi.employeeId);
+  }
+
+  // ===== LỌC THÁNG / PHÒNG BAN / TỪ KHÓA / TRẠNG THÁI =====
   if (thang !== undefined) {
     where += " AND l.thang = ?";
     params.push(thang);
   }
 
-  // lọc phòng ban
   if (!isNaN(phong_ban_id)) {
     where += " AND nv.phong_ban_id = ?";
     params.push(phong_ban_id);
   }
 
-  // lọc keyword
   if (keyword) {
     where += `
       AND (
@@ -51,7 +82,6 @@ export const getBaoCaoLuong = async (req: any) => {
     params.push(`%${keyword}%`, `%${keyword}%`);
   }
 
-  // lọc trạng thái
   if (trang_thai && trang_thai !== "all") {
     if (trang_thai === "no_debt") {
       where += " AND (l.luong_thuc_nhan - COALESCE(ls.da_tra, 0)) > 0";
@@ -136,16 +166,14 @@ export const getBaoCaoLuong = async (req: any) => {
     tong_phu_cap: rows.reduce((s, r) => s + Number(r.luong_p2), 0),
     tong_thuong: rows.reduce((s, r) => s + Number(r.luong_p3), 0),
 
-    // Tổng BH
     tong_bhxh: rows.reduce((s, r) => s + Number(r.bhxh), 0),
     tong_bhyt: rows.reduce((s, r) => s + Number(r.bhyt), 0),
     tong_bhtn: rows.reduce((s, r) => s + Number(r.bhtn), 0),
 
-    // Tổng thuế
     tong_thue: rows.reduce((s, r) => s + Number(r.thue_tncn), 0),
 
     so_nv: rows.length,
-    items: rows, // ⭐ GIỮ NGUYÊN "items"
+    items: rows,
   };
 };
 
@@ -258,21 +286,24 @@ export const getLichSuTraLuong = async (nhan_vien_id: number, thang: number, nam
   const [rows] = await pool.query(
     `
     SELECT 
-      id,
-      so_tien_thuc_tra,
-      DATE_FORMAT(ngay_tra, '%Y-%m-%d') AS ngay_tra,
-      trang_thai,
-      ghi_chu,
-      created_at,
-      updated_at
-    FROM lich_su_tra_luong
+      ls.id,
+      ls.so_tien_thuc_tra,
+      DATE_FORMAT(ls.ngay_tra, '%Y-%m-%d') AS ngay_tra,
+      ls.trang_thai,
+      ls.ghi_chu,
+      ls.created_at,
+      ls.updated_at,
+      ls.nguoi_thuc_hien_id,
+      nv2.ho_ten AS nguoi_thuc_hien
+    FROM lich_su_tra_luong ls
+    LEFT JOIN nhan_vien nv2 ON nv2.id = ls.nguoi_thuc_hien_id
     WHERE 
-      nhan_vien_id = ?
-      AND thang = ?
-      AND nam = ?
-      AND COALESCE(so_tien_thuc_tra, 0) > 0      -- 🔥 CHỈ LẤY DÒNG CÓ TIỀN
-      AND ngay_tra IS NOT NULL                   -- 🔥 PHẢI CÓ NGÀY TRẢ
-    ORDER BY ngay_tra ASC, id ASC
+      ls.nhan_vien_id = ?
+      AND ls.thang = ?
+      AND ls.nam = ?
+      AND COALESCE(ls.so_tien_thuc_tra, 0) > 0    -- chỉ lấy dòng có tiền
+      AND ls.ngay_tra IS NOT NULL                 -- phải có ngày trả
+    ORDER BY ls.ngay_tra ASC, ls.id ASC
   `,
     [nhan_vien_id, thang, nam]
   );

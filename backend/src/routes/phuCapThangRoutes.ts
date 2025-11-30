@@ -1,4 +1,4 @@
-// routes
+// phuCapThangRoutes
 import { Router } from "express";
 import * as controller from "../controllers/phuCapThangController";
 import { requireAuth, requireRole } from "../middlewares/auth";
@@ -6,12 +6,21 @@ import { requireAuth, requireRole } from "../middlewares/auth";
 const router = Router();
 
 // Admin + Manager xem, Admin sửa
-router.get("/", requireAuth, requireRole(["admin", "manager"]), controller.list);
-router.post("/", requireAuth, requireRole(["admin"]), controller.create);
-router.put("/:id", requireAuth, requireRole(["admin"]), controller.update);
-router.delete("/:id", requireAuth, requireRole(["admin"]), controller.remove);
+// GET → admin + manager + employee
+router.get("/", requireAuth, requireRole(["admin", "manager", "employee"]), controller.list);
 
-// Auto copy từ tháng trước
-router.post("/auto-copy", requireAuth, requireRole(["admin"]), controller.autoCopy);
+// POST → admin + manager thường
+router.post(
+  "/",
+  requireAuth,
+  requireRole(["admin", "manager"]), // manager kế toán cũng vào đây nhưng FE sẽ ẩn nút
+  controller.create
+);
+
+// PUT → admin + manager kế toán
+router.put("/:id", requireAuth, requireRole(["admin", "manager"]), controller.update);
+
+// DELETE → admin + manager kế toán
+router.delete("/:id", requireAuth, requireRole(["admin", "manager"]), controller.remove);
 
 export default router;

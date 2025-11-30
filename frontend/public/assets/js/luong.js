@@ -81,9 +81,16 @@ function setUserBadge() {
   // ========= Nhân viên: chỉ xem =========
   if (role === 'employee') return;
 
-  // ========= Manager: chỉ xem ========
-  // (Không được tính lương, không được duyệt)
-  if (role === 'manager') return;
+  // ========= Manager (THƯỜNG): chỉ xem ========
+  if (role === 'manager' && !u.isAccountingManager) return;
+
+  // ========= Manager KẾ TOÁN → giống Admin ========
+  if (role === 'manager' && u.isAccountingManager) {
+    if (btnCalc) btnCalc.style.display = 'inline-block';
+    if (btnApprove) btnApprove.style.display = 'inline-block';
+    if (btnUnapprove) btnUnapprove.style.display = 'inline-block';
+    return;
+  }
 
   // ========= Admin: toàn quyền ========
   if (role === 'admin') {
@@ -234,9 +241,33 @@ function pageInfo() {
 }
 
 async function loadPhongBan() {
-  const res = await api('/cham-cong/phong-ban/list');
-  const items = res.items || res.data?.items || [];
+  const u = getUser();
   const sel = $('#filter-phong-ban');
+
+  // ---- Admin hoặc Manager kế toán → xem toàn bộ ----
+  if (u.role === 'admin' || u.isAccountingManager) {
+    const res = await api('/cham-cong/phong-ban/list');
+    const items = res.items || res.data?.items || [];
+
+    sel.innerHTML =
+      '<option value="">Tất cả phòng ban</option>' +
+      items
+        .map((x) => `<option value="${x.id}">${esc(x.ten_phong_ban)}</option>`)
+        .join('');
+    return;
+  }
+
+  // ---- Manager thường → chỉ xem phòng mình ----
+  const managed = u.managedDepartmentIds || [];
+
+  if (managed.length === 0) {
+    sel.innerHTML = `<option value="">(Không có phòng ban nào)</option>`;
+    return;
+  }
+
+  // Tải full để lọc FE (đỡ phải tạo route mới)
+  const res = await api('/cham-cong/phong-ban/list');
+  const items = (res.items || []).filter((x) => managed.includes(x.id));
 
   sel.innerHTML =
     '<option value="">Tất cả phòng ban</option>' +
@@ -246,9 +277,34 @@ async function loadPhongBan() {
 }
 
 async function loadNhanVien() {
-  const res = await api('/nhan-vien?limit=1000');
-  const items = res.data?.items || [];
+  const u = getUser();
   const sel = $('#filter-nhan-vien');
+
+  // ---- Admin hoặc Manager kế toán → xem toàn bộ nhân viên ----
+  if (u.role === 'admin' || u.isAccountingManager) {
+    const res = await api('/nhan-vien?limit=1000');
+    const items = res.data?.items || [];
+
+    sel.innerHTML =
+      '<option value="">Tất cả nhân viên</option>' +
+      items
+        .map((x) => `<option value="${x.id}">${esc(x.ho_ten)}</option>`)
+        .join('');
+    return;
+  }
+
+  // ---- Manager thường → nhân viên thuộc phòng ban mình ----
+  const managed = u.managedDepartmentIds || [];
+
+  if (managed.length === 0) {
+    sel.innerHTML = `<option value="">(Không có nhân viên)</option>`;
+    return;
+  }
+
+  const res = await api('/nhan-vien?limit=1000');
+  const items = (res.data?.items || []).filter((x) =>
+    managed.includes(x.phong_ban_id)
+  );
 
   sel.innerHTML =
     '<option value="">Tất cả nhân viên</option>' +
@@ -331,6 +387,40 @@ async function onSave(e) {
 }
 
 // ============================
+// CẬP NHẬT NÚT EDIT / DELETE THEO PHÂN QUYỀN
+// ============================
+function updateEditDeleteButtons(state) {
+  const u = getUser();
+  const isLocked = state === 'da_duyet';
+
+  document.querySelectorAll('#tbody .salary-row').forEach((tr) => {
+    const editBtn = tr.querySelector('button[data-act="edit"]');
+    const delBtn = tr.querySelector('button[data-act="del"]');
+
+    if (!editBtn || !delBtn) return;
+
+    // Nhân viên & manager thường → không được sửa/xóa
+    if (
+      u.role === 'employee' ||
+      (u.role === 'manager' && !u.isAccountingManager)
+    ) {
+      editBtn.style.display = 'none';
+      delBtn.style.display = 'none';
+      return;
+    }
+
+    // Admin hoặc Manager kế toán
+    if (isLocked) {
+      editBtn.style.display = 'none';
+      delBtn.style.display = 'none';
+    } else {
+      editBtn.style.display = '';
+      delBtn.style.display = '';
+    }
+  });
+}
+
+// ============================
 // CẬP NHẬT NÚT DUYỆT / HỦY DUYỆT
 // ============================
 function updateDuyetButton(state) {
@@ -346,28 +436,6 @@ function updateDuyetButton(state) {
     btn.classList.remove('btn-warn');
     btn.classList.add('btn-success');
   }
-}
-
-// ============================
-// ẨN/HIỆN NÚT EDIT + DELETE TRONG BẢNG
-// ============================
-function updateEditDeleteButtons(state) {
-  const isLocked = state === 'da_duyet';
-
-  document.querySelectorAll('#tbody .salary-row').forEach((tr) => {
-    const editBtn = tr.querySelector('button[data-act="edit"]');
-    const delBtn = tr.querySelector('button[data-act="del"]');
-
-    if (!editBtn || !delBtn) return;
-
-    if (isLocked) {
-      editBtn.style.display = 'none';
-      delBtn.style.display = 'none';
-    } else {
-      editBtn.style.display = '';
-      delBtn.style.display = '';
-    }
-  });
 }
 
 // ============================
@@ -425,9 +493,13 @@ function bind() {
     if (!confirm(`Bạn chắc muốn tính lương tháng ${thang}/${nam}?`)) return;
 
     try {
-      await api(`/luong/tinh-thang?thang=${thang}&nam=${nam}`, {
-        method: 'POST',
-      });
+      const pb = $('#filter-phong-ban').value || '';
+      const nv = $('#filter-nhan-vien').value || '';
+
+      await api(
+        `/luong/tinh-thang?thang=${thang}&nam=${nam}&phong_ban_id=${pb}&nhan_vien_id=${nv}`,
+        { method: 'POST' }
+      );
       await fetchList();
       alert(`Đã tính lương tháng ${thang}/${nam}`);
     } catch (err) {
@@ -458,6 +530,12 @@ function bind() {
           method: 'POST',
           body: { thang, nam },
         });
+
+        // Nếu BE trả về error (ví dụ: đã trả 1 phần hoặc trả hết)
+        if (res.error) {
+          alert('❌ ' + res.error);
+          return;
+        }
 
         alert(res.message);
 
@@ -535,6 +613,10 @@ async function init() {
   $('#y').textContent = new Date().getFullYear();
   setUserBadge();
   setupMonthYearSelect();
+
+  await loadPhongBan();
+  await loadNhanVien();
+
   await fetchList();
   await loadApproveState($('#thang').value, $('#nam').value);
   bind();

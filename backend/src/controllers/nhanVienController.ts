@@ -71,3 +71,22 @@ export const getByChucVu = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+// ⭐ THÊM MỚI: Cập nhật số người phụ thuộc
+// ⭐ THÊM MỚI Ở CUỐI FILE
+export const updateNguoiPhuThuoc = async (req: any, res: any, next: any) => {
+  try {
+    const id = Number(req.params.id);
+    const { so_nguoi_phu_thuoc } = req.body;
+
+    const result = await service.updateNguoiPhuThuoc(req, id, so_nguoi_phu_thuoc);
+
+    if (result?.error) {
+      return res.status(400).json(result);
+    }
+
+    return res.json({ message: "Cập nhật số người phụ thuộc thành công", ...result });
+  } catch (e) {
+    next(e);
+  }
+};

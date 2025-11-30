@@ -1,22 +1,35 @@
-// src/routes/hopDongRoutes.ts
-
 import { Router } from "express";
 import multer from "multer";
 import * as controller from "../controllers/hopDongController";
 import { requireAuth, requireRole } from "../middlewares/auth";
+import { layPhamViNguoiDung } from "../utils/pham-vi-nguoi-dung";
 
 const router = Router();
-
-// Cấu hình multer để upload file hợp đồng
 const upload = multer({ dest: "uploads/" });
 
 /* ==================== DANH SÁCH ==================== */
-// Chỉ yêu cầu đăng nhập, quyền chi tiết xử lý trong service
 router.get("/", requireAuth, controller.list);
 router.get("/:id", requireAuth, controller.detail);
 
+/* ==================== QUYỀN HỢP ĐỒNG (CHO FE) ==================== */
+router.get(
+  "/_permissions/me",
+  requireAuth,
+  requireRole(["admin", "manager", "employee"]),
+  async (req, res, next) => {
+    try {
+      const phamvi = await layPhamViNguoiDung(req);
+      res.json({
+        role: phamvi.role,
+        isAccountingManager: !!phamvi.isAccountingManager,
+      });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
 /* ==================== TẠO MỚI ==================== */
-// Chỉ Admin hoặc Manager (logic Manager Kế toán kiểm tra thêm trong service)
 router.post(
   "/",
   requireAuth,
@@ -26,7 +39,6 @@ router.post(
 );
 
 /* ==================== CẬP NHẬT ==================== */
-// ❗ PHẢI CÓ upload.single → sửa lỗi req.body = {} khi dùng FormData
 router.put(
   "/:id",
   requireAuth,
@@ -36,7 +48,6 @@ router.put(
 );
 
 /* ==================== XOÁ ==================== */
-// Chỉ Admin được xoá
 router.delete("/:id", requireAuth, requireRole(["admin"]), controller.remove);
 
 export default router;

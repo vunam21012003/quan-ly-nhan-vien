@@ -24,6 +24,7 @@ import trangChinhRoutes from "./routes/trangChinhRoutes";
 import phuCapLoaiRoutes from "./routes/phuCapLoaiRoutes";
 import phuCapThangRoutes from "./routes/phuCapThangRoutes";
 import uploadRoutes from "./routes/upload";
+import donNghiPhepRoutes from "./routes/donNghiPhepRoutes";
 
 import ngayLeRoutes from "./routes/ngayLeRoutes";
 import phanCongLamBuRoutes from "./routes/phanCongLamBuRoutes";
@@ -55,6 +56,8 @@ app.use(
         "script-src": ["'self'", "'unsafe-inline'"],
         "style-src": ["'self'", "'unsafe-inline'"],
         "img-src": ["'self'", "data:", "blob:"],
+        "connect-src": ["'self'"],
+        "script-src-attr": ["'unsafe-inline'"],
       },
     },
   })
@@ -148,8 +151,11 @@ app.use("/upload", uploadRoutes);
 
 // ✅ Chấm công, hợp đồng, lương
 app.use("/cham-cong", requireAuth, requireRole(["admin", "manager", "employee"]), chamCongRoutes);
-app.use("/hop-dong", requireAuth, requireRole(["admin", "manager"]), hopDongRoutes);
+app.use("/hop-dong", requireAuth, requireRole(["admin", "manager", "employee"]), hopDongRoutes);
 app.use("/luong", requireAuth, requireRole(["admin", "manager"]), luongRoutes);
+
+//nghỉ phép
+app.use("/don-nghi-phep", donNghiPhepRoutes);
 
 // ✅ Lịch sử trả lương, báo cáo, phân tích công
 app.use("/lich-su-tra-luong", requireAuth, requireRole(["admin", "manager"]), lichSuTraLuongRoutes);
@@ -161,7 +167,12 @@ app.use("/tra-luong", requireAuth, requireRole(["admin", "manager"]), luongPayRo
 app.use("/tai-khoan", requireAuth, requireRole(["admin", "manager"]), taiKhoanRoutes);
 
 app.use("/phu-cap-loai", requireAuth, requireRole(["admin", "manager"]), phuCapLoaiRoutes);
-app.use("/phu-cap-thang", requireAuth, requireRole(["admin", "manager"]), phuCapThangRoutes);
+app.use(
+  "/phu-cap-thang",
+  requireAuth,
+  requireRole(["admin", "manager", "employee"]),
+  phuCapThangRoutes
+);
 
 // trang chính
 app.use("/api/trang-chinh", trangChinhRoutes);

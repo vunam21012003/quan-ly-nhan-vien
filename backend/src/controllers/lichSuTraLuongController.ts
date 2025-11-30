@@ -1,3 +1,4 @@
+//lichSuTraLuongController.ts
 import { Request, Response } from "express";
 import * as service from "../services/lichSuTraLuongService";
 

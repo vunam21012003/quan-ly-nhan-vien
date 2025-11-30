@@ -1,30 +1,54 @@
+//baoCaoLuongRoutes
 import { Router } from "express";
 import * as controller from "../controllers/baoCaoLuongController";
 import { requireAuth, requireRole, requireKetoanOrAdmin } from "../middlewares/auth";
+import { layPhamViNguoiDung } from "../utils/pham-vi-nguoi-dung";
 
 const router = Router();
 
 router.get(
   "/luong",
   requireAuth,
-  requireRole(["admin", "manager"]), // Bắt buộc là admin hoặc manager
-  requireKetoanOrAdmin, // Và nếu là manager thì phải là manager phòng Kế toán
+  async (req, res, next) => {
+    try {
+      // Gán phạm vi cho req để service dùng
+      req.phamvi = await layPhamViNguoiDung(req);
+      next();
+    } catch (e) {
+      console.error("Lỗi layPhamViNguoiDung:", e);
+      return res.status(500).json({ error: "Lỗi xác định phạm vi người dùng" });
+    }
+  },
   controller.getBaoCaoLuong
 );
 
 router.get(
   "/luong/lich-su/:nhan_vien_id",
   requireAuth,
-  requireRole(["admin", "manager"]),
-  requireKetoanOrAdmin,
+  async (req, res, next) => {
+    try {
+      req.phamvi = await layPhamViNguoiDung(req);
+      next();
+    } catch (e) {
+      console.error("Lỗi layPhamViNguoiDung:", e);
+      return res.status(500).json({ error: "Lỗi xác định phạm vi người dùng" });
+    }
+  },
   controller.getLichSuTraLuong
 );
 
 router.get(
   "/luong/chi-tiet/:nhan_vien_id",
   requireAuth,
-  requireRole(["admin", "manager"]),
-  requireKetoanOrAdmin,
+  async (req, res, next) => {
+    try {
+      req.phamvi = await layPhamViNguoiDung(req);
+      next();
+    } catch (e) {
+      console.error("Lỗi layPhamViNguoiDung:", e);
+      return res.status(500).json({ error: "Lỗi xác định phạm vi người dùng" });
+    }
+  },
   controller.getChiTietLuongNhanVien
 );
 

@@ -44,6 +44,12 @@ fetch('danh-sach.html')
           adminMenu.style.display = 'none'; // Ẩn nếu không phải admin
         }
       }
+      const salaryMenu = document.querySelector('a[href="./luong.html"]');
+      if (salaryMenu) {
+        if (user.role === 'employee') {
+          salaryMenu.style.display = 'none'; // 👈 NHÂN VIÊN KHÔNG THẤY
+        }
+      }
     }
 
     // ===== LOGOUT HANDLER =====

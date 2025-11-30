@@ -65,6 +65,28 @@ function buildQuery() {
   return qs.toString();
 }
 
+function getRole() {
+  const u = getUser();
+  // Backend đang dùng: "admin" | "manager" | "employee"
+  return u?.role || 'employee';
+}
+
+function isAccountingManager() {
+  const u = getUser();
+  // Nếu JWT có field này thì dùng, nếu chưa có thì luôn false (BE vẫn chặn)
+  return !!u?.isAccountingManager;
+}
+
+// Chỉ admin + manager phòng kế toán được phép trả lương
+function canPay() {
+  const r = getRole();
+  return r === 'admin' || (r === 'manager' && isAccountingManager());
+}
+
+// Chỉ admin + manager phòng kế toán được export
+function canExport() {
+  return canPay();
+}
 /* ==========================================================
    TẠO 10 KPI CHUẨN KẾ TOÁN
 ========================================================== */
@@ -138,7 +160,8 @@ function statusBadge(st) {
 ========================================================== */
 function rowHtml(x) {
   const isEditable =
-    x.trang_thai_cuoi === 'cho_xu_ly' || x.trang_thai_cuoi === 'con_no';
+    canPay() &&
+    (x.trang_thai_cuoi === 'cho_xu_ly' || x.trang_thai_cuoi === 'con_no');
 
   return `
     <tr>
@@ -285,10 +308,17 @@ async function openDetail(btn) {
       .map(
         (h) => `
         <div style="border-bottom:1px solid #ddd; padding:6px 0;">
-          <strong>${h.ngay_tra}</strong>
-          — <span style="color:green">${money(h.so_tien_thuc_tra)} đ</span><br>
-          <span class="text-muted">Trạng thái: ${h.trang_thai}</span>
-        </div>
+        <strong>${h.ngay_tra}</strong>
+        — <span style="color:green">${money(h.so_tien_thuc_tra)} đ</span><br>
+        <span class="text-muted">
+          Trạng thái: ${h.trang_thai}
+          ${
+            h.nguoi_thuc_hien
+              ? ` • Người thực hiện: ${esc(h.nguoi_thuc_hien)}`
+              : ''
+          }
+        </span>
+      </div>
       `
       )
       .join('');
@@ -407,6 +437,10 @@ function bind() {
     );
 
     if (!inp) return alert('Không tìm thấy số tiền trả!');
+    if (!canPay()) {
+      alert('Bạn không có quyền thực hiện thao tác trả lương.');
+      return;
+    }
 
     // lấy số còn nợ từ dataset
     const conNo = Number(btnPay.dataset.conno || 0);
@@ -459,7 +493,17 @@ function bind() {
   /* ----------------------------
        EXPORT EXCEL
   ----------------------------- */
+  if (!canExport()) {
+    const btnExport = document.getElementById('btn-export');
+    if (btnExport) btnExport.style.display = 'none';
+  }
+
   $('#btn-export')?.addEventListener('click', async () => {
+    if (!canExport()) {
+      alert('Bạn không có quyền xuất báo cáo lương.');
+      return;
+    }
+
     const qs = buildQuery();
     const token = getToken();
 

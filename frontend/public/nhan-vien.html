@@ -11,138 +11,300 @@
     <div id="menuContainer"></div>
 
     <main class="container">
-      <div class="page-header">
-        <h1 class="page-title">Nhân viên</h1>
-        <div class="toolbar">
-          <input
-            id="nv-search"
-            type="search"
-            placeholder="Tìm theo tên / email / SĐT…"
-          />
-          <select id="nv-phongban"></select>
-          <select id="nv-chucvu"></select>
-          <button id="nv-btn-search" class="btn">Lọc</button>
-          <button id="nv-btn-refresh" class="btn">Tải lại</button>
-          <button id="nv-btn-create" class="btn btn-primary">
-            Thêm nhân viên
-          </button>
+      <!-- Header & Toolbar Styled -->
+      <div class="page-header-modern">
+        <div class="header-content">
+          <h1 class="page-title">Danh sách nhân viên</h1>
+          <p class="text-muted">Quản lý thông tin và hồ sơ nhân sự</p>
+        </div>
+
+        <div class="toolbar-modern">
+          <div class="search-box">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input
+              id="nv-search"
+              type="search"
+              placeholder="Tìm kiếm nhân viên..."
+            />
+          </div>
+
+          <div class="filter-group">
+            <select id="nv-phongban"></select>
+            <select id="nv-chucvu"></select>
+          </div>
+
+          <div class="action-group">
+            <button id="nv-btn-search" class="btn btn-secondary btn-icon">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polygon
+                  points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"
+                ></polygon>
+              </svg>
+              Lọc
+            </button>
+            <button
+              id="nv-btn-refresh"
+              class="btn btn-secondary btn-icon"
+              title="Tải lại"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M23 4v6h-6"></path>
+                <path d="M1 20v-6h6"></path>
+                <path
+                  d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"
+                ></path>
+              </svg>
+            </button>
+            <button id="nv-btn-create" class="btn btn-primary btn-icon">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              Thêm mới
+            </button>
+          </div>
         </div>
       </div>
 
-      <div class="table-wrap">
-        <table class="table">
-          <thead>
-            <tr>
-              <th class="col-id">ID</th>
-              <th>Họ tên</th>
-              <th class="col-gt">Giới tính</th>
-              <th>Phòng ban</th>
-              <th>Chức vụ</th>
-              <th class="col-email">Email</th>
-              <th class="col-sdt">SĐT</th>
-              <th class="col-ngayvao">Ngày vào</th>
-              <th class="col-tt">Trạng thái</th>
-              <th class="col-act">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody id="nv-tbody">
-            <tr>
-              <td colspan="10" class="text-muted">Đang tải…</td>
-            </tr>
-          </tbody>
-        </table>
+      <!-- Table Styled -->
+      <div class="card-table">
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th class="col-id">ID</th>
+                <th style="min-width: 200px">Họ tên</th>
+                <th class="col-gt text-center">Giới tính</th>
+                <th>Phòng ban / Chức vụ</th>
+                <!-- Gộp cột cho gọn -->
+                <th class="col-contact">Liên hệ</th>
+                <!-- Gộp Email/SĐT -->
+                <th class="col-ngayvao">Ngày vào</th>
+                <th class="col-spt text-center">NPT</th>
+                <th class="col-tt text-center">Trạng thái</th>
+                <th class="col-act text-right">Hành động</th>
+              </tr>
+            </thead>
+            <tbody id="nv-tbody">
+              <tr>
+                <td
+                  colspan="9"
+                  class="text-muted text-center"
+                  style="padding: 40px"
+                >
+                  Đang tải dữ liệu...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- Pagination inside card footer -->
+        <div class="pagination-wrap">
+          <div class="pagination" id="nv-pagination"></div>
+        </div>
       </div>
-
-      <div class="pagination" id="nv-pagination"></div>
     </main>
 
+    <!-- Modal Styled -->
     <dialog id="nv-modal">
-      <form id="nv-form" method="" class="form" style="padding: 10px 2px">
-        <h3 id="nv-modal-title" style="margin: 0">Thêm nhân viên</h3>
-
-        <div class="form-group">
-          <label>Ảnh đại diện</label>
-          <input id="nv-anh_dai_dien" type="file" accept="image/*" />
-          <img
-            id="nv-preview"
-            src=""
-            style="
-              width: 80px;
-              height: 80px;
-              border-radius: 8px;
-              margin-top: 6px;
-              display: none;
-            "
-          />
+      <form id="nv-form" method="" class="form">
+        <div class="modal-header">
+          <h3 id="nv-modal-title">Thêm nhân viên</h3>
+          <p class="modal-subtitle">
+            Điền thông tin chi tiết nhân viên vào hệ thống
+          </p>
         </div>
 
-        <div class="form-group">
-          <label for="nv-ho_ten">Họ tên</label>
-          <input id="nv-ho_ten" required />
+        <div class="modal-body-grid">
+          <!-- Cột 1: Avatar & Thông tin cơ bản -->
+          <div class="grid-col-left">
+            <div class="avatar-upload-wrapper">
+              <div class="avatar-preview-box">
+                <img
+                  id="nv-preview"
+                  src="./assets/img/no-avatar.png"
+                  alt="Avatar"
+                />
+              </div>
+              <label for="nv-anh_dai_dien" class="btn-upload">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
+                  ></path>
+                  <circle cx="12" cy="13" r="4"></circle>
+                </svg>
+                Chọn ảnh
+              </label>
+              <input id="nv-anh_dai_dien" type="file" accept="image/*" hidden />
+            </div>
+          </div>
+
+          <!-- Cột 2: Các trường nhập liệu -->
+          <div class="grid-col-right">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="nv-ho_ten"
+                  >Họ và tên <span class="req">*</span></label
+                >
+                <input
+                  id="nv-ho_ten"
+                  required
+                  placeholder="Nhập họ tên đầy đủ"
+                />
+              </div>
+              <div class="form-group">
+                <label for="nv-gioi_tinh">Giới tính</label>
+                <select id="nv-gioi_tinh">
+                  <option value="Nam">Nam</option>
+                  <option value="Nữ">Nữ</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="nv-email">Email</label>
+                <input
+                  id="nv-email"
+                  type="email"
+                  placeholder="example@company.com"
+                />
+              </div>
+              <div class="form-group">
+                <label for="nv-so_dien_thoai">Số điện thoại</label>
+                <input id="nv-so_dien_thoai" placeholder="09xxxxxxxx" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="nv-ngay_sinh">Ngày sinh</label>
+                <input id="nv-ngay_sinh" type="date" />
+              </div>
+              <div class="form-group">
+                <label for="nv-ngay_vao_lam">Ngày vào làm</label>
+                <input id="nv-ngay_vao_lam" type="date" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="nv-dia_chi">Địa chỉ</label>
+              <input id="nv-dia_chi" placeholder="Địa chỉ thường trú" />
+            </div>
+
+            <div class="divider"><span>Công việc</span></div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="nv-phong_ban_id">Phòng ban</label>
+                <select id="nv-phong_ban_id"></select>
+              </div>
+              <div class="form-group">
+                <label for="nv-chuc_vu_id"
+                  >Chức vụ <span class="req">*</span></label
+                >
+                <select id="nv-chuc_vu_id" required></select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="nv-trang_thai">Trạng thái</label>
+                <select id="nv-trang_thai">
+                  <option value="dang_lam">Đang làm việc</option>
+                  <option value="tam_nghi">Tạm nghỉ</option>
+                  <option value="da_nghi">Đã nghỉ việc</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="nv-so_nguoi_phu_thuoc">
+                  Số người phụ thuộc
+                  <small id="nv-spt-note" class="text-warn"></small>
+                </label>
+                <input
+                  id="nv-so_nguoi_phu_thuoc"
+                  type="number"
+                  min="0"
+                  max="20"
+                  value="0"
+                />
+              </div>
+            </div>
+
+            <div class="form-group full-width">
+              <label for="nv-ghi_chu">Ghi chú</label>
+              <textarea
+                id="nv-ghi_chu"
+                rows="2"
+                placeholder="Ghi chú thêm..."
+              ></textarea>
+            </div>
+
+            <div class="alert alert-error" id="nv-error" hidden></div>
+          </div>
         </div>
 
-        <div class="form-group">
-          <label for="nv-gioi_tinh">Giới tính</label>
-          <select id="nv-gioi_tinh">
-            <option value="Nam">Nam</option>
-            <option value="Nữ">Nữ</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="nv-ngay_sinh">Ngày sinh</label>
-          <input id="nv-ngay_sinh" type="date" />
-        </div>
-
-        <div class="form-group">
-          <label for="nv-email">Email</label>
-          <input id="nv-email" type="email" />
-        </div>
-
-        <div class="form-group">
-          <label for="nv-so_dien_thoai">Số điện thoại</label>
-          <input id="nv-so_dien_thoai" />
-        </div>
-
-        <div class="form-group">
-          <label for="nv-dia_chi">Địa chỉ</label>
-          <input id="nv-dia_chi" />
-        </div>
-
-        <div class="form-group">
-          <label for="nv-phong_ban_id">Phòng ban</label>
-          <select id="nv-phong_ban_id"></select>
-        </div>
-
-        <div class="form-group">
-          <label for="nv-chuc_vu_id">Chức vụ</label>
-          <select id="nv-chuc_vu_id" required></select>
-        </div>
-
-        <div class="form-group">
-          <label for="nv-ngay_vao_lam">Ngày vào làm</label>
-          <input id="nv-ngay_vao_lam" type="date" />
-        </div>
-
-        <div class="form-group">
-          <label for="nv-trang_thai">Trạng thái</label>
-          <select id="nv-trang_thai">
-            <option value="dang_lam">Đang làm</option>
-            <option value="tam_nghi">Tạm nghỉ</option>
-            <option value="da_nghi">Đã nghỉ</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="nv-ghi_chu">Ghi chú</label>
-          <textarea id="nv-ghi_chu" placeholder="Tuỳ chọn"></textarea>
-        </div>
-
-        <div class="alert alert-error" id="nv-error" hidden></div>
-        <div style="display: flex; gap: 8px; justify-content: flex-end">
-          <button id="nv-cancel" type="button" class="btn">Hủy</button>
+        <div class="modal-footer">
+          <button id="nv-cancel" type="button" class="btn btn-secondary">
+            Đóng
+          </button>
           <button id="nv-save" type="submit" class="btn btn-primary">
-            Lưu
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              style="margin-right: 4px"
+            >
+              <path
+                d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
+              ></path>
+              <polyline points="17 21 17 13 7 13 7 21"></polyline>
+              <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+            Lưu hồ sơ
           </button>
         </div>
       </form>
@@ -150,7 +312,7 @@
 
     <footer class="footer">
       <div class="container">
-        <small>© <span id="y"></span> HR System</small>
+        <small>© <span id="y"></span> HR System. Designed for You.</small>
       </div>
     </footer>
 

@@ -22,4 +22,11 @@ router.delete("/:id", requireAuth, requireRole(["admin", "manager"]), controller
 // Phục vụ trang Chức vụ: lấy NV theo chuc_vu_id
 router.get("/by-chucvu/:chuc_vu_id", requireAuth, requireRole(["admin"]), controller.getByChucVu);
 
+router.patch(
+  "/:id/nguoi-phu-thuoc",
+  requireAuth,
+  requireRole(["admin", "manager"]),
+  controller.updateNguoiPhuThuoc
+);
+
 export default router;

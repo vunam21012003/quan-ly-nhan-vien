@@ -1,3 +1,4 @@
+//phuCapLoaiService
 import { pool } from "../db";
 
 export const list = async () => {

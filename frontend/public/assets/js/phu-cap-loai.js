@@ -17,6 +17,11 @@ let state = {
   editingId: null,
 };
 
+// ===== FIX: Thêm 4 dòng lấy ROLE để tránh lỗi ROLE is not defined =====
+let CURRENT_USER = JSON.parse(localStorage.getItem('hr_user') || '{}');
+const ROLE = (CURRENT_USER.role || 'employee').toLowerCase();
+// ======================================================================
+
 // ============================
 // LOAD LOẠI PHỤ CẤP
 // ============================
@@ -60,12 +65,14 @@ function renderLoai() {
         <td>${Number(x.mac_dinh || 0).toLocaleString('vi-VN')}</td>
 
         <td>
-          <button class="btn btn-sm btn-edit" data-id="${x.id}">
-            ✏️
-          </button>
-          <button class="btn btn-sm btn-del" data-id="${x.id}">
-            🗑️
-          </button>
+          ${
+            ROLE === 'admin'
+              ? `
+                <button class="btn btn-sm btn-edit" data-id="${x.id}">✏️</button>
+                <button class="btn btn-sm btn-del" data-id="${x.id}">🗑️</button>
+              `
+              : ``
+          }
         </td>
       </tr>
     `
@@ -77,6 +84,10 @@ function renderLoai() {
 // MỞ MODAL
 // ============================
 function openLoaiModal(item = null) {
+  if (ROLE !== 'admin') {
+    alert('Bạn không có quyền thao tác loại phụ cấp!');
+    return;
+  }
   state.editingId = item?.id ?? null;
 
   $('#loai-title').textContent = item
@@ -150,7 +161,11 @@ async function deleteLoai(id) {
 // BIND
 // ============================
 function bindLoaiEvents() {
-  $('#btn-add-loai').addEventListener('click', () => openLoaiModal());
+  if (ROLE !== 'admin') {
+    $('#btn-add-loai').style.display = 'none';
+  } else {
+    $('#btn-add-loai').addEventListener('click', () => openLoaiModal());
+  }
 
   $('#btn-cancel-loai').addEventListener('click', closeLoaiModal);
   $('#form-loai').addEventListener('submit', saveLoai);

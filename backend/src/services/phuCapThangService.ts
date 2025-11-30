@@ -1,26 +1,72 @@
 // src/services/phuCapThangService.ts
 import { pool } from "../db";
 import { isSalaryLocked } from "../utils/checkPaid";
+import { layPhamViNguoiDung } from "../utils/pham-vi-nguoi-dung";
 
 /* ============================================
    LẤY DANH SÁCH PHỤ CẤP
 ============================================ */
 export const list = async (query: any) => {
-  const thang = Number(query.thang);
-  const nam = Number(query.nam);
-  const nv = Number(query.nhan_vien_id);
-  const mode = query.mode || "normal"; // ⭐ thêm mode
+  const {
+    __phamvi, // ⭐ ĐÃ NHẬN TỪ CONTROLLER
+    thang: qThang,
+    nam: qNam,
+    nhan_vien_id: qNv,
+    mode: qMode,
+  } = query;
+
+  const thang = Number(qThang);
+  const nam = Number(qNam);
+  const nv = Number(qNv);
+  const mode = qMode || "normal";
 
   let where = `WHERE 1=1`;
   const params: any[] = [];
 
-  // ⭐ Lọc theo nhân viên (luôn áp dụng)
+  /* ============================================================
+       ⭐⭐  PHÂN QUYỀN XEM DANH SÁCH  ⭐⭐
+     ============================================================ */
+  if (__phamvi) {
+    const role = __phamvi.role;
+    const employeeId = __phamvi.employeeId ?? __phamvi.employee_id; // <-- thêm dòng này
+    const managedDepartmentIds = __phamvi.managedDepartmentIds || [];
+    const isAccountingManager = __phamvi.isAccountingManager === true;
+
+    // 🔥 Employee → chỉ xem chính mình
+    if (role === "employee") {
+      where += " AND pct.nhan_vien_id = ?";
+      params.push(employeeId);
+    }
+
+    // 🔥 Manager thường → chỉ xem nhân viên thuộc phòng ban mình quản lý
+    else if (role === "manager" && !isAccountingManager) {
+      if (managedDepartmentIds.length > 0) {
+        const placeholders = managedDepartmentIds.map(() => "?").join(",");
+        where += ` AND nv.phong_ban_id IN (${placeholders})`;
+        params.push(...managedDepartmentIds);
+      } else {
+        // ❌ Manager không quản lý phòng ban nào → không được thấy ai
+        where += " AND 1=0";
+      }
+    }
+
+    // 🔥 Manager kế toán → xem tất cả
+    // Không giới hạn
+
+    // 🔥 Admin → xem tất cả
+  }
+
+  /* ============================================================
+       ⭐⭐  LỌC THEO NHÂN VIÊN (NẾU USER CHỌN)
+     ============================================================ */
   if (!isNaN(nv) && nv) {
     where += " AND pct.nhan_vien_id = ?";
     params.push(nv);
   }
 
-  // ⭐ Chế độ NORMAL → chỉ hiển thị phụ cấp theo tháng
+  /* ============================================================
+       ⭐⭐  MODE NORMAL / ALL
+     ============================================================ */
   if (mode === "normal") {
     if (!isNaN(thang) && thang) {
       where += " AND pct.thang = ?";
@@ -30,12 +76,8 @@ export const list = async (query: any) => {
       where += " AND pct.nam = ?";
       params.push(nam);
     }
-  }
-
-  // ⭐ Chế độ ALL → hiển thị:
-  // 1. is_fixed = 1 (phụ cấp cố định)
-  // 2. is_fixed = 0 và đúng tháng/năm
-  else if (mode === "all") {
+  } else if (mode === "all") {
+    // Lấy: cố định + đúng tháng/năm
     where += " AND ( pc.is_fixed = 1 ";
 
     if (!isNaN(thang) && thang && !isNaN(nam) && nam) {
@@ -46,19 +88,23 @@ export const list = async (query: any) => {
     where += ")";
   }
 
+  /* ============================================================
+       ⭐⭐  QUERY CUỐI CÙNG
+     ============================================================ */
   const [rows] = await pool.query(
     `
-    SELECT 
-      pct.*, 
-      nv.ho_ten,
-      pc.ten AS ten_phu_cap,
-      pc.is_fixed
-    FROM phu_cap_chi_tiet pct
-    JOIN nhan_vien nv ON nv.id = pct.nhan_vien_id
-    JOIN phu_cap_loai pc ON pc.id = pct.loai_id
-    ${where}
-    ORDER BY pc.is_fixed DESC, pct.id DESC
-  `,
+      SELECT 
+        pct.*, 
+        nv.ho_ten,
+        nv.phong_ban_id,
+        pc.ten AS ten_phu_cap,
+        pc.is_fixed
+      FROM phu_cap_chi_tiet pct
+      JOIN nhan_vien nv ON nv.id = pct.nhan_vien_id
+      JOIN phu_cap_loai pc ON pc.id = pct.loai_id
+      ${where}
+      ORDER BY pc.is_fixed DESC, pct.id DESC
+    `,
     params
   );
 
@@ -68,10 +114,45 @@ export const list = async (query: any) => {
 /* ============================================
    THÊM PHỤ CẤP (HỖ TRỢ CHỌN NHIỀU)
 ============================================ */
-export const create = async (body: any) => {
-  const { nhan_vien_id, loai_ids, thang, nam, so_tien_map, ghi_chu_map } = body;
+export const create = async (body: any, req: any) => {
+  // ===== PHÂN QUYỀN =====
+  const phamvi = await layPhamViNguoiDung(req);
 
-  // 🔒 CHẶN tạo phụ cấp theo tháng nếu đã trả lương
+  // Employee: không thêm
+  if (phamvi.role === "employee") {
+    return { error: "Bạn không có quyền thêm phụ cấp!" };
+  }
+
+  const { nhan_vien_id } = body;
+
+  // Lấy phòng ban của nhân viên được thêm
+  const [[nv]]: any = await pool.query("SELECT phong_ban_id FROM nhan_vien WHERE id=?", [
+    nhan_vien_id,
+  ]);
+
+  if (!nv) {
+    return { error: "Nhân viên không tồn tại!" };
+  }
+
+  // Manager thường → chỉ thêm cho phòng ban họ quản lý
+  if (phamvi.role === "manager" && !phamvi.isAccountingManager) {
+    if (!phamvi.managedDepartmentIds.includes(nv.phong_ban_id)) {
+      return { error: "Bạn không có quyền thêm phụ cấp cho phòng ban khác!" };
+    }
+  }
+
+  // Manager kế toán → chỉ thêm cho phòng ban họ quản lý
+  if (phamvi.role === "manager" && phamvi.isAccountingManager) {
+    if (!phamvi.managedDepartmentIds.includes(nv.phong_ban_id)) {
+      return { error: "Bạn chỉ có thể thêm phụ cấp cho phòng ban mình quản lý!" };
+    }
+  }
+
+  // Admin: full quyền → không chặn gì
+
+  // ===== TOÀN BỘ LOGIC CŨ GIỮ NGUYÊN TỪ ĐÂY =====
+  const { loai_ids, thang, nam, so_tien_map, ghi_chu_map } = body;
+
   if (thang && nam && (await isSalaryLocked(nhan_vien_id, thang, nam))) {
     return { error: "Tháng này đã trả lương — không thể thêm phụ cấp!" };
   }
@@ -92,13 +173,9 @@ export const create = async (body: any) => {
     loai_ids
   );
 
-  if (!loais || loais.length !== loai_ids.length) {
-    return { error: "Một số loại phụ cấp không tồn tại!" };
-  }
-
   for (const loai of loais) {
     if (loai.is_fixed == 1 && !effectiveHopDongId) {
-      return { error: "Phụ cấp cố định cần Hợp đồng (còn hiệu lực)!" };
+      return { error: "Phụ cấp cố định cần hợp đồng còn hiệu lực!" };
     }
     if (loai.is_fixed == 0 && (!thang || !nam)) {
       return { error: "Phụ cấp theo tháng cần tháng & năm!" };
@@ -144,10 +221,24 @@ export const create = async (body: any) => {
 /* ============================================
    CẬP NHẬT PHỤ CẤP
 ============================================ */
-export const update = async (id: number, body: any) => {
+export const update = async (id: number, body: any, req: any) => {
+  // ===== PHÂN QUYỀN =====
+  const phamvi = await layPhamViNguoiDung(req);
+
+  // Manager thường không được sửa
+  if (phamvi.role === "manager" && !phamvi.isAccountingManager) {
+    return { error: "Manager thường không có quyền sửa phụ cấp!" };
+  }
+
+  // Employee không được sửa
+  if (phamvi.role === "employee") {
+    return { error: "Bạn không có quyền sửa phụ cấp!" };
+  }
+
+  // ===== GIỮ LOGIC CŨ NGUYÊN VẸN =====
+
   const { nhan_vien_id, loai_id, thang, nam, so_tien, ghi_chu } = body;
 
-  // 🔒 CHẶN sửa nếu là phụ cấp theo tháng của tháng đã trả lương
   if (loai_id && thang && nam && (await isSalaryLocked(nhan_vien_id, thang, nam))) {
     return { error: "Tháng này đã trả lương — không thể sửa phụ cấp!" };
   }
@@ -194,14 +285,28 @@ export const update = async (id: number, body: any) => {
 /* ============================================
    XÓA
 ============================================ */
-export const remove = async (id: number) => {
+export const remove = async (id: number, req: any) => {
+  // ===== PHÂN QUYỀN =====
+  const phamvi = await layPhamViNguoiDung(req);
+
+  // Manager thường không được xóa
+  if (phamvi.role === "manager" && !phamvi.isAccountingManager) {
+    return { error: "Manager thường không có quyền xóa phụ cấp!" };
+  }
+
+  // Employee không được xóa
+  if (phamvi.role === "employee") {
+    return { error: "Bạn không có quyền xóa phụ cấp!" };
+  }
+
+  // ===== GIỮ LOGIC CŨ NGUYÊN VẸN =====
+
   const [[row]]: any = await pool.query(
     "SELECT nhan_vien_id, thang, nam FROM phu_cap_chi_tiet WHERE id=?",
     [id]
   );
 
   if (row?.thang && row?.nam) {
-    // 🔒 CHẶN xóa phụ cấp theo tháng
     if (await isSalaryLocked(row.nhan_vien_id, row.thang, row.nam)) {
       return { error: "Tháng này đã trả lương — không thể xóa phụ cấp!" };
     }
@@ -211,76 +316,76 @@ export const remove = async (id: number) => {
   return { ok: true };
 };
 
-/* ============================================
-   AUTO COPY TỪ THÁNG TRƯỚC —— (ĐÃ FIX CHUẨN)
-============================================ */
-export const autoCopyFromLastMonth = async (thang: number, nam: number) => {
-  if (!thang || !nam) {
-    return { ok: false, error: "Cần tháng và năm!", copiedCount: 0 };
-  }
+// /* ============================================
+//    AUTO COPY TỪ THÁNG TRƯỚC —— (ĐÃ FIX CHUẨN)
+// ============================================ */
+// export const autoCopyFromLastMonth = async (thang: number, nam: number) => {
+//   if (!thang || !nam) {
+//     return { ok: false, error: "Cần tháng và năm!", copiedCount: 0 };
+//   }
 
-  // Tính tháng trước
-  let thangTruoc = thang - 1;
-  let namTruoc = nam;
-  if (thangTruoc < 1) {
-    thangTruoc = 12;
-    namTruoc -= 1;
-  }
+//   // Tính tháng trước
+//   let thangTruoc = thang - 1;
+//   let namTruoc = nam;
+//   if (thangTruoc < 1) {
+//     thangTruoc = 12;
+//     namTruoc -= 1;
+//   }
 
-  // Lấy phụ cấp theo tháng của tháng trước
-  const [prevRecords]: any = await pool.query(
-    `
-      SELECT pct.*, pc.is_fixed
-      FROM phu_cap_chi_tiet pct
-      JOIN phu_cap_loai pc ON pc.id = pct.loai_id
-      WHERE pct.thang = ? AND pct.nam = ? AND pc.is_fixed = 0
-    `,
-    [thangTruoc, namTruoc]
-  );
+//   // Lấy phụ cấp theo tháng của tháng trước
+//   const [prevRecords]: any = await pool.query(
+//     `
+//       SELECT pct.*, pc.is_fixed
+//       FROM phu_cap_chi_tiet pct
+//       JOIN phu_cap_loai pc ON pc.id = pct.loai_id
+//       WHERE pct.thang = ? AND pct.nam = ? AND pc.is_fixed = 0
+//     `,
+//     [thangTruoc, namTruoc]
+//   );
 
-  if (!prevRecords || prevRecords.length === 0) {
-    return {
-      ok: false,
-      error: `Không có phụ cấp theo tháng ở ${thangTruoc}/${namTruoc}!`,
-      copiedCount: 0,
-    };
-  }
+//   if (!prevRecords || prevRecords.length === 0) {
+//     return {
+//       ok: false,
+//       error: `Không có phụ cấp theo tháng ở ${thangTruoc}/${namTruoc}!`,
+//       copiedCount: 0,
+//     };
+//   }
 
-  let copiedCount = 0;
+//   let copiedCount = 0;
 
-  for (const r of prevRecords) {
-    // Kiểm tra xem record (nhan_vien_id + loai_id) đã tồn tại trong tháng hiện tại chưa
-    const [exists]: any = await pool.query(
-      `
-        SELECT id FROM phu_cap_chi_tiet
-        WHERE nhan_vien_id = ? AND loai_id = ? AND thang = ? AND nam = ?
-        LIMIT 1
-      `,
-      [r.nhan_vien_id, r.loai_id, thang, nam]
-    );
+//   for (const r of prevRecords) {
+//     // Kiểm tra xem record (nhan_vien_id + loai_id) đã tồn tại trong tháng hiện tại chưa
+//     const [exists]: any = await pool.query(
+//       `
+//         SELECT id FROM phu_cap_chi_tiet
+//         WHERE nhan_vien_id = ? AND loai_id = ? AND thang = ? AND nam = ?
+//         LIMIT 1
+//       `,
+//       [r.nhan_vien_id, r.loai_id, thang, nam]
+//     );
 
-    if (exists.length > 0) {
-      // Bỏ qua nếu đã có
-      continue;
-    }
+//     if (exists.length > 0) {
+//       // Bỏ qua nếu đã có
+//       continue;
+//     }
 
-    // Sao chép bản ghi chưa tồn tại
-    await pool.query(
-      `
-        INSERT INTO phu_cap_chi_tiet
-        (nhan_vien_id, hop_dong_id, loai_id, thang, nam, so_tien, ghi_chu)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `,
-      [r.nhan_vien_id, r.hop_dong_id, r.loai_id, thang, nam, r.so_tien, r.ghi_chu]
-    );
+//     // Sao chép bản ghi chưa tồn tại
+//     await pool.query(
+//       `
+//         INSERT INTO phu_cap_chi_tiet
+//         (nhan_vien_id, hop_dong_id, loai_id, thang, nam, so_tien, ghi_chu)
+//         VALUES (?, ?, ?, ?, ?, ?, ?)
+//       `,
+//       [r.nhan_vien_id, r.hop_dong_id, r.loai_id, thang, nam, r.so_tien, r.ghi_chu]
+//     );
 
-    copiedCount++;
-  }
+//     copiedCount++;
+//   }
 
-  return {
-    ok: true,
-    copiedCount,
-    from: `${thangTruoc}/${namTruoc}`,
-    to: `${thang}/${nam}`,
-  };
-};
+//   return {
+//     ok: true,
+//     copiedCount,
+//     from: `${thangTruoc}/${namTruoc}`,
+//     to: `${thang}/${nam}`,
+//   };
+// };

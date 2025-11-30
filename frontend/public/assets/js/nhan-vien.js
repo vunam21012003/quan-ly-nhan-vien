@@ -36,6 +36,15 @@ const esc = (s) =>
   );
 
 /* ==========================================================
+   HELPER KIỂM TRA TÊN PHÒNG BAN CÓ PHẢI KẾ TOÁN KHÔNG
+========================================================== */
+function isPhongKeToan(name) {
+  if (!name) return false;
+  const lower = name.toLowerCase();
+  return lower.includes('kế toán') || lower.includes('ke toan');
+}
+
+/* ==========================================================
    HELPER NHẬN DIỆN MANAGER KẾ TOÁN
 ========================================================== */
 function isAccountingManagerFE() {
@@ -97,73 +106,115 @@ function rowHtml(x) {
   const myPB = st.USER?.phong_ban_id || null;
   const empPB = x.phong_ban_id || null;
 
-  const isManagerKT = isAccountingManagerFE(); // FE nhận diện phòng kế toán
+  // Helper check manager kế toán (như logic cũ của bạn)
+  const isManagerKT = isAccountingManagerFE();
 
   let canEdit = false;
 
-  // ===========================
-  //   🔥 QUYỀN EDIT CHUẨN
-  // ===========================
-
+  // --- LOGIC CHECK QUYỀN (Giữ nguyên logic cũ) ---
   if (myRole === 'admin') {
     canEdit = true;
   } else if (myRole === 'manager') {
-    // Manager KẾ TOÁN → chỉ sửa NV phòng Kế toán
     if (isManagerKT) {
       const pbName = (x.ten_phong_ban || '').toLowerCase();
       canEdit = pbName.includes('kế toán') || pbName.includes('ke toan');
-    }
-
-    // Manager THƯỜNG → sửa NV cùng phòng ban
-    else if (myPB && empPB && myPB === empPB) {
+    } else if (myPB && empPB && myPB === empPB) {
       canEdit = true;
     }
-  }
-
-  // Employee → không edit
-  else {
+  } else {
     canEdit = false;
   }
 
-  // ===========================
-  //   RENDER BUTTONS
-  // ===========================
-
+  // --- RENDER BUTTONS (Dùng Icon SVG & Class mới) ---
   let actionButtons = `
-      <button class="page-btn btn-sm" data-act="view">Xem</button>
+      <button class="btn-icon-only" data-act="view" title="Xem chi tiết">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+      </button>
   `;
 
   if (canEdit) {
     actionButtons += `
-      <button class="page-btn btn-sm" data-act="edit">Sửa</button>
+      <button class="btn-icon-only" data-act="edit" title="Chỉnh sửa">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+      </button>
     `;
   } else {
-    actionButtons += `<span class="text-muted"></span>`;
+    // Logic Manager Kế toán sửa NPT
+    if (myRole === 'manager' && isManagerKT) {
+      const pbName = (x.ten_phong_ban || '').toLowerCase();
+      const isEmpKeToan =
+        pbName.includes('kế toán') || pbName.includes('ke toan');
+
+      if (!isEmpKeToan) {
+        actionButtons += `
+          <button class="btn-icon-only" data-act="edit" title="Chỉ sửa NPT">
+             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+          </button>
+        `;
+      }
+    }
   }
 
   if (myRole === 'admin') {
     actionButtons += `
-      <button class="page-btn btn-sm" data-act="del">Xóa</button>
+      <button class="btn-icon-only delete" data-act="del" title="Xóa">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+      </button>
     `;
   }
 
+  // --- XỬ LÝ TRẠNG THÁI & AVATAR ---
+  const statusMap = {
+    dang_lam: 'Đang làm',
+    tam_nghi: 'Tạm nghỉ',
+    da_nghi: 'Đã nghỉ',
+  };
+  const statusText = statusMap[x.trang_thai] || x.trang_thai;
+  const statusClass = `bg-${x.trang_thai}`; // Class CSS tương ứng màu
+
+  const avatarUrl = x.anh_dai_dien || './assets/img/no-avatar.png';
+
+  // --- TRẢ VỀ HTML ---
   return `<tr data-id="${x.id}">
-    <td>${x.id}</td>
+    <td class="col-id text-muted">#${x.id}</td>
     <td>
-      <img src="${x.anh_dai_dien || './assets/img/no-avatar.png'}"
-           style="width:32px;height:32px;border-radius:4px;margin-right:4px;vertical-align:middle">
-      ${esc(x.ho_ten)}
+      <div class="user-cell">
+        <!-- Đã xóa onerror để tránh lỗi Security -->
+        <img src="${avatarUrl}" class="user-avatar" alt="Avatar">
+        <div class="user-info">
+            <span class="user-name">${esc(x.ho_ten)}</span>
+            <span class="user-sub">${esc(x.email || '')}</span>
+        </div>
+      </div>
     </td>
-    <td>${esc(x.gioi_tinh || '')}</td>
-    <td>${esc(x.ten_phong_ban || '')}</td>
-    <td>${esc(x.ten_chuc_vu || '')}</td>
-    <td>${esc(x.email || '')}</td>
-    <td>${esc(x.so_dien_thoai || '')}</td>
+    <td class="text-center">${esc(x.gioi_tinh || '')}</td>
+    <td>
+        <div style="font-weight:500">${esc(x.ten_chuc_vu || '')}</div>
+        <div class="text-muted" style="font-size:12px">${esc(
+          x.ten_phong_ban || ''
+        )}</div>
+    </td>
+    <td>
+        ${
+          x.so_dien_thoai
+            ? `<div><span class="text-muted">📞</span> ${esc(
+                x.so_dien_thoai
+              )}</div>`
+            : ''
+        }
+    </td>
     <td>${
       x.ngay_vao_lam ? new Date(x.ngay_vao_lam).toLocaleDateString('vi-VN') : ''
     }</td>
-    <td>${esc(x.trang_thai || '')}</td>
-    <td>${actionButtons}</td>
+    <td class="text-center">${x.so_nguoi_phu_thuoc ?? 0}</td>
+    <td class="text-center">
+        <span class="badge-status ${statusClass}">${statusText}</span>
+    </td>
+    <td class="text-right">
+        <div style="display:flex;justify-content:flex-end;gap:4px">
+            ${actionButtons}
+        </div>
+    </td>
   </tr>`;
 }
 
@@ -383,6 +434,7 @@ async function openModal(item = null, mode = 'edit') {
     ? item.ngay_vao_lam.split('T')[0]
     : '';
   $('#nv-trang_thai').value = item?.trang_thai ?? 'dang_lam';
+  $('#nv-so_nguoi_phu_thuoc').value = item?.so_nguoi_phu_thuoc ?? 0;
   $('#nv-ghi_chu').value = item?.ghi_chu ?? '';
 
   // ======= ẢNH XEM TRƯỚC =======
@@ -468,18 +520,78 @@ async function openModal(item = null, mode = 'edit') {
   ======================================================= */
   const allInputs = $('#nv-form').querySelectorAll('input, select, textarea');
   allInputs.forEach((input) => {
+    // xử lý riêng cho số NPT, nên bỏ qua ở đây
+    if (input.id === 'nv-so_nguoi_phu_thuoc') return;
     input.readOnly = isView;
     input.disabled = isView;
   });
 
-  // Nhưng admin & manager-kế-toán vẫn sửa được (trừ PB & CV)
+  // Admin: vẫn được sửa PB & CV khi không phải view
   if (st.ROLE === 'admin') {
-    pbSelect.disabled = false;
-    cvSelect.disabled = false;
+    pbSelect.disabled = isView ? true : false;
+    cvSelect.disabled = isView ? true : false;
   } else if (st.ROLE === 'manager' && isAccountingManagerFE()) {
-    // kế toán manager chỉ sửa nhân viên phòng kế toán
+    // Manager kế toán: PB & CV luôn bị khóa (như bạn đã muốn)
     pbSelect.disabled = true;
     cvSelect.disabled = true;
+  }
+
+  /* =======================================================
+     ⭐ XỬ LÝ RIÊNG SỐ NGƯỜI PHỤ THUỘC
+  ======================================================= */
+  const sptInput = $('#nv-so_nguoi_phu_thuoc');
+  const sptNote = $('#nv-spt-note');
+
+  const isKeToanMgr = isAccountingManagerFE();
+  const empPhongBanName = item?.ten_phong_ban || '';
+  const isNVPhongKeToan = isPhongKeToan(empPhongBanName);
+
+  const myPB = st.USER?.phong_ban_id || null;
+  const empPB = item?.phong_ban_id || null;
+  const isSameDepart = myPB && empPB && myPB === empPB;
+
+  let canEditSPT = false;
+  let noteText = '';
+
+  if (isView) {
+    canEditSPT = false;
+  } else if (st.ROLE === 'admin') {
+    // Admin sửa được số NPT của tất cả
+    canEditSPT = true;
+  } else if (st.ROLE === 'manager') {
+    if (isKeToanMgr) {
+      // Manager Kế Toán: sửa được số NPT của tất cả NV
+      canEditSPT = true;
+      if (!isNVPhongKeToan) {
+        noteText = '(Chỉ sửa được số người phụ thuộc)';
+      }
+    } else if (isSameDepart) {
+      // Manager thường: sửa NV phòng mình (bao gồm số NPT)
+      canEditSPT = true;
+    }
+  }
+
+  sptInput.disabled = !canEditSPT;
+  sptInput.readOnly = !canEditSPT;
+  if (sptNote) sptNote.textContent = noteText;
+
+  if (!canEditSPT) {
+    sptInput.style.backgroundColor = '#f0f0f0';
+    sptInput.style.cursor = 'not-allowed';
+  } else {
+    sptInput.style.backgroundColor = '';
+    sptInput.style.cursor = '';
+  }
+
+  /* =======================================================
+     ⭐ Manager Kế Toán xem NV PHÒNG KHÁC: khóa các trường khác
+  ======================================================= */
+  if (!isView && st.ROLE === 'manager' && isKeToanMgr && !isNVPhongKeToan) {
+    allInputs.forEach((input) => {
+      if (input.id === 'nv-so_nguoi_phu_thuoc') return;
+      input.disabled = true;
+      input.readOnly = true;
+    });
   }
 
   /* =======================================================
@@ -502,6 +614,7 @@ function closeModal() {
    BIND EVENT  ✔ giữ nguyên, chỉ sửa phần load chức vụ theo PB
 ========================================================== */
 function bind() {
+  // 1. Nút Refresh
   $('#nv-btn-refresh').addEventListener('click', () => {
     st.page = 1;
     $('#nv-search').value = '';
@@ -510,14 +623,17 @@ function bind() {
     fetchList();
   });
 
+  // 2. Nút Search & Filter
   $('#nv-btn-search').addEventListener('click', fetchList);
 
+  // 3. Dropdown phòng ban (để load chức vụ tương ứng)
   $('#nv-phong_ban_id').addEventListener('change', async (e) => {
     const pbId = e.target.value;
     await loadChucVus(pbId);
     $('#nv-chuc_vu_id').value = '';
   });
 
+  // 4. Preview ảnh khi upload
   $('#nv-anh_dai_dien').addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -526,15 +642,17 @@ function bind() {
     }
   });
 
+  // 5. Nút Tạo mới
   $('#nv-btn-create').addEventListener('click', () =>
     st.IS_MANAGER_OR_ADMIN
       ? openModal(null, 'edit')
       : alert('Bạn không có quyền')
   );
 
+  // 6. Nút Đóng/Hủy Modal
   $('#nv-cancel').addEventListener('click', closeModal);
 
-  /* SUBMIT */
+  // 7. SUBMIT FORM (Logic giữ nguyên)
   $('#nv-form').addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -543,6 +661,36 @@ function bind() {
       return;
     }
 
+    const editingItem = st.list.find((x) => x.id == st.editingId);
+    const isKeToanMgr = isAccountingManagerFE();
+    const isNVPhongKeToan = editingItem
+      ? isPhongKeToan(editingItem.ten_phong_ban)
+      : false;
+
+    // CASE: Manager Kế toán sửa NPT nhân viên phòng khác
+    if (
+      st.editingId &&
+      st.ROLE === 'manager' &&
+      isKeToanMgr &&
+      !isNVPhongKeToan
+    ) {
+      try {
+        const so_nguoi_phu_thuoc =
+          Number($('#nv-so_nguoi_phu_thuoc').value) || 0;
+        await api(`/nhan-vien/${st.editingId}/nguoi-phu-thuoc`, {
+          method: 'PATCH',
+          body: { so_nguoi_phu_thuoc },
+        });
+        closeModal();
+        fetchList();
+        return;
+      } catch (err) {
+        showErr(err?.message || 'Lỗi cập nhật số người phụ thuộc');
+        return;
+      }
+    }
+
+    // CASE: Bình thường (Tạo mới / Sửa full)
     const payload = {
       ho_ten: $('#nv-ho_ten').value.trim(),
       gioi_tinh: $('#nv-gioi_tinh').value,
@@ -554,6 +702,7 @@ function bind() {
       chuc_vu_id: Number($('#nv-chuc_vu_id').value) || null,
       ngay_vao_lam: $('#nv-ngay_vao_lam').value || null,
       trang_thai: $('#nv-trang_thai').value || 'dang_lam',
+      so_nguoi_phu_thuoc: Number($('#nv-so_nguoi_phu_thuoc').value) || 0,
       ghi_chu: $('#nv-ghi_chu').value || null,
     };
 
@@ -564,13 +713,10 @@ function bind() {
     if (file) {
       const fd = new FormData();
       fd.append('file', file);
-
       const up = await fetch('http://localhost:8001/upload', {
         method: 'POST',
         body: fd,
-        headers: {
-          Authorization: `Bearer ${getToken()}`,
-        },
+        headers: { Authorization: `Bearer ${getToken()}` },
       })
         .then((r) => r.json())
         .catch(() => null);
@@ -589,7 +735,6 @@ function bind() {
       } else {
         await api('/nhan-vien', { method: 'POST', body: payload });
       }
-
       closeModal();
       fetchList();
     } catch (err) {
@@ -597,21 +742,27 @@ function bind() {
     }
   });
 
+  // 8. SỰ KIỆN CLICK TRONG BẢNG (QUAN TRỌNG NHẤT: ĐÃ SỬA SELECTOR)
   $('#nv-tbody').addEventListener('click', async (e) => {
+    // Tìm dòng chứa ID
     const row = e.target.closest('tr[data-id]');
     if (!row) return;
     const id = row.dataset.id;
-    const btn = e.target.closest('button.page-btn');
+
+    // TÌM NÚT CÓ DATA-ACT (Bất kể icon hay button)
+    const btn = e.target.closest('button[data-act]');
     if (!btn) return;
 
     const act = btn.dataset.act;
     const item = st.list.find((x) => x.id == id);
 
     if (act === 'view') return openModal(item, 'view');
+
     if (act === 'edit') {
       if (!st.IS_MANAGER_OR_ADMIN) return alert('Bạn không có quyền');
       return openModal(item, 'edit');
     }
+
     if (act === 'del') {
       if (!st.IS_MANAGER_OR_ADMIN) return alert('Bạn không có quyền');
       if (!confirm(`Xoá nhân viên #${id}?`)) return;
@@ -619,15 +770,18 @@ function bind() {
       await api(`/nhan-vien/${id}`, { method: 'DELETE' }).catch(() =>
         alert('Không thể xoá')
       );
-
       fetchList();
     }
   });
 
-  $('#logout-btn').addEventListener('click', () => {
-    clearAuth();
-    location.href = './dang-nhap.html';
-  });
+  // 9. Logout
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      clearAuth();
+      location.href = './dang-nhap.html';
+    });
+  }
 }
 
 /* ==========================================================

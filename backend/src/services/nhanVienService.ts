@@ -20,7 +20,6 @@ async function isAccountingManager(userId: number): Promise<boolean> {
 }
 
 /** Liệt kê nhân viên */
-/** Liệt kê nhân viên */
 export const getAll = async (req: any) => {
   const userId = (req as any).user?.id as number;
   const search = (req.query.search as string) || "";
@@ -76,6 +75,7 @@ export const getAll = async (req: any) => {
     `SELECT 
        nv.id, nv.ho_ten, nv.gioi_tinh, nv.ngay_sinh, nv.dia_chi, nv.so_dien_thoai, nv.email,
        nv.anh_dai_dien, nv.phong_ban_id, nv.chuc_vu_id, nv.ngay_vao_lam, nv.trang_thai, nv.ghi_chu,
+       nv.so_nguoi_phu_thuoc,
        pb.ten_phong_ban, cv.ten_chuc_vu, cv.quyen_mac_dinh, cv.muc_luong_co_ban
      FROM nhan_vien nv
      LEFT JOIN phong_ban pb ON pb.id = nv.phong_ban_id
@@ -309,4 +309,36 @@ export const getByChucVu = async (chuc_vu_id: number) => {
     [chuc_vu_id]
   );
   return rows;
+};
+
+// ⭐ THÊM MỚI: Cập nhật riêng số người phụ thuộc (cho Manager Kế Toán)
+export const updateNguoiPhuThuoc = async (req: any, id: number, so_nguoi_phu_thuoc: number) => {
+  const scope = await layPhamViNguoiDung(req);
+
+  const isKeToan = scope.isAccountingManager;
+
+  // Chỉ Admin hoặc Manager Kế Toán mới được gọi endpoint này
+  if (scope.role !== "admin" && !isKeToan) {
+    return { error: "Chỉ Admin hoặc Kế Toán mới được cập nhật số người phụ thuộc" };
+  }
+
+  // Validate giá trị
+  const value = Number(so_nguoi_phu_thuoc);
+  if (!Number.isFinite(value) || value < 0 || value > 20) {
+    return { error: "Số người phụ thuộc phải từ 0 đến 20" };
+  }
+
+  // Kiểm tra nhân viên tồn tại
+  const [[nv]]: any = await pool.query(`SELECT id FROM nhan_vien WHERE id = ? LIMIT 1`, [id]);
+  if (!nv) {
+    return { error: "Không tìm thấy nhân viên" };
+  }
+
+  // Cập nhật
+  const [r]: any = await pool.query(`UPDATE nhan_vien SET so_nguoi_phu_thuoc = ? WHERE id = ?`, [
+    value,
+    id,
+  ]);
+
+  return { ok: r.affectedRows > 0 };
 };

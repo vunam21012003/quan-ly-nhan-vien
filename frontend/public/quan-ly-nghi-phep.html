@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quản lý Nghỉ phép</title>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="./assets/css/styles.css" />
+    <link rel="stylesheet" href="./assets/css/quan-ly-nghi-phep.css" />
+  </head>
+  <body>
+    <div id="menuContainer"></div>
+
+    <div class="container">
+      <div class="header-flex">
+        <h2>📋 Quản lý Nghỉ phép</h2>
+        <button class="btn btn-primary" onclick="openModal('modalTaoDon')">
+          <i class="fa-solid fa-plus"></i> Tạo đơn xin nghỉ
+        </button>
+      </div>
+
+      <!-- Bộ lọc -->
+      <div class="card">
+        <div class="filter-row">
+          <div class="form-group">
+            <label>Trạng thái</label>
+            <select class="form-control" id="filterTrangThai">
+              <option value="">Tất cả</option>
+              <option value="cho_duyet" selected>Chờ duyệt</option>
+              <option value="da_duyet">Đã duyệt</option>
+              <option value="tu_choi">Bị từ chối</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Năm</label>
+            <select class="form-control" id="filterYear">
+              <option value="2026">2026</option>
+              <option value="2025">2025</option>
+              <option value="2024">2024</option>
+            </select>
+          </div>
+          <div style="width: 150px">
+            <button
+              class="btn btn-secondary"
+              style="width: 100%"
+              onclick="loadDanhSach()"
+            >
+              Lọc
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bảng dữ liệu -->
+      <div class="card" style="padding: 0; overflow: hidden">
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 20%">Nhân viên</th>
+                <th style="width: 12%">Loại nghỉ</th>
+                <th style="width: 18%">Thời gian</th>
+                <th style="width: 10%">Số ngày</th>
+                <th style="width: 20%">Lý do</th>
+                <th style="width: 10%">Đã nghỉ</th>
+                <th style="width: 10%">Trạng thái</th>
+                <th style="text-align: right">Hành động</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody">
+              <!-- JS sẽ render -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL TẠO ĐƠN -->
+    <div id="modalTaoDon" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>📝 Đơn xin nghỉ phép</h3>
+          <button class="close-btn" onclick="closeModal('modalTaoDon')">
+            &times;
+          </button>
+        </div>
+        <div class="modal-body">
+          <form id="formTaoDon">
+            <div class="form-group" style="margin-bottom: 15px">
+              <label>Loại hình nghỉ</label>
+              <select class="form-control" name="loai_nghi">
+                <option value="phep_nam">Nghỉ phép năm</option>
+                <option value="om_dau">Nghỉ ốm</option>
+                <option value="khong_luong">Nghỉ không lương</option>
+                <option value="khac">Khác</option>
+              </select>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 15px">
+              <label>Thời gian nghỉ</label>
+              <div class="radio-group">
+                <label>
+                  <input
+                    type="radio"
+                    name="option_thoi_gian"
+                    id="radioCaNgay"
+                    value="ca_ngay"
+                    checked
+                    onchange="toggleThoiGian()"
+                  />
+                  Nhiều ngày / Cả ngày
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="option_thoi_gian"
+                    value="theo_buoi"
+                    onchange="toggleThoiGian()"
+                  />
+                  0.5 ngày (Sáng/Chiều)
+                </label>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Từ ngày</label>
+                <input
+                  type="date"
+                  class="form-control"
+                  name="ngay_bat_dau"
+                  required
+                />
+              </div>
+
+              <div class="form-group" id="divNgayKetThuc">
+                <label>Đến ngày</label>
+                <input type="date" class="form-control" name="ngay_ket_thuc" />
+              </div>
+
+              <div class="form-group d-none" id="divBuoiNghi">
+                <label>Buổi nghỉ</label>
+                <select class="form-control" name="buoi_nghi">
+                  <option value="sang">Buổi Sáng</option>
+                  <option value="chieu">Buổi Chiều</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Lý do</label>
+              <textarea
+                class="form-control"
+                name="ly_do"
+                rows="3"
+                required
+                placeholder="Nhập lý do..."
+              ></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal('modalTaoDon')">
+            Đóng
+          </button>
+          <button class="btn btn-primary" onclick="submitDon()">Gửi đơn</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL TỪ CHỐI -->
+    <div id="modalTuChoi" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 style="color: var(--danger-color)">Từ chối đơn nghỉ</h3>
+          <button class="close-btn" onclick="closeModal('modalTuChoi')">
+            &times;
+          </button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="hiddenRejectId" />
+          <div class="form-group">
+            <label>Lý do từ chối:</label>
+            <textarea
+              class="form-control"
+              id="txtLyDoTuChoi"
+              rows="3"
+            ></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal('modalTuChoi')">
+            Hủy
+          </button>
+          <button class="btn btn-danger" onclick="confirmTuChoi()">
+            Xác nhận
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Import JS -->
+    <script src="./assets/js/danh-sach.js"></script>
+    <script type="module" src="./assets/js/quan-ly-nghi-phep.js"></script>
+    <script type="module" src="./assets/js/navbar.js"></script>
+  </body>
+</html>

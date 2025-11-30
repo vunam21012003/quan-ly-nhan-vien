@@ -1,185 +1,363 @@
-/* Trang Nhân viên */
+/* assets/css/nhan-vien.css */
 
 /* ===================================== */
-/* 1. Thanh Công cụ & Bộ Lọc (Toolbar) */
+/* 1. Modern Header & Toolbar */
 /* ===================================== */
-.page-header {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  margin: 24px 0;
-  gap: 16px;
-}
-.page-title {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 700;
-}
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-  width: auto;
-}
-.toolbar .form-group {
-  margin: 0;
-}
-.toolbar input {
-  max-width: 220px;
-}
-.toolbar select {
-  min-width: 130px;
-}
-.toolbar input,
-.toolbar select,
-.toolbar button {
-  height: 38px;
-  font-size: 13px;
-  padding: 0 12px;
-  border-radius: 8px;
-}
-
-.td-actions {
-  min-width: 160px;
-  white-space: nowrap;
-}
-.td-actions .btn {
-  margin-right: 4px;
-}
-
-.pagination {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  justify-content: flex-end;
-  margin: 20px 0 10px 0;
-}
-.page-btn {
-  height: 38px;
-  width: 38px;
-  font-weight: 600;
-  padding: 0;
-}
-.page-btn.btn-sm {
-  padding: 0;
-}
-
-/* ===================================== */
-/* 2. Tối ưu Modal/Form Nhân viên (Đã Sửa Lỗi Tràn) */
-/* ===================================== */
-
-/* 💡 QUAN TRỌNG: GHI ĐÈ KÍCH THƯỚC CỦA MODAL (dialog) */
-#nv-modal {
-  /* Tăng max-width để form 2 cột có đủ chỗ. */
-  max-width: 800px;
-  width: 95%;
-  padding: 0;
-}
-
-#nv-modal .form {
-  padding: 30px !important;
-  /* Đặt 100% để form con chiếm hết không gian mới của #nv-modal. */
-  width: 100%;
-  min-width: unset;
-}
-
-/* Áp dụng Grid 2 cột cho các form group để xem chi tiết đẹp hơn */
-#nv-form {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px 30px;
-  min-width: 0;
-}
-
-#nv-form h3 {
-  grid-column: 1 / -1;
-  font-size: 20px;
-  color: var(--primary);
-  border-bottom: 2px solid var(--primary-light);
-  padding-bottom: 15px;
-  margin: 0 0 20px 0 !important;
-}
-
-/* Đảm bảo Ghi chú, Lỗi, và nút hành động chiếm trọn 2 cột */
-#nv-form .form-group:has(textarea),
-#nv-form #nv-error,
-#nv-form > div:last-child {
-  grid-column: 1 / -1;
-}
-
-/* Điều chỉnh lại khoảng cách của form-group con trong form */
-#nv-form .form-group {
+.page-header-modern {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px 24px;
+  margin: 20px 0;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.04);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 16px;
+}
+
+@media (min-width: 992px) {
+  .page-header-modern {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+.header-content .page-title {
+  font-size: 22px;
+  margin-bottom: 4px;
+  color: #1e293b;
+}
+
+.header-content .text-muted {
+  font-size: 13px;
   margin: 0;
-  min-width: 0;
+}
+
+.toolbar-modern {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+/* Search Box Styling */
+.search-box {
+  position: relative;
+  flex-grow: 1;
+}
+.search-box svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+}
+.search-box input {
+  padding-left: 38px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  min-width: 240px;
+  transition: all 0.2s;
+}
+.search-box input:focus {
+  background: #fff;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(39, 77, 237, 0.1);
+}
+
+.filter-group,
+.action-group {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 16px;
 }
 
 /* ===================================== */
-/* 3. Responsive cho thiết bị di động (Mobile) */
+/* 2. Card Table Design */
 /* ===================================== */
-@media (max-width: 900px) {
-  /* 1. Tối ưu Toolbar */
-  .page-header {
-    flex-direction: column;
-    align-items: flex-start;
-    margin: 16px 0;
-  }
-  .toolbar {
-    width: 100%;
-    justify-content: space-between;
-  }
-  .toolbar input,
-  .toolbar select,
-  .toolbar button {
-    flex-basis: calc(50% - 5px);
-    min-width: unset;
-    flex-grow: 1;
-  }
-  #nv-btn-create {
-    flex-basis: 100%;
-  }
+.card-table {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  margin-bottom: 30px;
+}
 
-  /* 2. Ẩn bớt cột trong bảng lớn */
-  .table thead th.col-id,
-  .table tbody td:nth-child(1),
-  .table thead th.col-gt,
-  .table tbody td:nth-child(3),
-  .table thead th.col-email,
-  .table tbody td:nth-child(6),
-  .table thead th.col-sdt,
-  .table tbody td:nth-child(7),
-  .table thead th.col-ngayvao,
-  .table tbody td:nth-child(8),
-  .table thead th.col-tt,
-  .table tbody td:nth-child(9) {
-    display: none;
-  }
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: none; /* Override styles.css */
+  border-radius: 0;
+}
 
-  .td-actions {
-    min-width: 100px;
-  }
+.table {
+  border: none;
+  margin: 0;
+}
 
-  /* 💡 Đảm bảo Modal Responsive tốt trên Mobile */
-  #nv-modal {
-    max-width: calc(100% - 32px); /* Ghi đè lại để nhỏ gọn trên mobile */
-  }
+.table thead th {
+  background: #f8fafc;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  padding: 16px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
 
-  #nv-modal .form {
-    min-width: unset;
-    width: 100%;
-    padding: 20px !important;
-  }
-  #nv-form {
+.table tbody td {
+  padding: 16px 12px;
+  vertical-align: middle;
+  color: #334155;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 14px;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* User Info Cell */
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.user-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+.user-info {
+  display: flex;
+  flex-direction: column;
+}
+.user-name {
+  font-weight: 600;
+  color: var(--text);
+}
+.user-sub {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Badge Styling */
+.badge-status {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-block;
+}
+.bg-dang_lam {
+  background: #dcfce7;
+  color: #166534;
+}
+.bg-tam_nghi {
+  background: #fef9c3;
+  color: #854d0e;
+}
+.bg-da_nghi {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+/* Action Buttons */
+.btn-icon-only {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  transition: all 0.2s;
+}
+.btn-icon-only:hover {
+  background: #f1f5f9;
+  color: var(--primary);
+}
+.btn-icon-only.delete:hover {
+  color: var(--error);
+  background: #fef2f2;
+}
+
+.pagination-wrap {
+  padding: 12px 24px;
+  border-top: 1px solid #f1f5f9;
+  background: #fff;
+}
+
+/* ===================================== */
+/* 3. New Modal Design */
+/* ===================================== */
+#nv-modal {
+  max-width: 800px;
+  width: 95%;
+  border-radius: 20px;
+  overflow: hidden;
+  padding: 0;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+#nv-form {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 24px;
+  height: 100%;
+}
+
+.modal-header {
+  background: #f8fafc;
+  padding: 18px 30px;
+  border-bottom: 1px solid #e2e8f0;
+}
+.modal-header h3 {
+  margin: 0;
+  color: var(--primary);
+  font-size: 20px;
+}
+.modal-subtitle {
+  margin: 4px 0 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.modal-body-grid {
+  padding: 25px 30px;
+  display: grid;
+  grid-template-columns: 200px 1fr; /* 200px cho cột ảnh, còn lại cho form */
+  gap: 30px;
+  overflow-y: auto;
+  max-height: 70vh;
+}
+
+/* Left Column: Avatar */
+.grid-col-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.avatar-preview-box {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 4px solid #fff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  margin-bottom: 16px;
+  background: #f1f5f9;
+}
+#nv-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block !important; /* Force display */
+}
+.btn-upload {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-upload:hover {
+  background: #e2e8f0;
+}
+
+/* Right Column: Inputs */
+.grid-col-right {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.divider {
+  display: flex;
+  align-items: center;
+  margin: 10px 0;
+  font-size: 12px;
+  color: var(--primary);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e2e8f0;
+  margin-left: 10px;
+}
+
+.req {
+  color: var(--error);
+  margin-left: 2px;
+}
+
+.modal-footer {
+  margin: 2px 0px;
+  padding: 2px 30px;
+  background: #fff;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .modal-body-grid {
     grid-template-columns: 1fr;
-    gap: 15px;
   }
-  #nv-form h3 {
-    padding-bottom: 10px;
-    margin-bottom: 15px !important;
-    font-size: 18px;
+  .grid-col-left {
+    flex-direction: row;
+    align-items: center;
+    gap: 20px;
+  }
+  .avatar-preview-box {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 0;
+  }
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  .table thead th,
+  .table tbody td {
+    padding: 12px 8px;
+  }
+  .col-contact,
+  .col-ngayvao,
+  .col-spt {
+    display: none;
   }
 }

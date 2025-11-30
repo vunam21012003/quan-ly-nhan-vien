@@ -1,4 +1,4 @@
-/* style */
+/* style.css */
 /* ========== Root Colors ==========*/
 :root {
   --bg: #f7f8fa;
@@ -434,7 +434,7 @@ main {
 /* ===== FORM =====*/
 .form {
   display: grid;
-  gap: 16px;
+  gap: 10px;
 }
 
 .form-group {

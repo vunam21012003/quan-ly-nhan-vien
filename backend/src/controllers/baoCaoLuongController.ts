@@ -1,3 +1,4 @@
+//baoCaoLuongController.ts
 import { Request, Response } from "express";
 import * as service from "../services/baoCaoLuongService";
 import path from "path";

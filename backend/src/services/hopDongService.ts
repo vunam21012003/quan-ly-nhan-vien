@@ -1,6 +1,7 @@
 // src/services/hopDongService.ts
 import { Request } from "express";
 import { pool } from "../db";
+import "../middlewares/auth"; // chỉ để load khai báo mở rộng Request
 
 /**
  * Lấy phạm vi dữ liệu của user theo role
@@ -9,7 +10,26 @@ async function getUserScope(req: Request): Promise<{
   employeeId: number | null;
   managedDepartmentIds: number[];
   role: "admin" | "manager" | "employee";
+  isAccountingManager?: boolean;
 }> {
+  // Nếu middleware phân quyền chung đã set req.phamvi → ưu tiên dùng
+  if (req.phamvi) {
+    const scope = {
+      employeeId: req.phamvi.employeeId ?? null,
+      managedDepartmentIds: req.phamvi.managedDepartmentIds || [],
+      role: req.phamvi.role,
+      isAccountingManager: req.phamvi.isAccountingManager,
+    } as {
+      employeeId: number | null;
+      managedDepartmentIds: number[];
+      role: "admin" | "manager" | "employee";
+      isAccountingManager?: boolean;
+    };
+
+    return scope;
+  }
+
+  // Fallback: logic cũ, phòng trường hợp route này chỉ dùng requireAuth
   const user = (req as any).user;
 
   const [[me]]: any = await pool.query(
@@ -28,7 +48,8 @@ async function getUserScope(req: Request): Promise<{
   return {
     employeeId: me?.employeeId ?? null,
     managedDepartmentIds,
-    role: user.role,
+    role: user.role as "admin" | "manager" | "employee",
+    // isAccountingManager: undefined
   };
 }
 
@@ -55,7 +76,7 @@ export async function expireContractsIfNeeded() {
 export const getAll = async (req: Request) => {
   await expireContractsIfNeeded();
 
-  const { employeeId, managedDepartmentIds, role } = await getUserScope(req);
+  const { employeeId, managedDepartmentIds, role, isAccountingManager } = await getUserScope(req);
 
   const { nhan_vien_id, loai_hop_dong, trang_thai, tu_ngay, den_ngay } = req.query as any;
 
@@ -64,9 +85,13 @@ export const getAll = async (req: Request) => {
 
   /* ====== PHẠM VI THEO QUYỀN ====== */
   if (role === "manager") {
-    if (managedDepartmentIds.length === 0) return [];
-    whereParts.push(`nv.phong_ban_id IN (${managedDepartmentIds.map(() => "?").join(",")})`);
-    params.push(...managedDepartmentIds);
+    // Manager thường: chỉ xem hợp đồng nhân viên thuộc phòng ban mình quản
+    // Manager Kế toán (isAccountingManager === true): xem toàn bộ, không giới hạn phòng ban
+    if (!isAccountingManager) {
+      if (managedDepartmentIds.length === 0) return [];
+      whereParts.push(`nv.phong_ban_id IN (${managedDepartmentIds.map(() => "?").join(",")})`);
+      params.push(...managedDepartmentIds);
+    }
   } else if (role === "employee") {
     if (!employeeId) return [];
     whereParts.push(`hd.nhan_vien_id = ?`);
@@ -115,7 +140,7 @@ export const getAll = async (req: Request) => {
 
   const [rows]: any[] = await pool.query(
     `
-    SELECT hd.*, nv.ho_ten
+    SELECT hd.*, nv.ho_ten, nv.phong_ban_id
     FROM hop_dong hd
     JOIN nhan_vien nv ON nv.id = hd.nhan_vien_id
     ${whereSql}
@@ -167,15 +192,19 @@ export const getDetail = async (req: Request) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id) || id <= 0) return null;
 
-  const { employeeId, managedDepartmentIds, role } = await getUserScope(req);
+  const { employeeId, managedDepartmentIds, role, isAccountingManager } = await getUserScope(req);
 
   const whereParts: string[] = [`hd.id = ?`];
   const params: any[] = [id];
 
   if (role === "manager") {
-    if (managedDepartmentIds.length === 0) return null;
-    whereParts.push(`nv.phong_ban_id IN (${managedDepartmentIds.map(() => "?").join(",")})`);
-    params.push(...managedDepartmentIds);
+    // Manager kế toán: xem được chi tiết mọi hợp đồng (không giới hạn phòng ban)
+    // Manager thường: chỉ xem chi tiết HĐ nhân viên phòng mình
+    if (!isAccountingManager) {
+      if (managedDepartmentIds.length === 0) return null;
+      whereParts.push(`nv.phong_ban_id IN (${managedDepartmentIds.map(() => "?").join(",")})`);
+      params.push(...managedDepartmentIds);
+    }
   } else if (role === "employee") {
     if (!employeeId) return null;
     whereParts.push(`hd.nhan_vien_id = ?`);
@@ -197,7 +226,6 @@ export const getDetail = async (req: Request) => {
   const hopDong = rows[0];
   if (!hopDong) return null;
 
-  // 🔥 LẤY PHỤ CẤP CỐ ĐỊNH THEO HỢP ĐỒNG
   const [phuCaps] = await pool.query(
     `
       SELECT 
@@ -244,12 +272,15 @@ function parsePhuCaps(raw: any): { loai_id: number; so_tien: number }[] {
 
 /* ==================== TẠO MỚI ==================== */
 export const create = async (req: Request) => {
-  const { role, managedDepartmentIds } = await getUserScope(req);
+  const { role, managedDepartmentIds, isAccountingManager } = await getUserScope(req);
 
   // 1. Kiểm tra Quyền Tạo
-  const IS_KE_TOAN_MANAGER = role === "manager" && managedDepartmentIds.includes(5);
+  // - Admin: OK
+  // - Manager kế toán: OK (dựa trên isAccountingManager từ phân quyền chung)
+  // - Các manager khác / employee: KHÔNG
+  const isKeToanManager = !!isAccountingManager;
 
-  if (role !== "admin" && !IS_KE_TOAN_MANAGER) {
+  if (role !== "admin" && !isKeToanManager) {
     return { error: "Chỉ Admin hoặc Manager Phòng Kế Toán mới được tạo hợp đồng" };
   }
 
@@ -279,12 +310,11 @@ export const create = async (req: Request) => {
     final_ngay_ket_thuc = ngay_ket_thuc;
   }
 
-  // 4. Transaction
+  // 4. Transaction (GIỮ NGUYÊN)
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
 
-    // 4.1. Chèn hợp đồng mới
     const [result]: any = await conn.query(
       `
       INSERT INTO hop_dong (
@@ -310,7 +340,7 @@ export const create = async (req: Request) => {
 
     const newId = result.insertId;
 
-    // ⭐⭐⭐ AUTO UPDATE: Nếu nhân viên chưa có ngày vào làm → gán bằng ngày bắt đầu hợp đồng
+    // AUTO UPDATE ngày_vao_lam như cũ
     const [[nv]]: any = await conn.query(
       `SELECT ngay_vao_lam FROM nhan_vien WHERE id = ? LIMIT 1`,
       [nhan_vien_id]
@@ -322,7 +352,6 @@ export const create = async (req: Request) => {
         nhan_vien_id,
       ]);
     }
-    // ⭐⭐⭐ Hết đoạn thêm
 
     await conn.commit();
     return { success: true, id: newId };
@@ -341,15 +370,17 @@ export const update = async (id: number, req: Request) => {
     return { error: "ID hợp đồng không hợp lệ" };
   }
 
-  const { role, managedDepartmentIds } = await getUserScope(req);
+  const { role, managedDepartmentIds, isAccountingManager } = await getUserScope(req);
 
   // 1. Kiểm tra Quyền
   if (role !== "admin") {
-    const IS_KE_TOAN_MANAGER = role === "manager" && managedDepartmentIds.includes(5);
+    const IS_KE_TOAN_MANAGER = !!isAccountingManager;
+
     if (!IS_KE_TOAN_MANAGER) {
       return { error: "Chỉ Admin hoặc Manager Phòng Kế Toán mới được sửa hợp đồng" };
     }
 
+    // GIỮ NGUYÊN LOGIC CŨ: Manager Kế toán chỉ được sửa hợp đồng của nhân viên phòng Kế toán
     const [rows]: any = await pool.query(
       `
       SELECT nv.phong_ban_id
@@ -381,13 +412,13 @@ export const update = async (id: number, req: Request) => {
     ghi_chu,
   } = req.body;
 
-  // 3. Xử lý file hợp đồng
-  let finalFile = old.file_hop_dong; // ⭐ giữ file cũ nếu không upload mới
+  // 3. Xử lý file hợp đồng (GIỮ NGUYÊN)
+  let finalFile = old.file_hop_dong;
   if ((req as any).file) {
-    finalFile = (req as any).file.path; // nếu upload mới → dùng file mới
+    finalFile = (req as any).file.path;
   }
 
-  // 4. Xử lý ngày kết thúc
+  // 4. Xử lý ngày kết thúc (GIỮ NGUYÊN)
   let final_ngay_ket_thuc = null;
   if (loai_hop_dong === "Xác định thời hạn") {
     final_ngay_ket_thuc = ngay_ket_thuc;
@@ -398,7 +429,7 @@ export const update = async (id: number, req: Request) => {
     return { error: "Vui lòng nhập đầy đủ thông tin bắt buộc" };
   }
 
-  // 6. Cập nhật
+  // 6. Cập nhật (GIỮ NGUYÊN)
   const [r]: any = await pool.query(
     `
     UPDATE hop_dong SET
@@ -424,7 +455,7 @@ export const update = async (id: number, req: Request) => {
       luong_thoa_thuan,
       ghi_chu ?? old.ghi_chu,
       trang_thai ?? old.trang_thai,
-      finalFile, // ⭐ giữ file cũ nếu không upload mới
+      finalFile,
       id,
     ]
   );

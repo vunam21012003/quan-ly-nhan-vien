@@ -41,7 +41,34 @@ try {
 
 const ROLE = (CURRENT_USER.role || '').toLowerCase();
 const IS_MANAGER = ROLE === 'manager';
-const IS_ACCOUNTING_MANAGER = CURRENT_USER?.is_accounting_manager === true;
+const IS_ADMIN = ROLE === 'admin';
+const IS_EMPLOYEE = ROLE === 'employee';
+
+// Backend trả snake_case: is_accounting_manager
+const IS_ACCOUNTING_MANAGER =
+  CURRENT_USER?.is_accounting_manager === true ||
+  CURRENT_USER?.isAccountingManager === true;
+
+// ======================================
+// ẨN NÚT THÊM PHỤ CẤP THÁNG
+// ======================================
+document.addEventListener('DOMContentLoaded', () => {
+  const btnAdd = document.querySelector('#btn-add-thang');
+
+  if (!btnAdd) return;
+
+  // 1️⃣ Employee → không được thêm
+  if (IS_EMPLOYEE) {
+    btnAdd.style.display = 'none';
+  }
+
+  // 2️⃣ Manager thường → vẫn được thêm nhưng KHÔNG sửa/xoá
+  if (IS_MANAGER && !IS_ACCOUNTING_MANAGER) {
+    btnAdd.style.display = 'inline-block';
+  }
+
+  // 3️⃣ Manager kế toán & Admin → full quyền → không ẩn gì
+});
 
 /* ===========================================================
    LOAD DATA
@@ -82,12 +109,28 @@ async function loadLoaiPC() {
 //  LOAD DANH SÁCH NHÂN VIÊN
 // ===========================================================
 async function loadNhanVien() {
-  // thêm _=... để tránh cache
   const res = await api('/nhan-vien?limit=999&_=' + Date.now());
-  const arr = res?.data?.items ?? [];
+  let arr = res?.data?.items ?? [];
+
+  // ===== PHÂN QUYỀN HIỂN THỊ =====
+  if (ROLE === 'employee') {
+    arr = arr.filter((nv) => nv.id === CURRENT_USER.employee_id);
+  }
+
+  if (IS_MANAGER && !IS_ACCOUNTING_MANAGER) {
+    const managed = CURRENT_USER.managedDepartmentIds || [];
+    if (managed.length > 0) {
+      arr = arr.filter((nv) => managed.includes(nv.phong_ban_id));
+    } else {
+      arr = [];
+    }
+  }
+
+  // Manager kế toán & Admin → không lọc
+
   state.nhanViens = arr;
 
-  // Filter NV trên toolbar
+  // Render bộ lọc NV ở toolbar
   $('#filter-nv').innerHTML =
     `<option value="">-- Nhân viên --</option>` +
     arr
@@ -95,13 +138,56 @@ async function loadNhanVien() {
         (nv) => `<option value="${nv.id}">${nv.id} - ${esc(nv.ho_ten)}</option>`
       )
       .join('');
+}
 
-  // Dropdown nhân viên trong modal
-  $('#thang-nv').innerHTML = arr
-    .map(
-      (nv) => `<option value="${nv.id}">${nv.id} - ${esc(nv.ho_ten)}</option>`
-    )
-    .join('');
+function setupNhanVienSearch() {
+  const input = $('#nv-search-input');
+  const dropdown = $('#nv-search-list');
+
+  if (!input || !dropdown) return;
+
+  input.addEventListener('input', () => {
+    const keyword = input.value.toLowerCase().trim();
+    if (!keyword) {
+      dropdown.style.display = 'none';
+      return;
+    }
+
+    const list = state.nhanViens.filter(
+      (nv) =>
+        nv.ho_ten.toLowerCase().includes(keyword) ||
+        String(nv.id).includes(keyword)
+    );
+
+    if (list.length === 0) {
+      dropdown.innerHTML = `<div class="nv-search-item text-muted">Không tìm thấy</div>`;
+      dropdown.style.display = 'block';
+      return;
+    }
+
+    dropdown.innerHTML = list
+      .map(
+        (nv) => `
+        <div class="nv-search-item" data-id="${nv.id}">
+          ${nv.id} - ${nv.ho_ten}
+        </div>
+      `
+      )
+      .join('');
+
+    dropdown.style.display = 'block';
+  });
+
+  dropdown.addEventListener('click', (e) => {
+    const item = e.target.closest('.nv-search-item');
+    if (!item) return;
+
+    const id = item.dataset.id;
+    input.value = `${id}`;
+    input.dataset.selectedId = id;
+
+    dropdown.style.display = 'none';
+  });
 }
 
 /* ===========================================================
@@ -135,9 +221,10 @@ function renderThang() {
         <td>${esc(x.ghi_chu || '')}</td>
         <td>
           ${
-            // Manager thường KHÔNG được sửa/xóa phụ cấp cố định
-            IS_MANAGER && !IS_ACCOUNTING_MANAGER && x.is_fixed == 1
-              ? ``
+            IS_EMPLOYEE
+              ? `` // Nhân viên không có nút gì
+              : IS_MANAGER && !IS_ACCOUNTING_MANAGER
+              ? `` // Manager thường: CHỈ được thêm, KHÔNG sửa/xóa
               : `
                 <button class="btn btn-sm btn-edit" data-id="${x.id}">✏️</button>
                 <button class="btn btn-sm btn-del" data-id="${x.id}">🗑️</button>
@@ -214,103 +301,91 @@ function handleLoaiChange(loaiIds) {
    MỞ MODAL (THÊM / SỬA)
 =========================================================== */
 async function openThangModal(item = null) {
-  // luôn đảm bảo đã có loại PC + nhân viên
   await loadLoaiPC();
   await loadNhanVien();
 
   state.editingId = item?.id ?? null;
-  state.selectedLoaiIds = [];
 
   $('#thang-title').textContent = item ? 'Sửa phụ cấp' : 'Thêm phụ cấp tháng';
   $('#thang-id').value = item?.id ?? '';
   $('#thang-note').value = item?.ghi_chu ?? '';
 
-  // reset tháng / năm
+  // Reset tháng/năm
   $('#thang-thang').value = '';
   $('#thang-nam').value = '';
 
-  // reset các dòng tiền
   $('#money-container').innerHTML = '';
 
-  const nvSelect = $('#thang-nv');
   const selectLoai = $('#thang-loai');
   const smallNote = selectLoai.nextElementSibling;
 
-  // render danh sách loại phụ cấp
+  // Render loại phụ cấp
   selectLoai.innerHTML = state.loais
     .map(
-      (x) => `<option value="${x.id}" data-fixed="${x.is_fixed}">
-        ${esc(x.ten)} ${x.is_fixed ? '(Cố định)' : '(Theo tháng)'}
-      </option>`
+      (x) => `
+        <option value="${x.id}" data-fixed="${x.is_fixed}">
+          ${esc(x.ten)} ${x.is_fixed ? '(Cố định)' : '(Theo tháng)'}
+        </option>
+      `
     )
     .join('');
 
+  // Manager thường không được chọn loại cố định
   if (IS_MANAGER && !IS_ACCOUNTING_MANAGER) {
-    // Không cho chọn loại cố định
     Array.from(selectLoai.options).forEach((opt) => {
       if (opt.dataset.fixed == '1') opt.disabled = true;
     });
   }
 
-  /* ============================
-        CHẾ ĐỘ SỬA
-  ============================ */
-  if (item) {
-    // ---- Nhân viên: hiển thị đúng & khóa cứng (KHÔNG disabled)
-    nvSelect.value = item.nhan_vien_id;
-    nvSelect.classList.add('locked-select');
-    // KHÔNG disabled, KHÔNG pointer-events: none
-    // khóa nhưng không disable
+  const nvInput = $('#nv-search-input');
 
-    // ---- Loại phụ cấp: chỉ 1 loại, khóa cứng
+  /* ==========================
+      CHẾ ĐỘ SỬA
+  ========================== */
+  if (item) {
+    // Gán NV vào ô tìm kiếm
+    nvInput.value = `${item.nhan_vien_id} - ${item.ho_ten}`;
+    nvInput.dataset.selectedId = item.nhan_vien_id;
+
+    // Khóa không cho đổi nhân viên
+    nvInput.classList.add('locked-select');
+    nvInput.readOnly = true;
+
+    // Loại phụ cấp
     selectLoai.removeAttribute('multiple');
-    selectLoai.value = String(item.loai_id);
     selectLoai.disabled = true;
     smallNote.hidden = true;
 
+    selectLoai.value = String(item.loai_id);
+
     const loai = state.loais.find((l) => l.id == item.loai_id);
 
-    // Phụ cấp theo tháng → giữ nguyên tháng/năm, nhưng khóa ô
     if (!loai?.is_fixed) {
-      $('#thang-thang').value = item.thang ?? '';
-      $('#thang-nam').value = item.nam ?? '';
+      $('#thang-thang').value = item.thang;
+      $('#thang-nam').value = item.nam;
     }
 
-    if (item && IS_MANAGER && !IS_ACCOUNTING_MANAGER && item.is_fixed == 1) {
-      alert('Bạn không có quyền sửa phụ cấp cố định!');
-      return;
-    }
-
-    // Khóa tháng + năm
     $('#thang-thang').disabled = true;
     $('#thang-nam').disabled = true;
 
-    // render 1 hàng tiền / ghi chú cho loại này
     state.selectedLoaiIds = [item.loai_id];
     renderMoneyInputs();
 
-    const moneyInput = document.querySelector(
-      `.money-input[data-id="${item.loai_id}"]`
-    );
-    if (moneyInput) moneyInput.value = item.so_tien;
-
-    const noteInput = document.querySelector(
-      `.note-input[data-id="${item.loai_id}"]`
-    );
-    if (noteInput) noteInput.value = item.ghi_chu ?? '';
+    $(`.money-input[data-id="${item.loai_id}"]`).value = item.so_tien;
+    $(`.note-input[data-id="${item.loai_id}"]`).value = item.ghi_chu ?? '';
   } else {
-    /* ============================
+    /* ==========================
         CHẾ ĐỘ THÊM
-  ============================ */
-    // không khóa nhân viên
-    nvSelect.value = '';
-    nvSelect.classList.remove('locked-select');
+    ========================== */
 
-    // mở tháng / năm
+    nvInput.value = '';
+    nvInput.dataset.selectedId = '';
+    nvInput.readOnly = false;
+    nvInput.classList.remove('locked-select');
+
     $('#thang-thang').disabled = false;
     $('#thang-nam').disabled = false;
 
-    // mở loại phụ cấp
     selectLoai.setAttribute('multiple', 'multiple');
     selectLoai.disabled = false;
     smallNote.hidden = false;
@@ -326,9 +401,14 @@ function closeThangModal() {
   $('#modal-thang').close();
   state.selectedLoaiIds = [];
 
-  // mở lại cho lần thêm mới sau
+  // Vì đã chuyển từ <select> sang search input → không còn thang-nv
   const nvSelect = $('#thang-nv');
-  nvSelect.classList.remove('locked-select');
+  if (nvSelect) {
+    nvSelect.classList.remove('locked-select');
+  }
+
+  $('#nv-search-input').value = '';
+  $('#nv-search-input').dataset.selectedId = '';
 
   $('#thang-loai').disabled = false;
   $('#thang-thang').disabled = false;
@@ -342,7 +422,9 @@ async function saveThang(e) {
   e.preventDefault();
   $('#thang-error').hidden = true;
 
-  const nvId = Number($('#thang-nv').value);
+  const nvInput = $('#nv-search-input');
+  const nvId = Number(nvInput.dataset.selectedId || 0);
+
   const thang = Number($('#thang-thang').value);
   const nam = Number($('#thang-nam').value);
   const ghiChuChung = $('#thang-note').value.trim();
@@ -552,6 +634,26 @@ function bindThangEvents() {
     const res = await api(`/phu-cap-thang?${qs.toString()}`);
     state.items = res.data ?? [];
     renderThang();
+    /* ===========================================================
+    PHÂN QUYỀN FRONTEND — ẨN NÚT / CHỨC NĂNG
+=========================================================== */
+
+    // 1️⃣ Employee → KHÔNG được thêm, KHÔNG sửa, KHÔNG xoá
+    if (IS_EMPLOYEE) {
+      const btnAdd = $('#btn-add-thang');
+      if (btnAdd) btnAdd.style.display = 'none';
+    }
+
+    // 2️⃣ Manager thường → chỉ được thêm, KHÔNG sửa, KHÔNG xoá
+    if (IS_MANAGER && !IS_ACCOUNTING_MANAGER) {
+      const btnAdd = $('#btn-add-thang');
+      if (btnAdd) btnAdd.style.display = 'inline-block'; // vẫn được thêm
+
+      // Sửa/xoá xử lý tại render table, không xử lý thêm tại đây
+    }
+
+    // 3️⃣ Manager kế toán & Admin → full quyền → không ẩn gì
+    // (Không cần code thêm)
   });
 
   const thangTab = document.getElementById('thang-tab');
@@ -597,7 +699,18 @@ function bindThangEvents() {
     const id = btn.dataset.id;
     const item = state.items.find((x) => x.id == id);
 
-    if (btn.classList.contains('btn-edit')) openThangModal(item);
+    if (btn.classList.contains('btn-edit')) {
+      if (IS_EMPLOYEE) {
+        alert('Bạn không có quyền sửa phụ cấp!');
+        return;
+      }
+      if (IS_MANAGER && !IS_ACCOUNTING_MANAGER) {
+        alert('Manager thường không được sửa phụ cấp!');
+        return;
+      }
+      openThangModal(item);
+    }
+
     if (btn.classList.contains('btn-del')) deleteThang(id);
   });
 
@@ -619,6 +732,7 @@ async function init() {
 
   await loadLoaiPC();
   await loadNhanVien();
+  setupNhanVienSearch();
 
   setDefaultFilter();
   await loadThang();

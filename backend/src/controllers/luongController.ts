@@ -83,10 +83,17 @@ export const remove = async (req: Request, res: Response) => {
 // ===== TÍNH LƯƠNG =====
 export const calcSalary = async (req: Request, res: Response) => {
   try {
-    const { thang, nam } = req.query;
+    const { thang, nam, phong_ban_id, nhan_vien_id } = req.query;
+
     if (!thang || !nam) return res.status(400).json({ error: "Thiếu tham số thang hoặc nam" });
 
-    const result = await service.calcSalaryForMonth(Number(thang), Number(nam));
+    const result = await service.calcSalaryForMonth({
+      thang: Number(thang),
+      nam: Number(nam),
+      phongBanId: phong_ban_id ? Number(phong_ban_id) : null,
+      nhanVienId: nhan_vien_id ? Number(nhan_vien_id) : null,
+    });
+
     res.json(result);
   } catch (err) {
     console.error("[POST /luong/tinh-thang] error:", err);

@@ -16,6 +16,7 @@ declare global {
         employeeId: number | null;
         managedDepartmentIds: number[];
         role: "admin" | "manager" | "employee";
+        isAccountingManager?: boolean;
       };
     }
   }
@@ -48,17 +49,32 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
 // 🔥 CHỈ ADMIN HOẶC MANAGER KẾ TOÁN (phòng Kế toán)
 // Dùng cho: tính lương
 // ============================================================
-export function requireKetoanOrAdmin(req: Request, res: Response, next: NextFunction) {
-  const phamvi = (req as any).phamvi;
+export async function requireKetoanOrAdmin(req: Request, res: Response, next: NextFunction) {
+  try {
+    let phamvi = (req as any).phamvi;
 
-  if (!phamvi) return res.status(401).json({ error: "Unauthorized" });
+    // ⭐ Nếu chưa có phạm vi → Tự lấy
+    if (!phamvi) {
+      phamvi = await layPhamViNguoiDung(req);
+      (req as any).phamvi = phamvi; // giữ nguyên logic cũ
+    }
 
-  if (phamvi.role === "admin") return next();
-  if (phamvi.role === "manager" && phamvi.isAccountingManager) return next();
+    if (!phamvi) return res.status(401).json({ error: "Unauthorized" });
 
-  return res.status(403).json({
-    error: "Chỉ admin hoặc quản lý phòng kế toán được phép thực hiện",
-  });
+    // ⭐ Admin có full quyền
+    if (phamvi.role === "admin") return next();
+
+    // ⭐ Manager kế toán (Kế toán trưởng)
+    if (phamvi.role === "manager" && phamvi.isAccountingManager) return next();
+
+    // ❌ Các role còn lại
+    return res.status(403).json({
+      error: "Chỉ admin hoặc quản lý phòng kế toán được phép thực hiện",
+    });
+  } catch (err) {
+    console.error("requireKetoanOrAdmin error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
 }
 
 export function requireRole(roles: Array<"admin" | "manager" | "employee">) {

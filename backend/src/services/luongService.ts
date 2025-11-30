@@ -7,7 +7,24 @@ import { RowDataPacket, ResultSetHeader } from "mysql2";
 import { Request } from "express";
 
 // ===============================================
-// TỶ LỆ BẢO HIỂM (phần nhân viên chịu)
+// HÀM HỖ TRỢ: TÍNH CÔNG CHUẨN CỦA THÁNG (MỚI THÊM)
+// ===============================================
+const getStandardWorkingDays = (month: number, year: number): number => {
+  const daysInMonth = new Date(year, month, 0).getDate();
+  let workingDays = 0;
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month - 1, day);
+    const dayOfWeek = date.getDay(); // 0 = Chủ nhật
+    if (dayOfWeek !== 0) {
+      workingDays++;
+    }
+  }
+  return workingDays;
+};
+
+// ===============================================
+// TỶ LỆ BẢO HIỂM (GIỮ NGUYÊN)
 // ===============================================
 const INSURANCE_RATES = {
   BHXH: 0.08,
@@ -16,7 +33,7 @@ const INSURANCE_RATES = {
 };
 
 // ===============================================
-// HÀM TÍNH THUẾ TNCN LŨY TIẾN
+// HÀM TÍNH THUẾ TNCN LŨY TIẾN (GIỮ NGUYÊN)
 // ===============================================
 const calcTNCN = (thuNhap: number): number => {
   if (thuNhap <= 0) return 0;
@@ -32,11 +49,11 @@ const calcTNCN = (thuNhap: number): number => {
 };
 
 // ===============================================
-// LẤY DANH SÁCH LƯƠNG
+// LẤY DANH SÁCH LƯƠNG (GIỮ NGUYÊN)
 // ===============================================
 export const getAll = async (req: any) => {
   const { thang, nam, page = 1, limit = 10 } = req.query;
-  const scope = req.phamvi; // ⭐ LẤY THÔNG TIN PHẠM VI USER
+  const scope = req.phamvi;
   const offset = (Number(page) - 1) * Number(limit);
 
   let where = "";
@@ -51,32 +68,22 @@ export const getAll = async (req: any) => {
     params.push(nam);
   }
 
-  // =============================
-  // ⭐⭐ PHÂN QUYỀN XEM LƯƠNG
-  // =============================
-
   if (scope.role === "employee") {
-    // chỉ xem lương của chính mình
     where += " AND l.nhan_vien_id = ?";
     params.push(scope.employeeId);
   }
 
   if (scope.role === "manager") {
-    // Nếu là manager phòng kế toán → full quyền
     if (scope.isAccountingManager) {
-      // không thêm điều kiện phòng ban → xem toàn công ty
+      // full quyền
     } else {
-      // Manager thường → chỉ xem phòng ban mình quản lý
       if (!scope.managedDepartmentIds.length) {
         return { items: [], total: 0 };
       }
-
       where += ` AND nv.phong_ban_id IN (${scope.managedDepartmentIds.map(() => "?").join(",")})`;
       params.push(...scope.managedDepartmentIds);
     }
   }
-
-  // Admin → full quyền (không thêm điều kiện)
 
   const [rows] = await pool.query<RowDataPacket[]>(
     `
@@ -106,7 +113,7 @@ export const getAll = async (req: any) => {
 };
 
 // ===============================================
-// LẤY LƯƠNG CỦA NHÂN VIÊN ĐANG ĐĂNG NHẬP
+// LẤY LƯƠNG CỦA TÔI (GIỮ NGUYÊN)
 // ===============================================
 export const getMine = async (req: any) => {
   const user = req.user;
@@ -125,7 +132,7 @@ export const getMine = async (req: any) => {
 };
 
 // ===============================================
-// LẤY CHI TIẾT LƯƠNG
+// LẤY CHI TIẾT (GIỮ NGUYÊN)
 // ===============================================
 export const getById = async (req: any) => {
   const id = Number(req.params.id);
@@ -142,7 +149,7 @@ export const getById = async (req: any) => {
 };
 
 // ===============================================
-// TẠO LƯƠNG THỦ CÔNG
+// TẠO THỦ CÔNG (GIỮ NGUYÊN)
 // ===============================================
 export const create = async (body: any) => {
   const {
@@ -191,7 +198,7 @@ export const create = async (body: any) => {
 };
 
 // ===============================================
-// CẬP NHẬT LƯƠNG
+// CẬP NHẬT THỦ CÔNG (GIỮ NGUYÊN)
 // ===============================================
 export const update = async (id: number, body: any) => {
   const [chk]: any = await pool.query(`SELECT trang_thai_duyet FROM luong WHERE id=?`, [id]);
@@ -241,7 +248,7 @@ export const update = async (id: number, body: any) => {
 };
 
 // ===============================================
-// XOÁ LƯƠNG
+// XOÁ THỦ CÔNG (GIỮ NGUYÊN)
 // ===============================================
 export const remove = async (id: number) => {
   const [chk]: any = await pool.query(`SELECT trang_thai_duyet FROM luong WHERE id=?`, [id]);
@@ -252,16 +259,22 @@ export const remove = async (id: number) => {
 };
 
 // =====================================================================
-//                    TÍNH LƯƠNG THÁNG - FULL VERSION
+// 🔥🔥 TÍNH LƯƠNG THÁNG - ĐÃ CẬP NHẬT LOGIC 🔥🔥
 // =====================================================================
 
-export const calcSalaryForMonth = async (thang: number, nam: number) => {
-  // Không cho tính lại khi đã duyệt
+export const calcSalaryForMonth = async (args: {
+  thang: number;
+  nam: number;
+  phongBanId: number | null;
+  nhanVienId: number | null;
+}) => {
+  const { thang, nam, phongBanId, nhanVienId } = args;
+
+  // Check trạng thái duyệt
   const [[state]]: any = await pool.query(
     `SELECT trang_thai_duyet 
-   FROM luong 
-   WHERE thang=? AND nam=? 
-   LIMIT 1`,
+     FROM luong 
+     WHERE thang=? AND nam=? LIMIT 1`,
     [thang, nam]
   );
 
@@ -269,18 +282,17 @@ export const calcSalaryForMonth = async (thang: number, nam: number) => {
     throw new Error(`Tháng ${thang}/${nam} đã duyệt lương — KHÔNG thể tính lại`);
   }
 
-  // 1️⃣ Lấy dữ liệu nhân viên + hợp đồng + phân tích công
-  const [rows]: any = await pool.query(
-    `
+  // ⭐ LOGIC MỚI: Tính số công chuẩn thực tế (Dynamic) thay vì 26
+  const so_cong_chuan = getStandardWorkingDays(thang, nam);
+
+  let sql = `
     SELECT 
       nv.id AS nhan_vien_id,
       nv.ho_ten,
       nv.phong_ban_id,
       nv.so_nguoi_phu_thuoc,
-
       hd.id AS hop_dong_id,
       hd.luong_thoa_thuan,
-
       ptc.tong_gio,
       ptc.gio_tang_ca,
       ptc.so_ngay_cong,
@@ -289,204 +301,127 @@ export const calcSalaryForMonth = async (thang: number, nam: number) => {
       ptc.so_ngay_nghi_khong_phep
     FROM nhan_vien nv
     JOIN hop_dong hd 
-        ON hd.nhan_vien_id = nv.id AND hd.trang_thai = 'con_hieu_luc'
+        ON hd.nhan_vien_id = nv.id 
+        AND hd.trang_thai = 'con_hieu_luc'
     LEFT JOIN phan_tich_cong ptc 
-        ON ptc.nhan_vien_id = nv.id AND ptc.thang = ? AND ptc.nam = ?
-    `,
-    [thang, nam]
-  );
+        ON ptc.nhan_vien_id = nv.id 
+        AND ptc.thang = ?
+        AND ptc.nam = ?
+    WHERE 1=1
+  `;
 
+  const params: any[] = [thang, nam];
+
+  if (nhanVienId) {
+    sql += ` AND nv.id = ?`;
+    params.push(nhanVienId);
+  } else if (phongBanId) {
+    sql += ` AND nv.phong_ban_id = ?`;
+    params.push(phongBanId);
+  }
+
+  sql += ` AND nv.trang_thai = 'dang_lam'`;
+
+  const [rows]: any = await pool.query(sql, params);
   const results: any[] = [];
 
-  // =============================
-  // 🔥 Lặp từng nhân viên
-  // =============================
   for (const r of rows) {
     const luong_thoa_thuan = Number(r.luong_thoa_thuan || 0);
-
     const so_ngay_cong = Number(r.so_ngay_cong || 0);
-    const so_ngay_phep = Number(r.so_ngay_nghi_phep || 0);
+    const so_ngay_phep = Number(r.so_ngay_nghi_phep || 0); // Đã bao gồm ốm đau như bạn yêu cầu
     const so_ngay_le = Number(r.so_ngay_nghi_huong_luong || 0);
-
     const gio_tang_ca = Number(r.gio_tang_ca || 0);
     const ngay_cong_lam = Number(r.tong_gio || 0) / 8;
 
-    // ---------------------------
-    // Lương ngày & giờ
-    // ---------------------------
-    const luong_ngay = luong_thoa_thuan / 26;
-    const luong_gio = luong_thoa_thuan / 208;
+    // ⭐ FIX: Tính lương ngày/giờ dựa trên công chuẩn thực tế
+    const luong_ngay = luong_thoa_thuan / so_cong_chuan;
+    const luong_gio = luong_ngay / 8;
 
-    // =============================
-    // 🔥 P1 – Lương theo công
-    // =============================
+    // P1: LƯƠNG CƠ BẢN (Công làm + Phép + Lễ)
     const luong_p1 = (so_ngay_cong + so_ngay_phep + so_ngay_le) * luong_ngay;
 
-    // =============================
-    // 🔥 P2 – PHỤ CẤP (FULL, KHÔNG CHIA CÔNG)
-    // =============================
+    // P2: PHỤ CẤP (Giữ nguyên logic cũ)
     const [phuCapList]: any = await pool.query(
-      `
-      SELECT 
-        pct.so_tien,
-        pcl.is_fixed,
-        pct.thang,
-        pct.nam
-      FROM phu_cap_chi_tiet pct
-      JOIN phu_cap_loai pcl ON pcl.id = pct.loai_id
-      WHERE pct.nhan_vien_id = ?
-        AND (
-            pct.hop_dong_id = ?
-         OR (pct.thang = ? AND pct.nam = ?)
-        )
-      `,
+      `SELECT pct.so_tien FROM phu_cap_chi_tiet pct
+       WHERE pct.nhan_vien_id = ? AND (pct.hop_dong_id = ? OR (pct.thang = ? AND pct.nam = ?))`,
       [r.nhan_vien_id, r.hop_dong_id, thang, nam]
     );
-
     let luong_p2 = 0;
+    for (const pc of phuCapList) luong_p2 += Number(pc.so_tien || 0);
 
-    for (const pc of phuCapList) {
-      luong_p2 += Number(pc.so_tien || 0); // FULL
-    }
-
-    // =============================
-    // 🔥 P3 – Tăng ca + Thưởng + Phạt
-    // =============================
-
-    // 1) Tăng ca
+    // P3: TĂNG CA + THƯỞNG/PHẠT (Giữ nguyên logic cũ)
     const luong_p3_tangca = gio_tang_ca * luong_gio;
-
-    // 2) Thưởng / phạt — cá nhân + phòng ban
     const [thuongPhat]: any = await pool.query(
-      `
-      SELECT loai, so_tien, phong_ban_id, nhan_vien_id
-      FROM thuong_phat
-      WHERE (nhan_vien_id = ? OR phong_ban_id = ?)
-        AND thang = ?
-        AND nam = ?
-      `,
+      `SELECT loai, so_tien FROM thuong_phat WHERE (nhan_vien_id = ? OR phong_ban_id = ?) AND thang = ? AND nam = ?`,
       [r.nhan_vien_id, r.phong_ban_id, thang, nam]
     );
-
     let luong_p3_bonus = 0;
-
     for (const tp of thuongPhat) {
-      if (tp.loai === "THUONG") {
-        luong_p3_bonus += Number(tp.so_tien || 0);
-      } else if (tp.loai === "PHAT") {
-        luong_p3_bonus -= Number(tp.so_tien || 0);
-      }
+      if (tp.loai === "THUONG") luong_p3_bonus += Number(tp.so_tien || 0);
+      else if (tp.loai === "PHAT") luong_p3_bonus -= Number(tp.so_tien || 0);
     }
-
     const luong_p3 = luong_p3_tangca + luong_p3_bonus;
 
-    // =============================
-    // 🔥 GROSS = P1 + P2 + P3
-    // =============================
+    // TỔNG LƯƠNG
     const tong_luong = luong_p1 + luong_p2 + luong_p3;
 
-    // =============================
-    // 🔥 BẢO HIỂM
-    // =============================
+    // BẢO HIỂM
     let bhxh = 0,
       bhyt = 0,
       bhtn = 0;
-
-    if (so_ngay_cong >= 14) {
+    if (so_ngay_cong + so_ngay_phep >= 14) {
       let mucDongBH = Math.min(luong_thoa_thuan, 36000000);
-
       bhxh = Math.round(mucDongBH * 0.08);
       bhyt = Math.round(mucDongBH * 0.015);
       bhtn = Math.round(mucDongBH * 0.01);
     }
-
     const tong_bh = bhxh + bhyt + bhtn;
 
-    // =============================
-    // 🔥 THUẾ TNCN
-    // =============================
+    // THUẾ
     const giam_tru_ban_than = 11000000;
     const giam_tru_phu_thuoc = (r.so_nguoi_phu_thuoc || 0) * 4400000;
-
     let taxable = tong_luong - tong_bh - giam_tru_ban_than - giam_tru_phu_thuoc;
     if (taxable < 0) taxable = 0;
-
     const thue_tncn = calcTNCN(taxable);
 
-    // =============================
-    // 🔥 NET
-    // =============================
+    // NET
     const luong_thuc_nhan = tong_luong - tong_bh - thue_tncn;
 
-    // =============================
-    // 🔥 LƯU DB (ON DUPLICATE UPDATE)
-    // =============================
+    // SAVE DB
     await pool.execute(
       `
       INSERT INTO luong (
-        nhan_vien_id, thang, nam,
-        luong_thoa_thuan,
-
+        nhan_vien_id, thang, nam, luong_thoa_thuan,
         luong_p1, luong_p2, luong_p3,
-
-        ngay_cong,
-        ngay_cong_lam,
-        so_ngay_le,
-
+        ngay_cong, ngay_cong_lam, so_ngay_le,
         tong_luong, bhxh, bhyt, bhtn, tong_bh,
-
-        thue_tncn,
-        luong_thuc_nhan,
-        gio_tang_ca,
-        ngay_tinh
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-      
+        thue_tncn, luong_thuc_nhan, gio_tang_ca, ngay_tinh
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
       ON DUPLICATE KEY UPDATE
         luong_thoa_thuan = VALUES(luong_thoa_thuan),
-        luong_p1 = VALUES(luong_p1),
-        luong_p2 = VALUES(luong_p2),
-        luong_p3 = VALUES(luong_p3),
-
-        ngay_cong = VALUES(ngay_cong),
-        ngay_cong_lam = VALUES(ngay_cong_lam),
-        so_ngay_le = VALUES(so_ngay_le),
-
-        tong_luong = VALUES(tong_luong),
-        bhxh = VALUES(bhxh),
-        bhyt = VALUES(bhyt),
-        bhtn = VALUES(bhtn),
-        tong_bh = VALUES(tong_bh),
-
-        thue_tncn = VALUES(thue_tncn),
-        luong_thuc_nhan = VALUES(luong_thuc_nhan),
-        gio_tang_ca = VALUES(gio_tang_ca),
-        ngay_tinh = NOW()
+        luong_p1 = VALUES(luong_p1), luong_p2 = VALUES(luong_p2), luong_p3 = VALUES(luong_p3),
+        ngay_cong = VALUES(ngay_cong), ngay_cong_lam = VALUES(ngay_cong_lam), so_ngay_le = VALUES(so_ngay_le),
+        tong_luong = VALUES(tong_luong), bhxh = VALUES(bhxh), bhyt = VALUES(bhyt), bhtn = VALUES(bhtn), tong_bh = VALUES(tong_bh),
+        thue_tncn = VALUES(thue_tncn), luong_thuc_nhan = VALUES(luong_thuc_nhan), gio_tang_ca = VALUES(gio_tang_ca), ngay_tinh = NOW()
       `,
       [
         r.nhan_vien_id,
         thang,
         nam,
-
         luong_thoa_thuan,
-
         luong_p1,
         luong_p2,
         luong_p3,
-
         so_ngay_cong,
         ngay_cong_lam,
         so_ngay_le,
-
         tong_luong,
         bhxh,
         bhyt,
         bhtn,
         tong_bh,
-
         thue_tncn,
         luong_thuc_nhan,
-
         gio_tang_ca,
       ]
     );
@@ -494,16 +429,13 @@ export const calcSalaryForMonth = async (thang: number, nam: number) => {
     results.push({
       nhan_vien_id: r.nhan_vien_id,
       ho_ten: r.ho_ten,
-
       so_ngay_cong,
       so_ngay_phep,
       so_ngay_le,
       gio_tang_ca,
-
       luong_p1,
       luong_p2,
       luong_p3,
-
       tong_luong,
       bhxh,
       bhyt,
@@ -511,7 +443,6 @@ export const calcSalaryForMonth = async (thang: number, nam: number) => {
       tong_bh,
       thue_tncn,
       luong_thuc_nhan,
-
       thang,
       nam,
     });
@@ -521,112 +452,75 @@ export const calcSalaryForMonth = async (thang: number, nam: number) => {
 };
 
 // =====================================================================
-//                     DUYỆT LƯƠNG (FULL VERSION)
+// DUYỆT LƯƠNG (GIỮ NGUYÊN)
 // =====================================================================
 export const toggleDuyetLuong = async (req: Request) => {
   const user = (req as any).user;
   const nguoi_id = Number(user?.nhan_vien_id);
-
   const thang = Number(req.body?.thang || req.query?.thang);
   const nam = Number(req.body?.nam || req.query?.nam);
 
   if (!thang || !nam) return { error: "Thiếu tham số tháng hoặc năm" };
-
   if (!nguoi_id) return { error: "Tài khoản chưa liên kết nhân viên" };
 
-  // 1️⃣ Kiểm tra đã có dữ liệu lương chưa
   const [rows]: any = await pool.query(
-    `SELECT trang_thai_duyet 
-     FROM luong 
-     WHERE thang=? AND nam=? 
-     LIMIT 1`,
+    `SELECT trang_thai_duyet FROM luong WHERE thang=? AND nam=? LIMIT 1`,
     [thang, nam]
   );
-
   if (!rows.length) return { error: "Chưa tính lương tháng này" };
-
   const current = rows[0].trang_thai_duyet;
 
-  // ==========================================================
-  //  🔥 CASE 1 — CHƯA DUYỆT → THỰC HIỆN DUYỆT
-  // ==========================================================
   if (!current || current === "chua_duyet") {
-    // 2) Cập nhật trạng thái
-    await pool.query(
-      `UPDATE luong 
-       SET trang_thai_duyet='da_duyet' 
-       WHERE thang=? AND nam=?`,
-      [thang, nam]
-    );
-
-    // 3) Lấy toàn bộ dữ liệu lương để tạo lịch sử
+    await pool.query(`UPDATE luong SET trang_thai_duyet='da_duyet' WHERE thang=? AND nam=?`, [
+      thang,
+      nam,
+    ]);
     const [salaryRows]: any = await pool.query(
-      `SELECT nhan_vien_id, luong_thuc_nhan 
-       FROM luong 
-       WHERE thang=? AND nam=?`,
+      `SELECT nhan_vien_id, luong_thuc_nhan FROM luong WHERE thang=? AND nam=?`,
       [thang, nam]
     );
-
-    // 4) Xóa lịch sử “chờ xử lý” cũ nếu có (tránh trùng)
     await pool.query(
-      `DELETE FROM lich_su_tra_luong 
-       WHERE thang=? AND nam=? AND trang_thai='cho_xu_ly'`,
+      `DELETE FROM lich_su_tra_luong WHERE thang=? AND nam=? AND trang_thai='cho_xu_ly'`,
       [thang, nam]
     );
-
-    // 5) Tạo lịch sử mới
     for (const s of salaryRows) {
       await pool.query(
-        `INSERT INTO lich_su_tra_luong
-        (nhan_vien_id, thang, nam, so_tien_thuc_tra,
-        ngay_tra, nguoi_thuc_hien_id, trang_thai, ghi_chu)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO lich_su_tra_luong (nhan_vien_id, thang, nam, so_tien_thuc_tra, ngay_tra, nguoi_thuc_hien_id, trang_thai, ghi_chu) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          s.nhan_vien_id, // đúng
+          s.nhan_vien_id,
           thang,
           nam,
-          null, // so_tien_thuc_tra ban đầu = null
-          null, // ngay_tra ban đầu = null
-          nguoi_id, // đúng -> 30 (id nhân viên của người duyệt)
-
+          null,
+          null,
+          nguoi_id,
           "cho_xu_ly",
           `Duyệt lương tháng ${thang}/${nam}`,
         ]
       );
     }
-
-    return {
-      message: `Đã duyệt lương tháng ${thang}/${nam}`,
-      state: "da_duyet",
-    };
+    return { message: `Đã duyệt lương tháng ${thang}/${nam}`, state: "da_duyet" };
   }
 
-  // ==========================================================
-  //  🔥 CASE 2 — ĐÃ DUYỆT → THỰC HIỆN HỦY DUYỆT
-  // ==========================================================
+  const [[paidInfo]]: any = await pool.query(
+    `SELECT COUNT(*) AS so_giao_dich FROM lich_su_tra_luong WHERE thang=? AND nam=? AND COALESCE(so_tien_thuc_tra,0) > 0`,
+    [thang, nam]
+  );
+  if (paidInfo?.so_giao_dich > 0) return { error: "Đã trả lương, không thể hủy duyệt." };
+
+  await pool.query(`UPDATE luong SET trang_thai_duyet='chua_duyet' WHERE thang=? AND nam=?`, [
+    thang,
+    nam,
+  ]);
   await pool.query(
-    `UPDATE luong 
-   SET trang_thai_duyet='chua_duyet' 
-   WHERE thang=? AND nam=?`,
+    `DELETE FROM lich_su_tra_luong WHERE thang=? AND nam=? AND trang_thai='cho_xu_ly'`,
     [thang, nam]
   );
 
-  // Xóa lịch sử chờ xử lý
-  await pool.query(
-    `DELETE FROM lich_su_tra_luong 
-   WHERE thang=? AND nam=? AND trang_thai='cho_xu_ly'`,
-    [thang, nam]
-  );
-
-  // ⭐⭐⭐ TỰ ĐỘNG TÍNH LẠI LƯƠNG NGAY SAU KHI HỦY DUYỆT
   try {
-    await calcSalaryForMonth(thang, nam);
+    await calcSalaryForMonth({ thang, nam, phongBanId: null, nhanVienId: null });
   } catch (err) {
     console.error("Lỗi tính lại lương sau hủy duyệt:", err);
   }
 
-  return {
-    message: `Đã hủy duyệt lương tháng ${thang}/${nam}`,
-    state: "chua_duyet",
-  };
+  return { message: `Đã hủy duyệt lương tháng ${thang}/${nam}`, state: "chua_duyet" };
 };

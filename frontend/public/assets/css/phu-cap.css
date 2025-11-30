@@ -390,6 +390,33 @@ dialog::backdrop {
   }
 }
 
+.nv-search-box {
+  position: relative;
+}
+
+.nv-search-dropdown {
+  position: absolute;
+  top: 105%;
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  display: none;
+  z-index: 20;
+}
+
+.nv-search-item {
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.nv-search-item:hover {
+  background: #f0f0f0;
+}
+
 /* Khóa nhưng vẫn hiển thị text đầy đủ */
 select.locked-select {
   background: #f3f4f6 !important;

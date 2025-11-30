@@ -1,3 +1,4 @@
+//api.js
 export const API_BASE = window.API_BASE || 'http://localhost:8001';
 
 // ==== Lưu/Lấy token & user trong localStorage ====
@@ -84,8 +85,22 @@ export async function healthCheck() {
 }
 
 // ==== Tiện ích bảo vệ trang ====
-export function requireAuthOrRedirect(to = './dang-nhap.html') {
-  if (!getToken()) location.href = to;
+export async function requireAuthOrRedirect(to = './dang-nhap.html') {
+  const token = getToken();
+
+  if (!token) {
+    location.href = to;
+    return;
+  }
+
+  // ⭐ Gọi /auth/me để lấy quyền mới nhất
+  try {
+    const me = await api('/auth/me');
+    saveUser(me); // ⭐ lưu lại user mới nhất (có isAccountingManager)
+  } catch (err) {
+    clearAuth();
+    location.href = to;
+  }
 }
 
 // ==== Đăng xuất nhanh ====
