@@ -4,9 +4,22 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Đăng nhập - Quản lý nhân viên</title>
-    <!-- <link rel="icon" href="./assets/images/favicon.png" /> -->
+
+    <link rel="stylesheet" href="./assets/fontawesome/css/all.min.css" />
     <link rel="stylesheet" href="./assets/css/styles.css" />
-    <!-- Có thể thêm font nếu muốn -->
+    <style>
+      .container {
+        height: 50px;
+      }
+      .nav-right {
+        position: absolute;
+        top: 6px;
+        right: 60px;
+      }
+      .nav-brand {
+        padding-top: 10px;
+      }
+    </style>
   </head>
   <body class="bg">
     <header class="navbar">
@@ -57,8 +70,19 @@
           </form>
 
           <div class="auth-help">
-            <small>Quên mật khẩu? Liên hệ quản trị hệ thống.</small>
+            <small>
+              Quên mật khẩu:
+              <button type="button" id="btn-forgot" class="link-button">
+                Gửi lại mật khẩu qua email
+              </button>
+            </small>
           </div>
+          <div
+            id="forgot-msg"
+            class="text-muted"
+            style="margin-top: 6px; font-size: 12px"
+            hidden
+          ></div>
         </div>
       </div>
     </main>

@@ -1,4 +1,4 @@
-import { openPhanCongModal } from './phan-cong-lam-bu.js';
+//chan-cong.js
 import { api, getUser, getToken, requireAuthOrRedirect } from './api.js';
 
 // --- STATE ---
@@ -10,31 +10,21 @@ const st = {
   currentParams: {},
 };
 
-const stLe = {
-  page: 1,
-  limit: 10,
-  total: 0,
-  items: [],
-  filterParams: {},
-};
-
 let cachedEmployees = [];
 
 const $ = (s, r = document) => r.querySelector(s);
 const esc = (s) =>
-  (s ?? '')
-    .toString()
-    .replace(
-      /[&<>"']/g,
-      (m) =>
-        ({
-          '&': '&amp;',
-          '<': '&lt;',
-          '>': '&gt;',
-          '"': '&quot;',
-          "'": '&#039;',
-        }[m])
-    );
+  (s ?? '').toString().replace(
+    /[&<>"']/g,
+    (m) =>
+      ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;',
+      }[m])
+  );
 const fmtDate = (s) => (s ? ('' + s).slice(0, 10) : '');
 const fmtTime = (s) => (s ? ('' + s).slice(0, 8) : '');
 
@@ -62,10 +52,6 @@ function getStatusBadge(status) {
     : `<span class="cc-badge cc-badge-gray">${esc(status)}</span>`;
 }
 
-// ============================================================
-// 1. DATA LOADING
-// ============================================================
-
 async function loadData() {
   const cleanParams = { page: String(st.page), limit: String(st.limit) };
   for (const [key, value] of Object.entries(st.currentParams)) {
@@ -81,7 +67,7 @@ async function loadData() {
   const qs = new URLSearchParams(cleanParams);
   $(
     '#tbody'
-  ).innerHTML = `<tr><td colspan="8" class="text-muted" style="text-align:center;">Đang tải dữ liệu...</td></tr>`;
+  ).innerHTML = `<tr><td colspan="9" class="text-muted" style="text-align:center;">Đang tải dữ liệu...</td></tr>`;
 
   try {
     const resp = await api(`/cham-cong?${qs}`);
@@ -90,12 +76,12 @@ async function loadData() {
     st.total = total || items.length;
     $('#tbody').innerHTML = items.length
       ? items.map(rowHtml).join('')
-      : `<tr><td colspan="8" class="text-muted" style="text-align:center;">Không có dữ liệu phù hợp</td></tr>`;
+      : `<tr><td colspan="9" class="text-muted" style="text-align:center;">Không có dữ liệu phù hợp</td></tr>`;
     renderPagination();
   } catch (e) {
     $(
       '#tbody'
-    ).innerHTML = `<tr><td colspan="8" class="text-error">Lỗi tải dữ liệu: ${e.message}</td></tr>`;
+    ).innerHTML = `<tr><td colspan="9" class="text-error">Lỗi tải dữ liệu: ${e.message}</td></tr>`;
   }
 }
 
@@ -113,9 +99,21 @@ function rowHtml(x) {
   const btns = isEmployee
     ? ''
     : `
-      <button class="cc-btn-action" data-act="edit" data-id="${x.id}" title="Sửa">✎</button>
-      <button class="cc-btn-action del" data-act="del" data-id="${x.id}" title="Xóa">🗑</button>
+      <button class="cc-btn-action" data-act="edit" data-id="${x.id}" title="Sửa"><i class="fa-solid fa-pen" style="color:#f6c23e"></i>
+</button>
+      <button class="cc-btn-action del" data-act="del" data-id="${x.id}" title="Xóa"><i class="fa-solid fa-trash" style="color:#e74a3b"></i>
+</button>
     `;
+
+  // Map loai_ngay to readable text
+  const loaiMap = {
+    thuong: 'Thường',
+    le: 'Lễ',
+    tet: 'Tết',
+    lam_bu: 'Làm bù',
+  };
+  const loaiText = loaiMap[x.loai_ngay] || x.loai_ngay || '-';
+
   return `<tr>
     <td>${esc(x.nhan_vien_id)}</td>
     <td>${nv}</td>
@@ -123,6 +121,7 @@ function rowHtml(x) {
     <td>${esc(fmtTime(x.gio_vao) || '-')}</td>
     <td>${esc(fmtTime(x.gio_ra) || '-')}</td>
     <td>${getStatusBadge(x.trang_thai)}</td>
+    <td>${esc(loaiText)}</td>
     <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(
       x.ghi_chu
     )}">${esc(x.ghi_chu || '')}</td>
@@ -180,15 +179,12 @@ function bindIdInput(inpId, inpName) {
   });
 }
 
-// --- SỬA LẠI HÀM NÀY ĐỂ FIX LỖI BỊ ẨN ---
 function bindNameInput(inpName, inpId) {
-  // Tạo element global một lần duy nhất
   let dd = document.getElementById('global-ac-dropdown');
   if (!dd) {
     dd = document.createElement('div');
     dd.id = 'global-ac-dropdown';
     dd.className = 'ac-dropdown';
-    // Mặc định cứ gắn vào body
     document.body.appendChild(dd);
   }
 
@@ -200,24 +196,18 @@ function bindNameInput(inpName, inpId) {
   };
 
   const show = (keyword) => {
-    // --- LOGIC QUAN TRỌNG: CHUYỂN PARENT CỦA DROPDOWN ---
-    // Kiểm tra xem ô input có nằm trong dialog (modal) không
     const dialog = inpName.closest('dialog');
 
     if (dialog) {
-      // Nếu input nằm trong Modal, ta phải chuyển Dropdown vào trong Modal
-      // để nó nằm trên cùng lớp hiển thị (Top Layer)
       if (dd.parentElement !== dialog) {
         dialog.appendChild(dd);
       }
     } else {
-      // Nếu input ở ngoài (ví dụ trang lọc), chuyển về body
       if (dd.parentElement !== document.body) {
         document.body.appendChild(dd);
       }
     }
 
-    // Tính toán vị trí (vì dùng position fixed nên vẫn tính theo màn hình)
     const rect = inpName.getBoundingClientRect();
     dd.style.top = rect.bottom + 2 + 'px';
     dd.style.left = rect.left + 'px';
@@ -255,10 +245,7 @@ function bindNameInput(inpName, inpId) {
   inpName.addEventListener('focus', () => {
     const val = inpName.value.trim();
 
-    // Trigger show để thực hiện logic chuyển parent
     if (!val) {
-      // Hack nhỏ: Gọi show với từ khóa rỗng để nó tính vị trí và chuyển parent
-      // nhưng sau đó ta ghi đè nội dung để hiện 5 người đầu
       show('');
       dd.innerHTML = cachedEmployees
         .slice(0, 5)
@@ -321,16 +308,24 @@ function createRowHTML(data = {}) {
         <option value="ve_som">Về sớm</option>
         <option value="nghi_phep">Nghỉ phép</option>
         <option value="nghi_khong_phep">Nghỉ không phép</option>
-        <option value="ngay_le">Ngày lễ</option>
+      </select>
+    </td>
+    <td>
+      <select class="inp-loai-ngay">
+        <option value="thuong">Thường</option>
+        <option value="le">Lễ</option>
+        <option value="tet">Tết</option>
+        <option value="lam_bu">Làm bù</option>
       </select>
     </td>
     <td><input type="text" class="inp-note" value="${esc(
       data.ghi_chu || ''
     )}" placeholder="..."></td>
-    <td><button type="button" class="btn-remove-row">×</button></td>
+    <td><button type="button" class="btn-remove-row">x</button></td>
   `;
 
   if (data.trang_thai) tr.querySelector('.inp-status').value = data.trang_thai;
+  if (data.loai_ngay) tr.querySelector('.inp-loai-ngay').value = data.loai_ngay;
 
   bindIdInput(tr.querySelector('.inp-id'), tr.querySelector('.inp-name'));
   bindNameInput(tr.querySelector('.inp-name'), tr.querySelector('.inp-id'));
@@ -383,6 +378,7 @@ async function saveBatch(e) {
         gio_vao: tr.querySelector('.inp-in').value || null,
         gio_ra: tr.querySelector('.inp-out').value || null,
         trang_thai: tr.querySelector('.inp-status').value,
+        loai_ngay: tr.querySelector('.inp-loai-ngay').value,
         ghi_chu: tr.querySelector('.inp-note').value.trim() || null,
       },
     });
@@ -414,10 +410,6 @@ async function saveBatch(e) {
     $('#modal-error').hidden = false;
   }
 }
-
-// ============================================================
-// 2. LOGIC CŨ
-// ============================================================
 
 async function fetchPhongBan() {
   try {
@@ -451,10 +443,10 @@ async function onUploadExcel(e) {
 
     if (!res.ok) {
       const msg = await res.text();
-      alert('❌ Upload thất bại: ' + msg);
+      alert('Upload thất bại: ' + msg);
     } else {
       const result = await res.json();
-      alert(result.message || '✅ Upload thành công!');
+      alert(result.message || 'Upload thành công!');
       loadData();
     }
   } catch (err) {
@@ -463,83 +455,24 @@ async function onUploadExcel(e) {
   e.target.value = '';
 }
 
-async function fetchNgayLe(params = {}) {
-  stLe.filterParams = params;
-  const resp = await api('/ngay-le');
-  const { items } = unwrap(resp);
-  let data = items;
-  if (params.ngay) data = data.filter((x) => fmtDate(x.ngay) === params.ngay);
-  if (params.ten) {
-    const kw = params.ten.toLowerCase();
-    data = data.filter((x) => (x.ten_ngay || '').toLowerCase().includes(kw));
-  }
-  if (params.loai) data = data.filter((x) => x.loai === params.loai);
-  stLe.items = data;
-  stLe.page = 1;
-  renderNgayLeTable();
-}
-
-function renderNgayLeTable() {
-  const start = (stLe.page - 1) * stLe.limit;
-  const end = start + stLe.limit;
-  const pageItems = stLe.items.slice(start, end);
-  stLe.total = stLe.items.length;
-  $('#tbody-le').innerHTML = pageItems.length
-    ? pageItems
-        .map((x) => {
-          let actionsHtml = `<button class="cc-btn-action del" title="Xóa" data-id="${x.id}" data-act="del-le">🗑</button>`;
-          if (x.loai === 'lam_bu') {
-            actionsHtml += ` <button class="cc-btn-action" title="Phân công" data-ngay="${x.ngay}" data-act="phan-cong">👥</button>`;
-          }
-          return `<tr>
-            <td>${esc(fmtDate(x.ngay))}</td>
-            <td><strong>${esc(x.ten_ngay)}</strong></td>
-            <td>${esc(x.loai)}</td>
-            <td>${esc(x.so_ngay_nghi ?? '')}</td> 
-            <td>${actionsHtml}</td>
-          </tr>`;
-        })
-        .join('')
-    : `<tr><td colspan="5" class="text-muted" style="text-align:center;">Không có dữ liệu phù hợp</td></tr>`;
-
-  const totalPages = Math.max(1, Math.ceil(stLe.total / stLe.limit));
-  $('#le-pageInfo').textContent = `Trang ${stLe.page}/${totalPages}`;
-  $('#le-prev').disabled = stLe.page <= 1;
-  $('#le-next').disabled = stLe.page >= totalPages;
-}
-
-async function addNgayLe() {
-  const body = {
-    ngay: $('#le-ngay').value,
-    ten_ngay: $('#le-ten').value,
-    loai: $('#le-loai').value,
-    mo_ta: null,
-    so_ngay_nghi: Number($('#le-so-ngay-nghi').value) || 1,
-  };
-  if (!body.ngay || !body.ten_ngay) return alert('Điền đầy đủ thông tin!');
-  await api('/ngay-le', { method: 'POST', body });
-  await fetchNgayLe();
-  alert('✅ Đã thêm ngày lễ thành công!');
-  $('#le-ngay').value = '';
-  $('#le-ten').value = '';
-}
-
 async function init() {
   requireAuthOrRedirect('./dang-nhap.html');
   if (!getToken()) return;
 
   const u = getUser();
   if (u && (u.role === 'manager' || u.role === 'employee')) {
-    const addBlock = document.getElementById('ngay-le-add-block');
-    if (addBlock) addBlock.style.display = 'none';
     if (u.role === 'employee') {
       if ($('#btn-create')) $('#btn-create').style.display = 'none';
     }
   }
 
+  if (u && u.role === 'admin') {
+    const btnAuto = $('#btn-auto-process');
+    if (btnAuto) btnAuto.style.display = 'inline-block';
+  }
+
   await fetchAllEmployees();
   await fetchPhongBan();
-  await fetchNgayLe();
 
   const today = new Date().toISOString().slice(0, 10);
   $('#from').value = today;
@@ -577,6 +510,56 @@ function bindEvents() {
       loadData();
     }
   });
+
+  //admin nhan tu dong cham cong
+  const btnAuto = $('#btn-auto-process');
+  if (btnAuto) {
+    btnAuto.addEventListener('click', async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      const dateInput = prompt(
+        'Nhập ngày cần chấm công tự động (YYYY-MM-DD):',
+        today
+      );
+
+      if (!dateInput) return;
+
+      if (
+        !confirm(
+          `Bạn có chắc muốn chạy chấm công tự động cho ngày ${dateInput}? \nDữ liệu cũ chưa có sẽ được điền tự động.`
+        )
+      ) {
+        return;
+      }
+
+      // 3. Gọi API
+      try {
+        btnAuto.disabled = true;
+        btnAuto.textContent = 'Đang xử lý...';
+
+        const res = await api(`/cham-cong/auto-process?date=${dateInput}`, {
+          method: 'POST',
+        });
+
+        // 4. Thông báo kết quả
+        const result = res.data || res;
+        alert(
+          `Xử lý xong!\n- Đã thêm: ${
+            result.processedCount
+          }\n- Bỏ qua (đã có/đã duyệt lương): ${result.skippedCount}\n${
+            result.errors ? '- Lỗi: ' + result.errors.length : ''
+          }`
+        );
+
+        // 5. Tải lại bảng dữ liệu
+        loadData();
+      } catch (err) {
+        alert(' Lỗi: ' + (err.message || 'Không thể xử lý'));
+      } finally {
+        btnAuto.disabled = false;
+        btnAuto.innerHTML = '<i class="fa fa-magic"></i> Chạy tự động';
+      }
+    });
+  }
 
   $('#btn-refresh').addEventListener('click', () => {
     const t = new Date().toISOString().slice(0, 10);
@@ -637,62 +620,6 @@ function bindEvents() {
       a.click();
     } catch (e) {
       alert('Lỗi tải file');
-    }
-  });
-
-  $('#btn-add-le').addEventListener('click', addNgayLe);
-  $('#btn-filter-le').addEventListener('click', () =>
-    fetchNgayLe({
-      ngay: $('#le-filter-ngay').value,
-      ten: $('#le-filter-ten').value,
-      loai: $('#le-filter-loai').value,
-    })
-  );
-  $('#btn-reset-le').addEventListener('click', () => {
-    $('#le-filter-ngay').value = '';
-    $('#le-filter-ten').value = '';
-    $('#le-filter-loai').value = '';
-    fetchNgayLe();
-  });
-  $('#le-prev').addEventListener('click', () => {
-    if (stLe.page > 1) {
-      stLe.page--;
-      renderNgayLeTable();
-    }
-  });
-  $('#le-next').addEventListener('click', () => {
-    if (stLe.page < Math.ceil(stLe.total / stLe.limit)) {
-      stLe.page++;
-      renderNgayLeTable();
-    }
-  });
-
-  $('#tbody-le').addEventListener('click', async (e) => {
-    const btn = e.target.closest('button[data-act]');
-    if (!btn) return;
-    const id = btn.dataset.id;
-    const act = btn.dataset.act;
-    if (act === 'del-le') {
-      if (confirm('Xoá ngày lễ này?')) {
-        await api(`/ngay-le/${id}`, { method: 'DELETE' });
-        await fetchNgayLe();
-      }
-    }
-    if (act === 'phan-cong') {
-      const u = getUser();
-      if (
-        u.role === 'admin' ||
-        (u.role === 'manager' && u.ten_phong_ban?.includes('kế toán'))
-      ) {
-        await openPhanCongModal(btn.dataset.ngay, { restrictPhongBan: null });
-      } else if (u.role === 'manager') {
-        await openPhanCongModal(btn.dataset.ngay, {
-          restrictPhongBan: u.phong_ban_id,
-        });
-      } else {
-        alert('Bạn không có quyền phân công.');
-      }
-      await fetchNgayLe();
     }
   });
 }

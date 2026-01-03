@@ -1,77 +1,19 @@
 // src/controllers/trangChinhController.ts
 import { Request, Response } from "express";
-import { dashboardService } from "../services/trangChinhService";
-import { layPhamViNguoiDung } from "../utils/pham-vi-nguoi-dung";
+import { getCompleteDashboard } from "../services/trangChinhService";
 
-export const dashboardController = {
-  // GET /staff-summary
-  async staffSummary(req: Request, res: Response) {
-    try {
-      const phamvi = await layPhamViNguoiDung(req);
-      const data = await dashboardService.getStaffSummary(phamvi);
-      return res.json(data);
-    } catch (err) {
-      console.error("[GET /trang-chinh/staff-summary] Lỗi:", err);
-      return res.status(500).json({ error: "Lỗi server" });
-    }
-  },
+export async function getComplete(req: Request, res: Response) {
+  try {
+    const accountId = (req as any).user?.id as number | undefined;
+    const phamvi = (req as any).phamvi;
 
-  // GET /salary-by-department
-  async salaryByDepartment(req: Request, res: Response) {
-    try {
-      const phamvi = await layPhamViNguoiDung(req);
-      const data = await dashboardService.getSalaryByDepartment(phamvi);
-      return res.json(data);
-    } catch (err) {
-      console.error("[GET /trang-chinh/salary-by-department] Lỗi:", err);
-      return res.status(500).json({ error: "Lỗi server" });
-    }
-  },
+    if (!accountId) return res.status(401).json({ message: "Unauthorized" });
+    if (!phamvi) return res.status(403).json({ message: "Forbidden" });
 
-  // GET /hours-summary
-  async hoursSummary(req: Request, res: Response) {
-    try {
-      const phamvi = await layPhamViNguoiDung(req);
-      const data = await dashboardService.getHoursSummary(phamvi);
-      return res.json(data);
-    } catch (err) {
-      console.error("[GET /trang-chinh/hours-summary] Lỗi:", err);
-      return res.status(500).json({ error: "Lỗi server" });
-    }
-  },
-
-  // GET /rewards-summary
-  async rewardsSummary(req: Request, res: Response) {
-    try {
-      const phamvi = await layPhamViNguoiDung(req);
-      const data = await dashboardService.getRewardsSummary(phamvi);
-      return res.json(data);
-    } catch (err) {
-      console.error("[GET /trang-chinh/rewards-summary] Lỗi:", err);
-      return res.status(500).json({ error: "Lỗi server" });
-    }
-  },
-
-  // GET /holidays
-  async holidays(req: Request, res: Response) {
-    try {
-      const data = await dashboardService.getUpcomingHolidays();
-      return res.json({ items: data });
-    } catch (err) {
-      console.error("[GET /trang-chinh/holidays] Lỗi:", err);
-      return res.status(500).json({ error: "Lỗi server" });
-    }
-  },
-
-  // GET /complete
-  async complete(req: Request, res: Response) {
-    try {
-      const phamvi = await layPhamViNguoiDung(req);
-      const data = await dashboardService.getCompleteDashboardData(phamvi);
-      return res.json(data);
-    } catch (err) {
-      console.error("[GET /trang-chinh/complete] Lỗi:", err);
-      return res.status(500).json({ error: "Lỗi server" });
-    }
-  },
-};
+    const data = await getCompleteDashboard({ accountId, phamvi });
+    return res.json(data);
+  } catch (err: any) {
+    console.error("getComplete error:", err);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+}

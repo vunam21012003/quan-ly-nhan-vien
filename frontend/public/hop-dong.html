@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Hợp đồng lao động - Quản lý nhân viên</title>
 
+    <link rel="stylesheet" href="./assets/fontawesome/css/all.min.css" />
     <link rel="stylesheet" href="./assets/css/styles.css" />
     <link rel="stylesheet" href="./assets/css/hop-dong.css" />
   </head>
@@ -41,7 +42,8 @@
         </div>
 
         <button id="btnAdd" class="btn btn-primary hidden">
-          ➕ Thêm Hợp đồng
+          <i class="fa-solid fa-plus" style="color: #1cc88a"></i>
+          Thêm Hợp đồng
         </button>
       </div>
 
@@ -82,7 +84,7 @@
       <h3 id="modalTitle">Tạo Hợp đồng Mới</h3>
       <form id="contractForm">
         <div class="form-group">
-          <label for="nhan_vien_id_input">Nhân viên</label>
+          <label for="nhan_vien_id_input">Nhân viên *</label>
           <input
             type="text"
             id="nhan_vien_id_input"
@@ -94,13 +96,20 @@
           <div id="nhanVienDropdown" class="dropdown-list"></div>
         </div>
 
+        <div class="form-group" id="luongCobanInfo" style="display: none">
+          <label>Lương cơ bản (Chức vụ)</label>
+          <div style="padding: 8px; background: #f0f0f0; border-radius: 4px">
+            <strong id="luongCobanValue">0 ₫</strong>
+          </div>
+        </div>
+
         <div class="form-group">
           <label for="so_hop_dong">Số hợp đồng</label>
           <input type="text" id="so_hop_dong" name="so_hop_dong" />
         </div>
 
         <div class="form-group">
-          <label for="loai_hop_dong">Loại hợp đồng</label>
+          <label for="loai_hop_dong">Loại hợp đồng *</label>
           <select id="loai_hop_dong" name="loai_hop_dong" required>
             <option value="Thử việc">Thử việc</option>
             <option value="Xác định thời hạn">Xác định thời hạn</option>
@@ -116,7 +125,7 @@
         </div>
 
         <div class="form-group">
-          <label for="ngay_bat_dau">Ngày bắt đầu</label>
+          <label for="ngay_bat_dau">Ngày bắt đầu *</label>
           <input type="date" id="ngay_bat_dau" name="ngay_bat_dau" required />
         </div>
 
@@ -131,9 +140,39 @@
             type="number"
             id="luong_thoa_thuan"
             name="luong_thoa_thuan"
-            required
             min="0"
+            placeholder="Để trống sẽ lấy lương cơ bản"
           />
+          <small class="text-muted"
+            >* Nếu để trống, hệ thống tự động điền = lương cơ bản</small
+          >
+        </div>
+
+        <div class="form-group">
+          <label>Phụ cấp</label>
+          <div style="display: flex; gap: 8px; margin-bottom: 8px">
+            <select id="loai_phu_cap" style="flex: 2">
+              <option value="">-- Chọn loại phụ cấp --</option>
+            </select>
+            <input
+              type="number"
+              id="so_tien_phu_cap"
+              placeholder="Số tiền"
+              min="0"
+              style="flex: 1"
+            />
+            <button
+              type="button"
+              id="btnAddPhuCap"
+              class="btn btn-sm btn-primary"
+            >
+              <i class="fa-solid fa-plus" style="color: #1cc88a"></i>
+              Thêm
+            </button>
+          </div>
+          <div id="phuCapListContainer" style="margin-top: 8px">
+            <p class="text-muted">Chưa có phụ cấp nào</p>
+          </div>
         </div>
 
         <div class="form-group">
@@ -179,8 +218,6 @@
         </button>
       </div>
     </dialog>
-
-    <div id="pagination" class="pagination"></div>
 
     <script type="module" src="./assets/js/hop-dong.js"></script>
     <script type="module" src="./assets/js/navbar.js"></script>

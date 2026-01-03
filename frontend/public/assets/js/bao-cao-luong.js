@@ -1,3 +1,4 @@
+// bao-cao-luong.js
 import {
   api,
   getUser,
@@ -7,6 +8,7 @@ import {
 } from './api.js';
 
 const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => r.querySelectorAll(s);
 const money = (v) => (v == null ? 0 : Number(v)).toLocaleString('vi-VN');
 const esc = (s) =>
   (s ?? '').toString().replace(/[&<>"']/g, (m) => {
@@ -19,9 +21,7 @@ const esc = (s) =>
     }[m];
   });
 
-/* ==========================================================
-   HIỂN THỊ USER BADGE
-========================================================== */
+//  HIỂN THỊ USER BADGE
 function setUserBadge() {
   const b = $('#user-badge'),
     u = getUser();
@@ -53,6 +53,10 @@ function buildQuery() {
   // phòng ban
   const pb = $('#phong_ban').value;
   if (pb) qs.append('phong_ban_id', pb);
+
+  // người duyệt
+  const nguoiDuyet = $('#nguoi_duyet').value;
+  if (nguoiDuyet) qs.append('nguoi_duyet_id', nguoiDuyet);
 
   // từ khóa
   const keyword = $('#search').value.trim();
@@ -87,9 +91,8 @@ function canPay() {
 function canExport() {
   return canPay();
 }
-/* ==========================================================
-   TẠO 10 KPI CHUẨN KẾ TOÁN
-========================================================== */
+
+//  TẠO 10 KPI CHUẨN KẾ TOÁN
 function renderCards(s) {
   const parts = [
     { label: 'P1 — Lương theo công', val: s.tong_co_ban },
@@ -145,7 +148,7 @@ function statusBadge(st) {
     case 'da_thanh_toan':
       return `<span class="badge-status badge-ok">Đã trả</span>`;
     case 'cho_xu_ly':
-      return `<span class="badge-status badge-warning">Chờ xử lý</span>`;
+      return `<span class="badge-status badge-warning">Chưa trả</span>`;
     case 'that_bai':
       return `<span class="badge-status badge-danger">Thất bại</span>`;
     case 'con_no':
@@ -155,9 +158,7 @@ function statusBadge(st) {
   }
 }
 
-/* ==========================================================
-   DÒNG DỮ LIỆU TRONG BẢNG
-========================================================== */
+//  DÒNG DỮ LIỆU TRONG BẢNG (THÊM CỘT NGƯỜI DUYỆT)
 function rowHtml(x) {
   const isEditable =
     canPay() &&
@@ -215,13 +216,14 @@ function rowHtml(x) {
 
       <td>${x.ngay_tra_gan_nhat ? esc(x.ngay_tra_gan_nhat) : '-'}</td>
       <td>${statusBadge(x.trang_thai_cuoi)}</td>
+
+      <!-- THÊM CỘT NGƯỜI DUYỆT -->
+      <td>${esc(x.nguoi_duyet_ten || '-')}</td>
     </tr>
   `;
 }
 
-/* ==========================================================
-   GỌI API BÁO CÁO
-========================================================== */
+//  GỌI API BÁO CÁO
 async function runReport() {
   const qs = buildQuery();
 
@@ -237,7 +239,7 @@ async function runReport() {
   $('#tbody').innerHTML =
     data.items.length > 0
       ? data.items.map(rowHtml).join('')
-      : `<tr><td colspan="10" class="text-muted">Không có dữ liệu</td></tr>`;
+      : `<tr><td colspan="11" class="text-muted">Không có dữ liệu</td></tr>`;
 }
 
 // gửi email PDF lương
@@ -270,15 +272,13 @@ async function paySalary(nvId) {
   runReport(); // reload lại dữ liệu
 }
 
-/* ==========================================================
-   XEM CHI TIẾT LƯƠNG (ĐÃ SỬA HIỆN LỊCH SỬ TRẢ LƯƠNG)
-========================================================== */
+//  XEM CHI TIẾT LƯƠNG
 async function openDetail(btn) {
   const nvId = btn.dataset.id;
   const thang = btn.dataset.thang;
   const nam = btn.dataset.nam;
 
-  // 1️⃣ Lấy chi tiết lương
+  // Lấy chi tiết lương
   const res = await api(
     `/bao-cao/luong/chi-tiet/${nvId}?thang=${thang}&nam=${nam}`
   ).catch(() => null);
@@ -293,12 +293,12 @@ async function openDetail(btn) {
     return;
   }
 
-  // 2️⃣ Lấy toàn bộ lịch sử trả lương
+  // Lấy toàn bộ lịch sử trả lương
   const his = await api(
     `/bao-cao/luong/lich-su/${nvId}?thang=${thang}&nam=${nam}`
   ).catch(() => ({ items: [] }));
 
-  // 3️⃣ Render lịch sử trả lương
+  // Render lịch sử trả lương
   let historyHtml = '';
 
   if (!his.items || his.items.length === 0) {
@@ -324,7 +324,6 @@ async function openDetail(btn) {
       .join('');
   }
 
-  // 4️⃣ Render GUI
   box.innerHTML = `
     <p><strong>${esc(d.ho_ten)}</strong> (${esc(d.phong_ban)} – ${esc(
     d.chuc_vu
@@ -334,9 +333,9 @@ async function openDetail(btn) {
     <div style="display:flex; gap:20px;">
       <div style="flex:1;">
         <h4>Thu nhập</h4>
-        <p>P1: ${money(d.p1_luong)} đ</p>
-        <p>P2: ${money(d.p2_phu_cap)} đ</p>
-        <p>P3: ${money(d.p3_khac)} đ</p>
+        <p>P1 (lương thủa thuận): ${money(d.p1_luong)} đ</p>
+        <p>P2 (phụ cấp): ${money(d.p2_phu_cap)} đ</p>
+        <p>P3 (thưởng/phạt + tăng ca): ${money(d.p3_khac)} đ</p>
         <p><strong>Tổng Gross: ${money(d.tong_luong)} đ</strong></p>
       </div>
 
@@ -349,7 +348,7 @@ async function openDetail(btn) {
       </div>
     </div>
 
-    <h4 style="margin-top:10px;">Công – Nghỉ – Tăng ca</h4>
+    <h4 style="margin-top:10px;">Công  Nghỉ  Tăng ca</h4>
     <p>Ngày công: ${d.so_ngay_cong} ngày</p>
     <p>Nghỉ phép: ${d.so_ngay_nghi_phep} ngày</p>
     <p>Nghỉ hưởng lương: ${d.so_ngay_nghi_huong_luong} ngày</p>
@@ -372,9 +371,15 @@ async function openDetail(btn) {
       </div>
 
       <p class="text-muted">Trạng thái: ${esc(d.trang_thai_cuoi)}</p>
+
+      <!-- THÊM THÔNG TIN NGƯỜI DUYỆT -->
+      <p class="text-muted" style="margin-top:8px;">Người duyệt: <strong>${esc(
+        d.nguoi_duyet_ten || 'Chưa có'
+      )}</strong></p>
     </div>
 
-    <h4 style="margin-top:20px;">📌 Lịch sử trả lương</h4>
+    <h4 style="margin-top:20px;"><i class="fa-solid fa-thumbtack" style="color:#e74a3b; transform: rotate(45deg);"></i>
+     Lịch sử trả lương</h4>
     <div style="max-height:200px; overflow-y:auto; padding-right:5px;">
       ${historyHtml}
     </div>
@@ -383,14 +388,10 @@ async function openDetail(btn) {
   $('#modal').showModal();
 }
 
-/* ==========================================================
-   BIND SỰ KIỆN
-========================================================== */
+//  BIND SỰ KIỆN
 function bind() {
-  /* ----------------------------
-       AUTO FILTER
-  ----------------------------- */
-  ['thang', 'nam', 'phong_ban', 'search'].forEach((id) => {
+  // 1. Gắn sự kiện cho các bộ lọc
+  ['thang', 'nam', 'phong_ban', 'search', 'nguoi_duyet'].forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
     el.addEventListener('input', () => runReport());
@@ -398,23 +399,21 @@ function bind() {
   });
 
   /* ----------------------------
-       TAB TRẠNG THÁI
+     TAB TRẠNG THÁI
   ----------------------------- */
   document.querySelectorAll('.tab-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       document
         .querySelectorAll('.tab-btn')
         .forEach((b) => b.classList.remove('active'));
-
       btn.classList.add('active');
       window._currentTab = btn.dataset.status || '';
-
       runReport();
     });
   });
 
   /* ----------------------------
-       CLICK "Xem chi tiết"
+     CLICK "Xem chi tiết"
   ----------------------------- */
   $('#tbody')?.addEventListener('click', (e) => {
     const btnDetail = e.target.closest('button[data-act="detail"]');
@@ -422,61 +421,110 @@ function bind() {
   });
 
   /* ----------------------------
-       CLICK "Trả lương" / "Trả nợ"
+     CLICK "Trả lương từng người" 
   ----------------------------- */
   $('#tbody')?.addEventListener('click', async (e) => {
     const btnPay = e.target.closest('button[data-act="pay"]');
     if (!btnPay) return;
 
-    const nvId = btnPay.dataset.id;
-    const thang = btnPay.dataset.thang;
-    const nam = btnPay.dataset.nam;
+    e.stopPropagation();
 
-    const inp = document.querySelector(
-      `input.input-tra[data-id="${nvId}"][data-thang="${thang}"][data-nam="${nam}"]`
-    );
-
-    if (!inp) return alert('Không tìm thấy số tiền trả!');
     if (!canPay()) {
       alert('Bạn không có quyền thực hiện thao tác trả lương.');
       return;
     }
 
-    // lấy số còn nợ từ dataset
+    const nvId = btnPay.dataset.id;
+    const thang = btnPay.dataset.thang;
+    const nam = btnPay.dataset.nam;
     const conNo = Number(btnPay.dataset.conno || 0);
 
-    // lấy số tiền từ input
-    let soTien = Number(inp.value);
+    const inp = document.querySelector(
+      `input.input-tra[data-id="${nvId}"][data-thang="${thang}"][data-nam="${nam}"]`
+    );
 
-    // Nếu kế toán KHÔNG nhập gì hoặc nhập <= 0 → xem như trả full
-    if (!soTien || soTien <= 0) {
+    let soTien = inp ? Number(inp.value) : conNo;
+
+    if (conNo > 0 && (soTien === undefined || soTien === null || soTien <= 0)) {
       soTien = conNo;
+    } else if (conNo === 0) {
+      soTien = 0;
     }
 
-    if (!confirm(`Xác nhận trả ${money(soTien)} đ cho nhân viên #${nvId}?`))
-      return;
+    let confirmMsg = `Xác nhận trả ${money(soTien)} đ cho nhân viên #${nvId}?`;
+    if (soTien === 0) {
+      confirmMsg = `Nhân viên #${nvId} có lương thực nhận bằng 0đ. Bạn có muốn tất toán kỳ lương này không?`;
+    }
+
+    if (!confirm(confirmMsg)) return;
 
     const res = await api('/tra-luong/pay', {
       method: 'POST',
       body: { nhan_vien_id: nvId, thang, nam, so_tien_thuc_tra: soTien },
     }).catch(() => null);
 
-    if (!res) return alert('Lỗi server khi trả lương!');
-
-    alert('Trả lương thành công!');
-    runReport();
+    if (res && res.ok) {
+      alert('Đã xử lý thanh toán thành công!');
+      runReport();
+    } else {
+      alert(res?.error || 'Lỗi server khi trả lương!');
+    }
   });
 
   /* ----------------------------
-       NÚT ĐÓNG MODAL
+     NÚT "TRẢ TẤT CẢ" 
   ----------------------------- */
-  $('#m-close')?.addEventListener('click', () => {
-    $('#modal').close();
+  const btnPayAll = document.getElementById('btn-pay-all');
+  btnPayAll?.addEventListener('click', async (e) => {
+    if (!canPay()) {
+      alert('Bạn không có quyền thực hiện thanh toán.');
+      return;
+    }
+
+    const thang = $('#thang').value;
+    const nam = $('#nam').value;
+    const pbId = $('#phong_ban').value;
+
+    if (!thang || !nam) {
+      alert('Vui lòng chọn đầy đủ tháng và năm!');
+      return;
+    }
+
+    const confirmMsg = `Xác nhận TẤT TOÁN nợ lương cho TẤT CẢ nhân viên ĐÃ DUYỆT trong tháng ${thang}/${nam}?`;
+    if (!confirm(confirmMsg)) return;
+
+    // Hiệu ứng chờ
+    btnPayAll.disabled = true;
+    const originalText = btnPayAll.textContent;
+    btnPayAll.textContent = 'Đang xử lý...';
+
+    try {
+      const res = await api('/tra-luong/pay-all', {
+        method: 'POST',
+        body: { thang, nam, phong_ban_id: pbId },
+      });
+
+      if (res.ok) {
+        alert(
+          `Thành công! Đã xử lý thanh toán cho ${res.result.count} nhân viên.`
+        );
+        runReport();
+      } else {
+        alert(res.error || 'Có lỗi xảy ra khi trả lương hàng loạt.');
+      }
+    } catch (err) {
+      alert('Lỗi kết nối máy chủ.');
+    } finally {
+      btnPayAll.disabled = false;
+      btnPayAll.textContent = originalText;
+    }
   });
 
   /* ----------------------------
-       CLICK RA NGOÀI ĐỂ ĐÓNG MODAL
+     CÁC SỰ KIỆN KHÁC (Modal, Export, Logout)
   ----------------------------- */
+  $('#m-close')?.addEventListener('click', () => $('#modal').close());
+
   const modal = document.getElementById('modal');
   modal?.addEventListener('click', (event) => {
     const rect = modal.getBoundingClientRect();
@@ -490,58 +538,35 @@ function bind() {
     }
   });
 
-  /* ----------------------------
-       EXPORT EXCEL
-  ----------------------------- */
   if (!canExport()) {
-    const btnExport = document.getElementById('btn-export');
-    if (btnExport) btnExport.style.display = 'none';
+    const btnExp = document.getElementById('btn-export');
+    if (btnExp) btnExp.style.display = 'none';
   }
 
   $('#btn-export')?.addEventListener('click', async () => {
-    if (!canExport()) {
-      alert('Bạn không có quyền xuất báo cáo lương.');
-      return;
-    }
-
     const qs = buildQuery();
     const token = getToken();
-
     const res = await fetch(`/bao-cao/luong/export?${qs}`, {
       method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
     });
-
-    if (!res.ok) {
-      alert('Không thể xuất Excel!');
-      return;
-    }
-
+    if (!res.ok) return alert('Không thể xuất Excel!');
     const blob = await res.blob();
     const url = window.URL.createObjectURL(blob);
-
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'bao-cao-luong.xlsx';
+    a.download = `bao-cao-luong-${$('#thang').value}-${$('#nam').value}.xlsx`;
     a.click();
-
     window.URL.revokeObjectURL(url);
   });
 
-  /* ----------------------------
-       LOGOUT
-  ----------------------------- */
   $('#logout-btn')?.addEventListener('click', () => {
     clearAuth();
     location.href = './dang-nhap.html';
   });
 }
 
-/* ==========================================================
-   LOAD PHÒNG BAN
-========================================================== */
+//  LOAD PHÒNG BAN
 async function loadPhongBan() {
   const res = await api('/phong-ban').catch(() => null);
   if (!res || !res.items) return;
@@ -555,36 +580,85 @@ async function loadPhongBan() {
   });
 }
 
-/* ==========================================================
-   INIT
-========================================================== */
+//  LOAD NGƯỜI DUYỆT (THÊM HÀM NÀY)
+async function loadNguoiDuyet() {
+  const res = await api('/users/duyet-luong').catch(() => null);
+  if (!res || !res.items) return;
+
+  const sel = $('#nguoi_duyet');
+  res.items.forEach((user) => {
+    const opt = document.createElement('option');
+    opt.value = user.id;
+    opt.textContent = user.ho_ten;
+    sel.appendChild(opt);
+  });
+}
+
+function setupCalendarFilters() {
+  const selThang = $('#thang');
+  const selNam = $('#nam');
+  const now = new Date();
+  const curMonth = now.getMonth() + 1;
+  const curYear = now.getFullYear();
+
+  if (selThang) {
+    let htmlThang = '<option value="">Tháng</option>';
+    for (let i = 1; i <= 12; i++) {
+      htmlThang += `<option value="${i}" ${
+        i === curMonth ? 'selected' : ''
+      }>Tháng ${i}</option>`;
+    }
+    selThang.innerHTML = htmlThang;
+  }
+  if (selNam) {
+    let htmlNam = '<option value="">Năm</option>';
+    for (let i = curYear - 5; i <= curYear + 1; i++) {
+      htmlNam += `<option value="${i}" ${
+        i === curYear ? 'selected' : ''
+      }>${i}</option>`;
+    }
+    selNam.innerHTML = htmlNam;
+  }
+}
+
+//  INIT
 async function init() {
-  // kiểm tra login
   requireAuthOrRedirect('./dang-nhap.html');
   if (!getToken()) return;
 
-  // Năm footer
-  $('#y').textContent = new Date().getFullYear();
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
 
-  // Hiển thị thông tin user
+  const selThang = $('#thang');
+  const selNam = $('#nam');
+
+  if (selThang) {
+    selThang.value = currentMonth;
+  }
+
+  if (selNam) {
+    selNam.value = currentYear;
+  }
+
+  const footerYear = $('#y');
+  if (footerYear) footerYear.textContent = currentYear;
+
   setUserBadge();
 
   document
     .querySelectorAll('.tab-btn')
     .forEach((b) => b.classList.remove('active'));
-  // Tab trạng thái mặc định = tất cả
   window._currentTab = 'cho_xu_ly';
-  document
-    .querySelector('.tab-btn[data-status="cho_xu_ly"]')
-    ?.classList.add('active');
+  const defaultTab = document.querySelector(
+    '.tab-btn[data-status="cho_xu_ly"]'
+  );
+  if (defaultTab) defaultTab.classList.add('active');
 
-  // Gắn sự kiện
   bind();
 
-  // Load phòng ban
-  await loadPhongBan();
+  await Promise.all([loadPhongBan(), loadNguoiDuyet()]);
 
-  // Chạy báo cáo lần đầu
   runReport();
 }
 

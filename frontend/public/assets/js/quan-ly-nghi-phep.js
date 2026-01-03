@@ -14,6 +14,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   currentUser = getUser();
 
   // Set năm hiện tại
+  const btnTaoDon = document.querySelector(
+    'button[onclick="openModal(\'modalTaoDon\')"]'
+  );
+  if (btnTaoDon && currentUser.role === 'admin') {
+    btnTaoDon.style.display = 'none';
+  }
+
+  // Set năm hiện tại
   const yearSelect = document.getElementById('filterYear');
   if (yearSelect) yearSelect.value = new Date().getFullYear();
 
@@ -91,7 +99,7 @@ function renderTable(list) {
     // -- Nút hành động --
     let actions = '';
     // Sếp duyệt/từ chối
-    if (isManager && item.trang_thai === 'cho_duyet') {
+    if (isManager && item.trang_thai === 'cho_duyet' && !isMe) {
       actions += `
                 <button class="btn btn-sm btn-success" onclick="duyetDon(${item.id})" title="Duyệt">✔</button>
                 <button class="btn btn-sm btn-danger" onclick="openTuChoiModal(${item.id})" title="Từ chối">✘</button>
@@ -205,12 +213,24 @@ window.submitDon = async () => {
     payload.buoi_nghi = data.buoi_nghi;
   }
 
+  if (!payload.ngay_bat_dau) {
+    alert('Vui lòng chọn ngày bắt đầu');
+    return;
+  }
+  if (mode === 'ca_ngay' && payload.ngay_ket_thuc) {
+    const dStart = new Date(payload.ngay_bat_dau);
+    const dEnd = new Date(payload.ngay_ket_thuc);
+    if (dEnd < dStart) {
+      alert('Ngày kết thúc không được nhỏ hơn ngày bắt đầu');
+      return;
+    }
+  }
+
   try {
     await api('/don-nghi-phep', { method: 'POST', body: payload });
     alert('Gửi đơn thành công!');
     closeModal('modalTaoDon');
     form.reset();
-    // Reset default state
     document.getElementById('radioCaNgay').checked = true;
     toggleThoiGian();
     loadDanhSach();

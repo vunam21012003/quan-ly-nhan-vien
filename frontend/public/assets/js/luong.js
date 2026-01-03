@@ -70,25 +70,19 @@ function setUserBadge() {
 
   // ========== Phân quyền giao diện ==========
   const btnCalc = $('#btn-calc'); // Tính lương
-  const btnApprove = $('#btn-approve'); // Duyệt
-  const btnUnapprove = $('#btn-unapprove'); // Hủy duyệt
+  const btnApprove = $('#btn-toggle-duyet'); // Duyệt
+  const btnUnapprove = $('#btn-toggle-duyet'); // Hủy duyệt
 
   // Mặc định ẩn các nút
   if (btnCalc) btnCalc.style.display = 'none';
   if (btnApprove) btnApprove.style.display = 'none';
   if (btnUnapprove) btnUnapprove.style.display = 'none';
 
-  // ========= Nhân viên: chỉ xem =========
-  if (role === 'employee') return;
-
-  // ========= Manager (THƯỜNG): chỉ xem ========
-  if (role === 'manager' && !u.isAccountingManager) return;
-
   // ========= Manager KẾ TOÁN → giống Admin ========
   if (role === 'manager' && u.isAccountingManager) {
     if (btnCalc) btnCalc.style.display = 'inline-block';
-    if (btnApprove) btnApprove.style.display = 'inline-block';
-    if (btnUnapprove) btnUnapprove.style.display = 'inline-block';
+    if (btnApprove) btnApprove.style.display = 'none';
+    if (btnUnapprove) btnUnapprove.style.display = 'none';
     return;
   }
 
@@ -114,11 +108,60 @@ function calcNet(x) {
 }
 
 /* ===========================================================
-   HIỂN THỊ 1 DÒNG LƯƠNG TRONG BẢNG
+   HIỂN THỊ 1 DÒNG LƯƠNG TRONG BẢNG - RÚT GỌN & BỔ SUNG
    =========================================================== */
+function moneyShort(v) {
+  const num = Number(v);
+  if (isNaN(num)) return '';
+  // Sử dụng toLocaleString để có dấu phẩy, sau đó thêm 'đ'
+  return num.toLocaleString('vi-VN') + 'đ';
+}
+
+function getMaxBHXHBase(thang, nam) {
+  const date = new Date(nam, thang - 1, 1);
+  // Ví dụ: Từ 01/07/2025, mức trần là 50 triệu
+  return date >= new Date(2025, 6, 1) ? 50_000_000 : 46_800_000;
+}
+
+function getStandardWorkingDays(month, year) {
+  const daysInMonth = new Date(year, month, 0).getDate();
+  let workingDays = 0;
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month - 1, day);
+    const dayOfWeek = date.getDay(); // 0 = Chủ nhật, 1 = Thứ hai, ..., 6 = Thứ bảy
+    if (dayOfWeek !== 0) {
+      // Chỉ tính các ngày từ Thứ Hai đến Thứ Bảy
+      workingDays++;
+    }
+  }
+  return workingDays;
+}
+
 function rowHtml(x) {
   const gross = calcGross(x);
   const net = calcNet(x);
+
+  // Lấy dữ liệu từ backend
+  const thangNum = Number(x.thang || 0);
+  const namNum = Number(x.nam || 0);
+  const soCongChuan =
+    thangNum && namNum ? getStandardWorkingDays(thangNum, namNum) : 0;
+  const luongThoaThuan = Number(x.luong_thoa_thuan || 0);
+  const soNgayCong = Number(x.so_ngay_cong || 0);
+  const soNgayPhep = Number(x.so_ngay_nghi_phep || 0);
+  const soNgayLe = Number(x.so_ngay_nghi_huong_luong || x.so_ngay_le || 0);
+  const gioTangCa = Number(x.gio_tang_ca || 0);
+  const mucLuongCoBan = Number(x.muc_luong_co_ban || 0);
+  const tongPhuCapDongBH = Number(x.tong_phu_cap_dong_bh || 0);
+  const soNgayCongThuc = Number(x.ngay_cong_lam || 0);
+  const soNguoiPhuThuoc = Number(x.so_nguoi_phu_thuoc || 0);
+
+  // Các giá trị cơ sở để hiển thị
+  const mucDongBHXH = Math.min(
+    mucLuongCoBan + tongPhuCapDongBH,
+    getMaxBHXHBase(thangNum, namNum)
+  );
 
   return `
   <tr class="salary-row" data-id="${x.id}">
@@ -131,8 +174,6 @@ function rowHtml(x) {
     <td>${money(x.thue_tncn ?? 0)}</td>
     <td>
       <button class="page-btn" data-act="expand" data-id="${x.id}">▼</button>
-      <button class="page-btn" data-act="edit" data-id="${x.id}">✏️</button>
-      <button class="page-btn" data-act="del" data-id="${x.id}">🗑️</button>
     </td>
   </tr>
 
@@ -141,44 +182,124 @@ function rowHtml(x) {
     <td colspan="8">
       <div class="expand-box">
 
-        <h4>I. Thành phần thu nhập</h4>
-        <table>
-          <tr><td>Lương thỏa thuận của tháng:</td><td>${money(
-            x.luong_thoa_thuan ?? 0
-          )}</td></tr>
-          <tr><td>P1 – Lương theo công:</td><td>${money(
-            x.luong_p1 ?? 0
-          )}</td></tr>
-          <tr><td>P2 – Phụ cấp:</td><td>${money(x.luong_p2 ?? 0)}</td></tr>
-          <tr><td>P3 – Tăng ca / Thưởng / Phạt:</td><td>${money(
-            x.luong_p3 ?? 0
-          )}</td></tr>
-          <tr><td><b>Tổng lương (Gross):</b></td><td><b>${money(
-            gross
-          )}</b></td></tr>
-        </table>
+        <!-- BỐ CỤC 2 CỘT CHO 2 PHẦN ĐẦU -->
+        <div class="salary-grid">
+          
+          <!-- I. THÀNH PHẦN THU NHẬP -->
+          <div class="salary-section">
+            <h4>I. Thành phần thu nhập</h4>
+            <div class="salary-item">
+              <span class="label">Lương thỏa thuận:</span>
+              <span>${money(luongThoaThuan)}</span>
+            </div>
+            <div class="salary-item">
+              <span class="label">Lương cơ bản:</span>
+              <span>${money(mucLuongCoBan)}</span>
+            </div>
+            <div class="salary-item">
+              <span class="label">Phụ cấp đóng BH:</span>
+              <span>${money(tongPhuCapDongBH)}</span>
+            </div>
+            <div class="salary-item">
+              <span class="label">P1 – Lương theo công:</span>
+              <span>${money(x.luong_p1 ?? 0)}</span>
+            </div>
+            <div class="salary-item">
+              <span class="label">P2 – Phụ cấp:</span>
+              <span>${money(x.luong_p2 ?? 0)}</span>
+            </div>
+            <div class="salary-item">
+              <span class="label">P3 – Tăng ca / Thưởng / Phạt:</span>
+              <span>${money(x.luong_p3 ?? 0)}</span>
+            </div>
+            <div class="salary-item">
+              <span class="label"><b>Tổng lương (Gross):</b></span>
+              <span><b>${money(gross)}</b></span>
+            </div>
+            <div class="formula-note">
+              <b>Công thức chung:</b><br>
+              P1 = (Số ngày công + Nghỉ phép + Nghỉ lễ) × (Lương thỏa thuận / Công chuẩn tháng)<br>
+              P3 = (Tiền tăng ca) + (Thưởng) - (Phạt)
+            </div>
+          </div>
 
-        <h4>II. Các khoản khấu trừ</h4>
-        <table>
-          <tr><td>BHXH (8%):</td><td>${money(x.bhxh ?? 0)}</td></tr>
-          <tr><td>BHYT (1.5%):</td><td>${money(x.bhyt ?? 0)}</td></tr>
-          <tr><td>BHTN (1%):</td><td>${money(x.bhtn ?? 0)}</td></tr>
-          <tr><td>Tổng bảo hiểm:</td><td>${money(x.tong_bh ?? 0)}</td></tr>
-          <tr><td>Thuế TNCN:</td><td>${money(x.thue_tncn ?? 0)}</td></tr>
-          <tr><td><b>Lương thực nhận (Net):</b></td><td><b>${money(
-            net
-          )}</b></td></tr>
-        </table>
+          <!-- II. CÁC KHOẢN KHẤU TRỪ - BỔ SUNG THEO BẢN CŨ -->
+          <div class="salary-section">
+            <h4>II. Các khoản khấu trừ</h4>
+            
+            <!-- Bổ sung: Cơ sở tính BHXH -->
+            <div class="salary-item">
+              <span class="label">Cơ sở tính BH (Lương CB + PC đóng BH):</span>
+              <span>${money(mucDongBHXH)}</span>
+            </div>
+            
+            <!-- Các khoản bảo hiểm - BỔ SUNG TỪ BẢN CŨ -->
+            <div class="salary-item">
+              <span class="label">BHXH (8%):</span>
+              <span>${money(x.bhxh ?? 0)}</span>
+            </div>
+            <div class="salary-item">
+              <span class="label">BHYT (1.5%):</span>
+              <span>${money(x.bhyt ?? 0)}</span>
+            </div>
+            <div class="salary-item">
+              <span class="label">BHTN (1%):</span>
+              <span>${money(x.bhtn ?? 0)}</span>
+            </div>
+            <div class="salary-item">
+              <span class="label">Tổng bảo hiểm:</span>
+              <span>${money(x.tong_bh ?? 0)}</span>
+            </div>
+            
+            <!-- Thuế TNCN -->
+            <div class="salary-item">
+              <span class="label">Thuế TNCN:</span>
+              <span>${money(x.thue_tncn ?? 0)}</span>
+            </div>
+            
+            <div class="salary-item">
+              <span class="label"><b>Lương thực nhận (Net):</b></span>
+              <span><b>${money(net)}</b></span>
+            </div>
+            
+            <div class="formula-note">
+              <b>Công thức chung:</b><br>
+              BHXH = Cơ sở tính BH × 8%<br>
+              Thuế TNCN = (Gross - Tổng BH - Giảm trừ bản thân 11M - Giảm trừ phụ thuộc) × Thuế suất
+            </div>
+          </div>
+        </div>
 
-        <h4>III. Công – Nghỉ – Tăng ca</h4>
-        <table>
-          <tr><td>Số ngày công:</td><td>${esc(x.so_ngay_cong ?? 0)}</td></tr>
-          <tr><td>Nghỉ phép:</td><td>${esc(x.so_ngay_nghi_phep ?? 0)}</td></tr>
-          <tr><td>Nghỉ lễ hưởng lương:</td><td>${esc(
-            x.so_ngay_le ?? 0
-          )}</td></tr>
-          <tr><td>Giờ tăng ca:</td><td>${esc(x.gio_tang_ca ?? 0)}</td></tr>
-        </table>
+        <!-- III. CÔNG – NGHỈ – TĂNG CA -->
+        <div class="salary-section" style="margin-top: 16px;">
+          <h4>III. Công – Nghỉ – Tăng ca</h4>
+          <div class="work-info-grid">
+            <div class="salary-item" style="border: none;">
+              <span class="label">Số ngày công:</span>
+              <span>${esc(soNgayCong)}</span>
+            </div>
+            <div class="salary-item" style="border: none;">
+              <span class="label">Số ngày công thực:</span>
+              <span>${esc(soNgayCongThuc)}</span>
+            </div>
+            <div class="salary-item" style="border: none;">
+              <span class="label">Nghỉ phép:</span>
+              <span>${esc(soNgayPhep)}</span>
+            </div>
+            <div class="salary-item" style="border: none;">
+              <span class="label">Nghỉ lễ hưởng lương:</span>
+              <span>${esc(soNgayLe)}</span>
+            </div>
+            <div class="salary-item" style="border: none;">
+              <span class="label">Giờ tăng ca:</span>
+              <span>${esc(gioTangCa)}</span>
+            </div>
+            <div class="salary-item" style="border: none; grid-column: 1 / -1;">
+              <span class="label">Công chuẩn tháng:</span>
+              <span>${esc(soCongChuan)} ngày (không tính Chủ nhật)</span>
+            </div>
+          </div>
+        </div>
 
       </div>
     </td>
@@ -387,34 +508,30 @@ async function onSave(e) {
 }
 
 // ============================
-// CẬP NHẬT NÚT EDIT / DELETE THEO PHÂN QUYỀN
+// CẬP NHẬT NÚT DELETE THEO PHÂN QUYỀN
 // ============================
 function updateEditDeleteButtons(state) {
   const u = getUser();
   const isLocked = state === 'da_duyet';
 
   document.querySelectorAll('#tbody .salary-row').forEach((tr) => {
-    const editBtn = tr.querySelector('button[data-act="edit"]');
     const delBtn = tr.querySelector('button[data-act="del"]');
 
-    if (!editBtn || !delBtn) return;
+    if (!delBtn) return;
 
     // Nhân viên & manager thường → không được sửa/xóa
     if (
       u.role === 'employee' ||
       (u.role === 'manager' && !u.isAccountingManager)
     ) {
-      editBtn.style.display = 'none';
       delBtn.style.display = 'none';
       return;
     }
 
     // Admin hoặc Manager kế toán
     if (isLocked) {
-      editBtn.style.display = 'none';
       delBtn.style.display = 'none';
     } else {
-      editBtn.style.display = '';
       delBtn.style.display = '';
     }
   });
@@ -566,8 +683,6 @@ function bind() {
       return;
     }
 
-    if (act === 'edit') return openModal(row);
-
     if (act === 'del') {
       if (!confirm(`Xóa bản lương #${id}?`)) return;
       try {
@@ -594,12 +709,12 @@ function bind() {
 
   $('#thang').addEventListener('change', () => {
     fetchList();
-    loadApproveState($('#thang').value, $('#nam').value); // ⭐ THÊM
+    loadApproveState($('#thang').value, $('#nam').value);
   });
 
   $('#nam').addEventListener('change', () => {
     fetchList();
-    loadApproveState($('#thang').value, $('#nam').value); // ⭐ THÊM
+    loadApproveState($('#thang').value, $('#nam').value);
   });
 }
 

@@ -1,3 +1,4 @@
+// auth.js
 import { api, setToken, saveUser, healthCheck } from './api.js';
 
 function setBadge(state, text) {
@@ -48,12 +49,74 @@ async function init() {
 
   const submitBtn = form.querySelector('button[type="submit"]');
   const errorBox = document.getElementById('login-error');
+  const forgotBtn = document.getElementById('btn-forgot');
+  const forgotMsg = document.getElementById('forgot-msg');
 
+  // ============================================================
+  // 1. SỰ KIỆN QUÊN MẬT KHẨU
+  // ============================================================
+  if (forgotBtn) {
+    forgotBtn.addEventListener('click', async () => {
+      // Reset thông báo
+      if (errorBox) {
+        errorBox.hidden = true;
+        errorBox.textContent = '';
+      }
+      if (forgotMsg) {
+        forgotMsg.hidden = true;
+        forgotMsg.textContent = '';
+      }
+
+      const username = (form.querySelector('#username')?.value || '').trim();
+      if (!username) {
+        if (errorBox) {
+          errorBox.hidden = false;
+          errorBox.textContent = 'Vui lòng nhập tên đăng nhập trước.';
+        }
+        return;
+      }
+
+      forgotBtn.disabled = true;
+      const oldText = forgotBtn.textContent;
+      forgotBtn.textContent = 'Đang gửi...';
+
+      try {
+        // 🔔 ĐỔI URL NÀY CHO PHÙ HỢP BACKEND CỦA BẠN NẾU CẦN
+        await api('/auth/forgot-password', {
+          method: 'POST',
+          body: { username },
+        });
+
+        if (forgotMsg) {
+          forgotMsg.hidden = false;
+          forgotMsg.textContent =
+            'Nếu tài khoản tồn tại, hệ thống đã gửi mật khẩu hoặc liên kết đặt lại mật khẩu tới email của bạn.';
+        }
+      } catch (err) {
+        if (errorBox) {
+          errorBox.hidden = false;
+          errorBox.textContent =
+            err?.message || 'Không thể gửi email khôi phục mật khẩu.';
+        }
+      } finally {
+        forgotBtn.disabled = false;
+        forgotBtn.textContent = oldText;
+      }
+    });
+  }
+
+  // ============================================================
+  // 2. SỰ KIỆN ĐĂNG NHẬP
+  // ============================================================
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (errorBox) {
       errorBox.hidden = true;
       errorBox.textContent = '';
+    }
+    if (forgotMsg) {
+      forgotMsg.hidden = true;
+      forgotMsg.textContent = '';
     }
 
     const username = (form.querySelector('#username')?.value || '').trim();

@@ -1,3 +1,134 @@
+/* =========================================
+   HEADER & TOOLBAR (Bảng lương)
+========================================= */
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.page-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #111827;
+  margin-top: 16px;
+}
+
+/* Thanh toolbar chứa bộ lọc và nút */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/* NHÓM FILTER: đặt width cố định, không cho full dòng */
+.toolbar select,
+.toolbar input[type='number'] {
+  height: 36px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  font-size: 0.9rem;
+  color: #111827;
+  outline: none;
+  /* chỉnh chiều rộng: */
+  width: 180px; /* bạn có thể đổi 160–200 tuỳ ý */
+  max-width: 180px;
+  flex: 0 0 auto; /* không kéo giãn full hàng */
+}
+
+#filter-phong-ban,
+#filter-nhan-vien {
+  width: 220px;
+  max-width: 220px;
+}
+
+#thang {
+  width: 130px;
+  max-width: 130px;
+}
+
+#nam {
+  width: 110px;
+  max-width: 110px;
+}
+
+/* giữ hiệu ứng focus */
+.toolbar select:focus,
+.toolbar input[type='number']:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.25);
+}
+
+.toolbar input::placeholder {
+  color: #9ca3af;
+}
+
+/* =========================================
+   BUTTONS
+========================================= */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  height: 36px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #111827;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    box-shadow 0.15s ease, transform 0.05s ease;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  background: #f3f4f6;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+/* Nút chính (Tính lương tháng) */
+.btn-primary {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+/* Nút Duyệt lương */
+.btn-success {
+  background: #16a34a;
+  border-color: #16a34a;
+  color: #ffffff;
+}
+
+.btn-success:hover {
+  background: #15803d;
+  border-color: #15803d;
+}
+
+/* =========================================
+   CÁC PHẦN CƠ BẢN (bạn đã có)
+========================================= */
+
 .table th,
 .table td {
   text-align: center;
@@ -14,6 +145,8 @@
   font-weight: 600;
   margin-bottom: 4px;
   display: block;
+  font-size: 0.9rem;
+  color: #374151;
 }
 
 #modal input,
@@ -25,15 +158,40 @@
   border-radius: 4px;
 }
 
+/* Cải thiện một chút cho modal input */
+#modal input,
+#modal select,
+#modal textarea {
+  border-radius: 6px;
+  border-color: #d1d5db;
+  font-size: 0.9rem;
+}
+
+#modal input:focus,
+#modal select:focus,
+#modal textarea:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.25);
+  outline: none;
+}
+
+/* =========================================
+   BONUS CONFIG
+========================================= */
+
 .bonus-config {
   background: #fff;
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 14px 16px;
+  margin-top: 16px;
 }
 
 .bonus-config h3 {
   font-size: 1.1rem;
   font-weight: 600;
+  margin: 0 0 10px 0;
+  color: #111827;
 }
 
 .bonus-config input {
@@ -43,7 +201,17 @@
   border-radius: 4px;
 }
 
-/* --- BẢNG LƯƠNG MỚI --- */
+/* Nâng cấp giống input modal */
+.bonus-config input {
+  border-radius: 6px;
+  border-color: #d1d5db;
+  font-size: 0.9rem;
+}
+
+/* =========================================
+   BẢNG LƯƠNG CHÍNH
+========================================= */
+
 .salary-table {
   width: 100%;
   border-collapse: collapse;
@@ -52,18 +220,28 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   border-radius: 6px;
   overflow: hidden;
+  font-size: 0.9rem;
+}
+
+.salary-table thead {
+  background: #f4f6f8;
 }
 
 .salary-table th {
-  background: #f4f6f8;
   font-weight: 600;
   padding: 8px 6px;
   border-bottom: 1px solid #ddd;
+  color: #374151;
 }
 
 .salary-table td {
   padding: 6px 8px;
   border-bottom: 1px solid #eee;
+  color: #111827;
+}
+
+.salary-table tr:last-child td {
+  border-bottom: none;
 }
 
 .salary-table tr:hover {
@@ -80,6 +258,14 @@
   color: #1a73e8;
 }
 
+/* =========================================
+   HÀNG MỞ RỘNG CHI TIẾT LƯƠNG (EXPAND)
+========================================= */
+
+.salary-row:hover {
+  background: #fafafa;
+}
+
 .expand-row {
   background: #fafafa;
   display: none;
@@ -90,17 +276,23 @@
   display: table-row;
 }
 
+/* Box chứa dữ liệu khi mở rộng */
 .expand-box {
-  padding: 10px 14px;
+  background: #fff;
+  padding: 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   font-size: 0.9rem;
 }
 
 .expand-box h4 {
   font-size: 1rem;
   color: #333;
-  margin: 6px 0;
+  margin: 6px 0 12px 0;
 }
 
+/* Bảng trong ô mở rộng */
 .expand-box table {
   width: 100%;
   border-collapse: collapse;
@@ -115,4 +307,97 @@
 .expand-box td:first-child {
   font-weight: 500;
   color: #444;
+}
+
+/* =========================================
+   CSS MỚI: LAYOUT 2 CỘT & CÔNG THỨC
+========================================= */
+
+/* Khung 2 cột trong phần mở rộng */
+.salary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 16px;
+}
+
+.salary-section {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 12px 16px;
+  border: 1px solid #e5e7eb;
+}
+
+.salary-section h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #1f2937;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Item của từng thành phần lương */
+.salary-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 13px;
+  border-bottom: 1px solid #f3f4f6;
+  gap: 8px;
+}
+
+.salary-item:last-child {
+  border-bottom: none;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.salary-item .label {
+  color: #374151;
+}
+
+.salary-item .formula {
+  font-size: 11px;
+  color: #6b7280;
+  margin-top: 2px;
+  text-align: right;
+}
+
+/* Grid thông tin công - tăng ca - nghỉ */
+.work-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 768px) {
+  .container {
+    margin-top: 16px;
+  }
+
+  .page-header {
+    align-items: flex-start;
+  }
+
+  .page-title {
+    font-size: 1.4rem;
+  }
+
+  .toolbar {
+    justify-content: flex-start;
+  }
+
+  .toolbar select,
+  .toolbar input[type='number'],
+  .btn {
+    width: 100%;
+  }
+
+  .salary-grid {
+    grid-template-columns: 1fr;
+  }
 }

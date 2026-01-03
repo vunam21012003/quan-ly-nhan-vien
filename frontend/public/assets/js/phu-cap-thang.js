@@ -1,4 +1,4 @@
-// phu-cap-thang.js (FULL FILE HOÀN CHỈNH – ĐÃ FIX NHIỀU LOẠI + Ô TIỀN RIÊNG)
+// phu-cap-thang.js
 import { api, requireAuthOrRedirect, getToken } from './api.js';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -14,7 +14,6 @@ const esc = (s) =>
         "'": '&#039;',
       }[m])
   );
-// ===== PHÂN TRANG PHỤ CẤP THÁNG =====
 const stPage = {
   page: 1,
   limit: 10,
@@ -31,7 +30,6 @@ let state = {
   selectedLoaiIds: [],
 };
 
-// Lấy role từ người dùng đang đăng nhập
 let CURRENT_USER = {};
 try {
   CURRENT_USER = JSON.parse(localStorage.getItem('hr_user')) || {};
@@ -44,35 +42,27 @@ const IS_MANAGER = ROLE === 'manager';
 const IS_ADMIN = ROLE === 'admin';
 const IS_EMPLOYEE = ROLE === 'employee';
 
-// Backend trả snake_case: is_accounting_manager
 const IS_ACCOUNTING_MANAGER =
   CURRENT_USER?.is_accounting_manager === true ||
   CURRENT_USER?.isAccountingManager === true;
 
-// ======================================
 // ẨN NÚT THÊM PHỤ CẤP THÁNG
-// ======================================
-document.addEventListener('DOMContentLoaded', () => {
-  const btnAdd = document.querySelector('#btn-add-thang');
-
+function applyAddButtonPermission() {
+  const btnAdd = $('#btn-add-thang');
   if (!btnAdd) return;
 
-  // 1️⃣ Employee → không được thêm
   if (IS_EMPLOYEE) {
     btnAdd.style.display = 'none';
+    return;
   }
 
-  // 2️⃣ Manager thường → vẫn được thêm nhưng KHÔNG sửa/xoá
   if (IS_MANAGER && !IS_ACCOUNTING_MANAGER) {
     btnAdd.style.display = 'inline-block';
+    return;
   }
+}
 
-  // 3️⃣ Manager kế toán & Admin → full quyền → không ẩn gì
-});
-
-/* ===========================================================
-   LOAD DATA
-=========================================================== */
+//  LOAD DATA
 async function loadThang() {
   const qs = new URLSearchParams();
 
@@ -87,7 +77,7 @@ async function loadThang() {
   const res = await api(`/phu-cap-thang?${qs.toString()}`);
   state.items = res.data ?? [];
 
-  stPage.page = 1; // ⭐ RESET PAGE KHI LỌC
+  stPage.page = 1;
   renderThang();
 }
 
@@ -100,19 +90,16 @@ async function loadLoaiPC() {
     else if (Array.isArray(res.items)) state.loais = res.items;
     else state.loais = [];
   } catch (err) {
-    console.error('❌ Lỗi load loại PC:', err);
+    console.error('Lỗi load loại PC:', err);
     state.loais = [];
   }
 }
 
-// ===========================================================
 //  LOAD DANH SÁCH NHÂN VIÊN
-// ===========================================================
 async function loadNhanVien() {
   const res = await api('/nhan-vien?limit=999&_=' + Date.now());
   let arr = res?.data?.items ?? [];
 
-  // ===== PHÂN QUYỀN HIỂN THỊ =====
   if (ROLE === 'employee') {
     arr = arr.filter((nv) => nv.id === CURRENT_USER.employee_id);
   }
@@ -126,8 +113,6 @@ async function loadNhanVien() {
     }
   }
 
-  // Manager kế toán & Admin → không lọc
-
   state.nhanViens = arr;
 
   // Render bộ lọc NV ở toolbar
@@ -140,6 +125,7 @@ async function loadNhanVien() {
       .join('');
 }
 
+//hiển thị danh sách nhân viên khi tìm kiếm trong modal
 function setupNhanVienSearch() {
   const input = $('#nv-search-input');
   const dropdown = $('#nv-search-list');
@@ -190,13 +176,10 @@ function setupNhanVienSearch() {
   });
 }
 
-/* ===========================================================
-   RENDER TABLE
-=========================================================== */
+//  RENDER TABLE
 function renderThang() {
   const body = $('#thang-body');
 
-  // ===== Lưu dữ liệu vào state phân trang =====
   stPage.items = state.items;
   stPage.total = state.items.length;
 
@@ -222,12 +205,12 @@ function renderThang() {
         <td>
           ${
             IS_EMPLOYEE
-              ? `` // Nhân viên không có nút gì
+              ? ``
               : IS_MANAGER && !IS_ACCOUNTING_MANAGER
-              ? `` // Manager thường: CHỈ được thêm, KHÔNG sửa/xóa
+              ? ``
               : `
-                <button class="btn btn-sm btn-edit" data-id="${x.id}">✏️</button>
-                <button class="btn btn-sm btn-del" data-id="${x.id}">🗑️</button>
+                <button class="btn btn-sm btn-edit" data-id="${x.id}"><i class="fa-solid fa-pen" style="color:#3ef69d"></i></button>
+                <button class="btn btn-sm btn-del" data-id="${x.id}"><i class="fa-solid fa-trash" style="color:#e4b721"></i></button>
               `
           }
         </td>
@@ -243,9 +226,7 @@ function renderThang() {
   $('#pc-next').disabled = stPage.page >= totalPages;
 }
 
-/* ===========================================================
-   RENDER Ô TIỀN + GHI CHÚ THEO TỪNG LOẠI
-=========================================================== */
+// Ô TIỀN + GHI CHÚ
 function renderMoneyInputs() {
   const container = $('#money-container');
   if (!container) return;
@@ -289,17 +270,11 @@ function renderMoneyInputs() {
   });
 }
 
-/* ===========================================================
-   KHÔNG DISABLE THÁNG/NĂM NỮA
-=========================================================== */
 function handleLoaiChange(loaiIds) {
-  // UI mới: tháng/năm luôn nhập được
   renderMoneyInputs();
 }
 
-/* ===========================================================
-   MỞ MODAL (THÊM / SỬA)
-=========================================================== */
+// MODAL (THÊM / SỬA)
 async function openThangModal(item = null) {
   await loadLoaiPC();
   await loadNhanVien();
@@ -310,7 +285,7 @@ async function openThangModal(item = null) {
   $('#thang-id').value = item?.id ?? '';
   $('#thang-note').value = item?.ghi_chu ?? '';
 
-  // Reset tháng/năm
+  // tháng/năm
   $('#thang-thang').value = '';
   $('#thang-nam').value = '';
 
@@ -319,18 +294,23 @@ async function openThangModal(item = null) {
   const selectLoai = $('#thang-loai');
   const smallNote = selectLoai.nextElementSibling;
 
-  // Render loại phụ cấp
-  selectLoai.innerHTML = state.loais
+  const loaiTheoThang = state.loais.filter((x) => String(x.is_fixed) === '0');
+
+  // loại phụ cấp
+  selectLoai.innerHTML = loaiTheoThang
     .map(
       (x) => `
-        <option value="${x.id}" data-fixed="${x.is_fixed}">
-          ${esc(x.ten)} ${x.is_fixed ? '(Cố định)' : '(Theo tháng)'}
+        <option value="${x.id}">
+          ${esc(x.ten)}
         </option>
       `
     )
     .join('');
 
-  // Manager thường không được chọn loại cố định
+  if (smallNote) {
+    smallNote.textContent = 'Chỉ hiển thị các loại phụ cấp theo tháng';
+  }
+
   if (IS_MANAGER && !IS_ACCOUNTING_MANAGER) {
     Array.from(selectLoai.options).forEach((opt) => {
       if (opt.dataset.fixed == '1') opt.disabled = true;
@@ -339,15 +319,11 @@ async function openThangModal(item = null) {
 
   const nvInput = $('#nv-search-input');
 
-  /* ==========================
-      CHẾ ĐỘ SỬA
-  ========================== */
+  // CHẾ ĐỘ SỬA
   if (item) {
-    // Gán NV vào ô tìm kiếm
     nvInput.value = `${item.nhan_vien_id} - ${item.ho_ten}`;
     nvInput.dataset.selectedId = item.nhan_vien_id;
 
-    // Khóa không cho đổi nhân viên
     nvInput.classList.add('locked-select');
     nvInput.readOnly = true;
 
@@ -374,10 +350,7 @@ async function openThangModal(item = null) {
     $(`.money-input[data-id="${item.loai_id}"]`).value = item.so_tien;
     $(`.note-input[data-id="${item.loai_id}"]`).value = item.ghi_chu ?? '';
   } else {
-    /* ==========================
-        CHẾ ĐỘ THÊM
-    ========================== */
-
+    // CHẾ ĐỘ THÊM
     nvInput.value = '';
     nvInput.dataset.selectedId = '';
     nvInput.readOnly = false;
@@ -397,11 +370,11 @@ async function openThangModal(item = null) {
   $('#modal-thang').showModal();
 }
 
+// Tắt modal reset lại
 function closeThangModal() {
   $('#modal-thang').close();
   state.selectedLoaiIds = [];
 
-  // Vì đã chuyển từ <select> sang search input → không còn thang-nv
   const nvSelect = $('#thang-nv');
   if (nvSelect) {
     nvSelect.classList.remove('locked-select');
@@ -415,9 +388,7 @@ function closeThangModal() {
   $('#thang-nam').disabled = false;
 }
 
-/* ===========================================================
-   LƯU PHỤ CẤP
-=========================================================== */
+// LƯU PHỤ CẤP
 async function saveThang(e) {
   e.preventDefault();
   $('#thang-error').hidden = true;
@@ -460,9 +431,7 @@ async function saveThang(e) {
   }
 
   try {
-    /* ---------------------------------------------------------
-        CHẾ ĐỘ SỬA
-    --------------------------------------------------------- */
+    // CHẾ ĐỘ SỬA
     if (state.editingId) {
       const loaiId = selectedIds[0];
       const loai = state.loais.find((l) => l.id == loaiId);
@@ -492,9 +461,7 @@ async function saveThang(e) {
         body: payload,
       });
     } else {
-      /* ---------------------------------------------------------
-        CHẾ ĐỘ THÊM NHIỀU LOẠI
-    --------------------------------------------------------- */
+      // CHẾ ĐỘ THÊM NHIỀU LOẠI
       const so_tien_map = {};
       const ghi_chu_map = {};
 
@@ -529,55 +496,7 @@ async function saveThang(e) {
   }
 }
 
-/* ===========================================================
-   AUTO COPY
-=========================================================== */
-async function autoCopyLastMonth() {
-  const thang = Number($('#filter-thang').value);
-  const nam = Number($('#filter-nam').value);
-
-  if (!thang || !nam) {
-    alert('Vui lòng chọn tháng và năm!');
-    return;
-  }
-
-  const thangTruoc = thang === 1 ? 12 : thang - 1;
-  const namTruoc = thang === 1 ? nam - 1 : nam;
-
-  if (
-    !confirm(
-      `Copy phụ cấp từ tháng ${thangTruoc}/${namTruoc} sang tháng ${thang}/${nam}?\n\n⚠️ Chỉ copy phụ cấp theo tháng.`
-    )
-  ) {
-    return;
-  }
-
-  try {
-    const res = await api('/phu-cap-thang/auto-copy', {
-      method: 'POST',
-      body: { thang, nam },
-    });
-
-    // Copy OK
-    if (res.ok) {
-      alert(
-        `✔ Copy thành công ${res.copiedCount} phụ cấp từ ${res.from} → ${res.to}`
-      );
-
-      await loadThang();
-      return;
-    }
-
-    // Lỗi hợp lệ
-    alert(`⚠ ${res.error || 'Không thể copy!'}`);
-  } catch (err) {
-    alert('❌ Lỗi hệ thống!');
-  }
-}
-
-/* ===========================================================
-   XÓA
-=========================================================== */
+// XÓA
 async function deleteThang(id) {
   if (IS_MANAGER && !IS_ACCOUNTING_MANAGER) {
     const item = state.items.find((x) => x.id == id);
@@ -603,21 +522,19 @@ function setDefaultFilter() {
   if (filterNam && !filterNam.value) filterNam.value = year;
 }
 
-/* ===========================================================
-   BIND EVENTS
-=========================================================== */
+// BIND EVENTS
 function bindThangEvents() {
   const now = new Date();
-  const currentMonth = now.getMonth() + 1; // JS: 0 → Jan, 11 → Dec
+  const currentMonth = now.getMonth() + 1;
   const currentYear = now.getFullYear();
 
-  // Nếu người dùng chưa chọn → set mặc định
   if (!$('#filter-thang').value) $('#filter-thang').value = currentMonth;
   if (!$('#filter-nam').value) $('#filter-nam').value = currentYear;
 
+  //lọc
   $('#button-filter').addEventListener('click', loadThang);
 
-  // ⭐ Nút hiển thị tất cả (cố định + theo tháng)
+  // hiển thị tất cả
   $('#btn-show-all').addEventListener('click', async () => {
     const qs = new URLSearchParams();
 
@@ -629,46 +546,15 @@ function bindThangEvents() {
     if (thang) qs.append('thang', thang);
     if (nam) qs.append('nam', nam);
 
-    qs.append('mode', 'all'); // ⭐ Quan trọng — báo backend lấy cả cố định
+    qs.append('mode', 'all');
 
     const res = await api(`/phu-cap-thang?${qs.toString()}`);
     state.items = res.data ?? [];
     renderThang();
-    /* ===========================================================
-    PHÂN QUYỀN FRONTEND — ẨN NÚT / CHỨC NĂNG
-=========================================================== */
 
-    // 1️⃣ Employee → KHÔNG được thêm, KHÔNG sửa, KHÔNG xoá
-    if (IS_EMPLOYEE) {
-      const btnAdd = $('#btn-add-thang');
-      if (btnAdd) btnAdd.style.display = 'none';
-    }
-
-    // 2️⃣ Manager thường → chỉ được thêm, KHÔNG sửa, KHÔNG xoá
-    if (IS_MANAGER && !IS_ACCOUNTING_MANAGER) {
-      const btnAdd = $('#btn-add-thang');
-      if (btnAdd) btnAdd.style.display = 'inline-block'; // vẫn được thêm
-
-      // Sửa/xoá xử lý tại render table, không xử lý thêm tại đây
-    }
-
-    // 3️⃣ Manager kế toán & Admin → full quyền → không ẩn gì
-    // (Không cần code thêm)
+    //  PHÂN QUYỀN
+    applyAddButtonPermission();
   });
-
-  const thangTab = document.getElementById('thang-tab');
-  const toolbar = thangTab?.querySelector('.toolbar');
-
-  if (toolbar && !document.getElementById('btn-auto-copy')) {
-    const btnAutoCopy = document.createElement('button');
-    btnAutoCopy.id = 'btn-auto-copy';
-    btnAutoCopy.type = 'button';
-    btnAutoCopy.className = 'btn btn-warn';
-    btnAutoCopy.textContent = '📋 Copy từ tháng trước';
-    btnAutoCopy.addEventListener('click', autoCopyLastMonth);
-
-    toolbar.insertBefore(btnAutoCopy, toolbar.querySelector('#btn-add-thang'));
-  }
 
   // ===== PHÂN TRANG =====
   $('#pc-prev').addEventListener('click', () => {
@@ -686,7 +572,6 @@ function bindThangEvents() {
     }
   });
 
-  // =====================================================
   $('#btn-add-thang').addEventListener('click', () => openThangModal());
 
   $('#btn-cancel-thang').addEventListener('click', closeThangModal);
@@ -714,7 +599,7 @@ function bindThangEvents() {
     if (btn.classList.contains('btn-del')) deleteThang(id);
   });
 
-  // ⭐ Khi chọn loại → cập nhật ô nhập tiền
+  // Khi chọn loại → cập nhật ô nhập tiền
   $('#thang-loai').addEventListener('change', (e) => {
     const selectedOptions = Array.from(e.target.selectedOptions);
     const loaiIds = selectedOptions.map((opt) => Number(opt.value));
@@ -723,9 +608,7 @@ function bindThangEvents() {
   });
 }
 
-/* ===========================================================
-   INIT
-=========================================================== */
+// INIT
 async function init() {
   requireAuthOrRedirect('./dang-nhap.html');
   if (!getToken()) return;

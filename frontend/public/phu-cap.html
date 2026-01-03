@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Phụ cấp - Quản lý nhân viên</title>
 
-    <!-- CSS -->
+    <link rel="stylesheet" href="./assets/fontawesome/css/all.min.css" />
     <link rel="stylesheet" href="./assets/css/styles.css" />
     <link rel="stylesheet" href="./assets/css/phu-cap.css" />
 
@@ -51,18 +51,21 @@
       <!-- TAB MENU -->
       <div class="tab-menu">
         <button class="tab-btn active" data-tab="loai-tab">
-          📂 Loại phụ cấp
+          <i class="fa-solid fa-folder" style="color: #f6c23e"></i>
+          Loại phụ cấp
         </button>
-        <button class="tab-btn" data-tab="thang-tab">🗓️ Phụ cấp tháng</button>
+        <button class="tab-btn" data-tab="thang-tab">
+          <i class="fa-solid fa-calendar-days" style="color: #4e73df"></i>
+          Phụ cấp tháng
+        </button>
       </div>
 
-      <!-- ==================================================== -->
-      <!--  TAB 1 — LOẠI PHỤ CẤP                               -->
-      <!-- ==================================================== -->
+      <!--  TAB 1 — LOẠI PHỤ CẤP -->
       <section id="loai-tab" class="tab-content active">
         <div class="toolbar">
           <button id="btn-add-loai" class="btn btn-primary">
-            ➕ Thêm loại phụ cấp
+            <i class="fa-solid fa-plus" style="color: #1cc88a"></i>
+            Thêm loại phụ cấp
           </button>
         </div>
 
@@ -138,9 +141,7 @@
         </dialog>
       </section>
 
-      <!-- ==================================================== -->
-      <!--  TAB 2 — PHỤ CẤP THÁNG                               -->
-      <!-- ==================================================== -->
+      <!--  TAB 2 — PHỤ CẤP THÁNG  -->
       <section id="thang-tab" class="tab-content">
         <div class="toolbar">
           <select id="filter-nv">
@@ -173,10 +174,15 @@
           <button id="button-filter" class="btn">Lọc</button>
 
           <button id="btn-show-all" type="button" class="btn btn-info">
-            📌 Hiển thị tất cả
+            <i
+              class="fa-solid fa-thumbtack"
+              style="color: #e74a3b; transform: rotate(45deg)"
+            ></i>
+            Hiển thị tất cả
           </button>
           <button id="btn-add-thang" class="btn btn-primary">
-            ➕ Thêm phụ cấp tháng
+            <i class="fa-solid fa-plus" style="color: #1cc88a"></i>
+            Thêm phụ cấp tháng
           </button>
         </div>
 
@@ -206,7 +212,7 @@
           </div>
         </div>
 
-        <!-- Modal Phụ Cấp Tháng - Chỉ cần cập nhật phần này -->
+        <!-- Modal Phụ Cấp Tháng -->
         <dialog id="modal-thang">
           <form id="form-thang" class="form" method="dialog">
             <h3 id="thang-title">Thêm phụ cấp tháng</h3>
@@ -247,12 +253,13 @@
               <label for="thang-loai">Loại phụ cấp *</label>
               <select id="thang-loai" multiple required></select>
               <small
-                >💡 Ctrl+Click (Windows) hoặc Cmd+Click (Mac) để chọn nhiều
+                ><i class="fa-solid fa-lightbulb" style="color: #f6c23e"></i>
+                Ctrl+Click (Windows) hoặc Cmd+Click (Mac) để chọn nhiều
                 loại</small
               >
             </div>
 
-            <!-- ⭐ Số tiền theo từng loại phụ cấp (được sinh tự động) -->
+            <!-- Số tiền theo từng loại phụ cấp -->
             <div class="form-group">
               <label>Số tiền theo từng loại</label>
               <div id="money-container"></div>
@@ -288,7 +295,6 @@
       </div>
     </footer>
 
-    <!-- JS -->
     <script src="./assets/js/danh-sach.js"></script>
     <script type="module" src="./assets/js/phu-cap-loai.js"></script>
     <script type="module" src="./assets/js/phu-cap-thang.js"></script>

@@ -11,7 +11,7 @@ const router = Router();
 router.get(
   "/",
   requireAuth,
-  requireRole(["admin", "manager"]),
+  requireRole(["admin", "manager", "employee"]),
   requireKetoanOrAdmin,
   controller.list
 );

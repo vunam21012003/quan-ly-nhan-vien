@@ -1,8 +1,7 @@
-/* assets/css/cham-cong.css */
+/* =========================================================
+   1. TABS CHẤM CÔNG / THƯỞNG PHẠT
+   ========================================================= */
 
-/* =========================================
-   1. TABS CONTAINER
-   ========================================= */
 .cc-tabs-container {
   display: flex;
   gap: 8px;
@@ -41,12 +40,14 @@
   background: transparent;
 }
 
-/* =========================================
-   2. CONTENT & TOOLBAR
-   ========================================= */
+/* =========================================================
+   2. TAB CONTENT + HEADER
+   ========================================================= */
+
 .cc-tab-content {
   display: none;
 }
+
 .cc-tab-content.active {
   display: block;
   background: var(--card);
@@ -75,11 +76,16 @@
   padding-bottom: 16px;
   margin-bottom: 20px;
 }
+
 .cc-header-row h2 {
   margin: 0;
   font-size: 18px;
   color: var(--text);
 }
+
+/* =========================================================
+   3. TOOLBAR TAB CHẤM CÔNG
+   ========================================================= */
 
 .cc-toolbar {
   display: flex;
@@ -125,47 +131,141 @@
   outline: none;
 }
 
+/* =========================================================
+   4. BẢNG CHẤM CÔNG + PHÂN TRANG
+   ========================================================= */
+
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin-bottom: 16px;
+}
+
+/* .table, .pagination, .page-btn, .text-muted
+   đã được định nghĩa trong styles.css global, không lặp lại ở đây */
+
+/* =========================================================
+   5. BOX THƯỞNG / PHẠT
+   ========================================================= */
+
+.cc-box-highlight {
+  background: #f0fdfa;
+  padding: 16px 18px;
+  border-radius: 10px;
+  border: 1px dashed #2dd4bf;
+  margin-bottom: 24px;
+}
+
+#tp-block-nhanvien h3,
+#tp-block-phongban h3 {
+  margin: 0 0 10px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+/* Hàng ngang trong 2 box Thưởng/Phạt */
+.cc-flex-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: nowrap;
+  margin-top: 10px;
+}
+
+/* Input / select trong 2 khối Thưởng/Phạt */
+#tp-block-nhanvien input,
+#tp-block-nhanvien select,
+#tp-block-phongban input,
+#tp-block-phongban select {
+  border: 1px solid #99f6e4;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  background: #fff;
+}
+
+/* Phòng ban + loại: nhỏ gọn */
+#tp-phong-ban,
+#tp-phong-ban-A,
+#tp-loai-pb,
+#tp-loai-nv {
+  min-width: 160px;
+  max-width: 200px;
+}
+
+/* Số tiền: gọn hơn nữa */
+#tp-so-tien-nv,
+#tp-so-tien-pb {
+  min-width: 120px;
+  max-width: 150px;
+}
+
+/* Lý do: chiếm nhiều không gian hơn các field khác */
+#tp-ly-do-nv,
+#tp-ly-do-pb {
+  flex: 2;
+  min-height: 20 px;
+}
+
+/* Hàng tháng / năm + nút, đẩy nút sang phải */
+#tp-block-nhanvien .mt-2,
+#tp-block-phongban .mt-2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+#tp-thang-nv,
+#tp-thang-pb,
+#tp-nam-nv,
+#tp-nam-pb {
+  min-width: 160px;
+  max-width: 200px;
+}
+
+#btn-filter-nv,
+#btn-filter-pb {
+  margin-left: auto;
+}
+
+#btn-filter-nv,
+#btn-tp-add-nv,
+#btn-filter-pb,
+#btn-tp-add-pb,
+#btn-export-tp {
+  padding: 0 14px;
+  height: 36px;
+  white-space: nowrap;
+}
+
+/* Nút trong hàng thứ 2: vừa phải, không quá dài */
+#tp-block-nhanvien .mt-2 button,
+#tp-block-phongban .mt-2 button {
+  padding: 0 14px;
+  height: 36px;
+  white-space: nowrap;
+}
+
+/* Nút xuất Excel trong tab Thưởng/Phạt */
 .btn-success-outline {
   background: #fff;
   border: 1px solid var(--ok);
   color: var(--ok);
   font-weight: 500;
+  border-radius: 6px;
 }
 .btn-success-outline:hover {
   background: var(--ok);
   color: #fff;
 }
 
-/* =========================================
-   3. HIGHLIGHT BOX
-   ========================================= */
-.cc-box-highlight {
-  background: #f0fdfa;
-  padding: 20px;
-  border-radius: 10px;
-  border: 1px dashed #2dd4bf;
-  margin-bottom: 24px;
-}
+/* =========================================================
+   6. BẢNG BATCH (TRONG MODAL CẬP NHẬT CHẤM CÔNG)
+   ========================================================= */
 
-.cc-flex-row {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
-  margin-top: 10px;
-}
-
-.cc-box-highlight input,
-.cc-box-highlight select {
-  border: 1px solid #99f6e4;
-  height: 38px;
-  padding: 0 10px;
-  border-radius: 6px;
-}
-
-/* =========================================
-   4. BATCH TABLE
-   ========================================= */
 .batch-table {
   width: 100%;
   border-collapse: separate;
@@ -231,16 +331,17 @@
   background: #fef2f2;
 }
 
-/* =========================================
-   5. AUTOCOMPLETE DROP DOWN (FIXED POSITION)
-   ========================================= */
+/* =========================================================
+   7. AUTOCOMPLETE (DÙNG CHO TYPEAHEAD NHÂN VIÊN)
+   ========================================================= */
+
 .ac-dropdown {
-  position: fixed; /* Fixed để đè lên modal */
+  position: fixed; /* để đè lên modal */
   background: #fff;
   border: 1px solid #cbd5e1;
   max-height: 250px;
   overflow-y: auto;
-  z-index: 2147483647; /* Z-index cao nhất */
+  z-index: 2147483647;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
   border-radius: 6px;
   display: none;
@@ -268,6 +369,7 @@
   font-weight: 600;
   color: var(--text);
 }
+
 .ac-item span {
   font-size: 11px;
   color: #94a3b8;
@@ -276,38 +378,9 @@
   border-radius: 4px;
 }
 
-/* =========================================
-   6. BADGES & BUTTONS
-   ========================================= */
-.cc-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1;
-}
-.cc-badge-ok {
-  background: #dcfce7;
-  color: #166534;
-}
-.cc-badge-warn {
-  background: #fef3c7;
-  color: #b45309;
-}
-.cc-badge-err {
-  background: #fee2e2;
-  color: #991b1b;
-}
-.cc-badge-info {
-  background: #e0f2fe;
-  color: #075985;
-}
-.cc-badge-gray {
-  background: #f3f4f6;
-  color: #4b5563;
-}
+/* =========================================================
+   8. NÚT ACTION NHỎ TRONG BẢNG
+   ========================================================= */
 
 .cc-btn-action {
   width: 32px;
@@ -323,20 +396,23 @@
   color: var(--text);
   transition: all 0.2s;
 }
+
 .cc-btn-action:hover {
   background: var(--primary-light);
   border-color: var(--primary);
   color: var(--primary);
 }
+
 .cc-btn-action.del:hover {
   background: #fef2f2;
   border-color: var(--error);
   color: var(--error);
 }
 
-/* =========================================
-   7. MODAL
-   ========================================= */
+/* =========================================================
+   9. MODAL CẬP NHẬT CHẤM CÔNG
+   ========================================================= */
+
 dialog {
   border: none;
   border-radius: 12px;
@@ -344,110 +420,179 @@ dialog {
   padding: 0;
   overflow: hidden;
 }
+
 dialog::backdrop {
   background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(2px);
 }
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
 }
 
+/* =========================================================
+   10. RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 992px) {
+  /* Cho phép wrap các input trong box thưởng/phạt */
+  .cc-flex-row {
+    flex-wrap: wrap;
+  }
+
+  #tp-nv-typeahead-placeholder,
+  #tp-ly-do-nv,
+  #tp-ly-do-pb {
+    flex-basis: 100%;
+  }
+
+  #tp-block-nhanvien .mt-2,
+  #tp-block-phongban .mt-2 {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+}
+
+/* =========================================================
+   10. RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 992px) {
+  /* Cho phép wrap các input trong box thưởng/phạt */
+  .cc-flex-row {
+    flex-wrap: wrap;
+  }
+
+  #tp-nv-typeahead-placeholder,
+  #tp-ly-do-nv,
+  #tp-ly-do-pb {
+    flex-basis: 100%;
+  }
+
+  #tp-block-nhanvien .mt-2,
+  #tp-block-phongban .mt-2 {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  /* Bỏ margin-left:auto của nút lọc trên tablet trở xuống */
+  #btn-filter-nv,
+  #btn-filter-pb {
+    margin-left: 0;
+  }
+}
+
 @media (max-width: 768px) {
+  /* ========== 1. TOOLBAR CHẤM CÔNG ========== */
   .cc-toolbar {
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
   }
+
   .cc-toolbar-group,
   .cc-toolbar-actions {
     flex-direction: column;
     width: 100%;
   }
+
   .cc-toolbar input,
   .cc-toolbar select,
   .cc-toolbar button,
   .cc-toolbar label {
     width: 100%;
   }
-  .cc-flex-row {
-    flex-direction: column;
+
+  /* ========== 2. KHỐI A – THƯỞNG/PHẠT NHÂN VIÊN ========== */
+
+  /* Hàng đầu tiên: chuyển sang layout “nhiều dòng” dễ đọc */
+  #tp-block-nhanvien .cc-flex-row {
+    flex-wrap: wrap;
     align-items: stretch;
+    margin-top: 12px;
   }
-}
 
-/* =========================================
-   NEW: STYLE CHO MODAL PHÂN CÔNG LÀM BÙ
-   ========================================= */
+  /* Tìm nhân viên: full width, nằm trên cùng */
+  #tp-nv-typeahead-placeholder {
+    flex-basis: 100%;
+    width: 100%;
+  }
 
-#phanCongModal {
-  padding: 10px 30px;
-}
-#pc-search-input {
-  border: 1px solid #d1d5db;
-  transition: border-color 0.2s;
-}
-#pc-search-input:focus {
-  border-color: var(--primary);
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(39, 77, 237, 0.1);
-}
+  /* Phòng ban – Loại – Số tiền: chia 2 cột để gọn */
+  #tp-phong-ban-A,
+  #tp-loai-nv,
+  #tp-so-tien-nv {
+    flex-basis: calc(50% - 5px);
+    min-width: 0;
+  }
 
-/* Khung danh sách */
-#pc-list-wrapper {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  overflow: hidden;
-}
+  /* Lý do: full width, nằm dưới hàng trên */
+  #tp-ly-do-nv {
+    flex-basis: 100%;
+    width: 100%;
+  }
 
-/* Item nhân viên */
-.pc-item {
-  display: flex;
-  align-items: center;
-  padding: 10px 12px;
-  border-bottom: 1px solid #f3f4f6;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.pc-item:last-child {
-  border-bottom: none;
-}
-.pc-item:hover {
-  background: #eff6ff;
-}
+  /* Hàng Tháng / Năm + nút của khối A */
+  #tp-block-nhanvien .mt-2 {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+  }
 
-/* Checkbox custom size */
-input.pc-checkbox {
-  width: 18px !important;
-  height: 18px !important;
-  margin-right: 12px;
-  cursor: pointer;
-  accent-color: var(--primary);
-  flex-shrink: 0;
-}
+  /* Tháng + Năm: nằm trên 1 dòng, mỗi cái 1/2 */
+  #tp-thang-nv,
+  #tp-nam-nv {
+    flex-basis: calc(50% - 5px);
+    min-width: 0;
+  }
 
-/* Text thông tin */
-.pc-info {
-  display: flex;
-  flex-direction: column;
-}
-.pc-name {
-  font-weight: 600;
-  color: #374151;
-  font-size: 14px;
-}
-.pc-dept {
-  font-size: 12px;
-  color: #6b7280;
-  margin-top: 2px;
-}
+  /* Nút: mỗi nút 1 dòng, full width, dễ bấm */
+  #tp-block-nhanvien .mt-2 button {
+    flex-basis: 100%;
+    width: 100%;
+  }
 
-/* Scrollbar cho danh sách */
-#pc-items-container::-webkit-scrollbar {
-  width: 6px;
-}
-#pc-items-container::-webkit-scrollbar-thumb {
-  background: #ccc;
-  border-radius: 3px;
+  /* ========== 3. KHỐI B – THƯỞNG/PHẠT PHÒNG BAN ========== */
+
+  #tp-block-phongban .cc-flex-row {
+    flex-wrap: wrap;
+    align-items: stretch;
+    margin-top: 12px;
+  }
+
+  /* Phòng ban – Loại – Số tiền chia 2 cột */
+  #tp-phong-ban,
+  #tp-loai-pb,
+  #tp-so-tien-pb {
+    flex-basis: calc(50% - 5px);
+    min-width: 0;
+  }
+
+  /* Lý do: full width */
+  #tp-ly-do-pb {
+    flex-basis: 100%;
+    width: 100%;
+  }
+
+  /* Hàng Tháng / Năm + nút của khối B */
+  #tp-block-phongban .mt-2 {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  #tp-thang-pb,
+  #tp-nam-pb {
+    flex-basis: calc(50% - 5px);
+    min-width: 0;
+  }
+
+  #tp-block-phongban .mt-2 button {
+    flex-basis: 100%;
+    width: 100%;
+  }
 }

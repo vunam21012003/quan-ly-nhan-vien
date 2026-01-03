@@ -1,5 +1,16 @@
 /* src/views/assets/css/phong-ban.css */
 
+.page-title {
+  margin-top: 20px;
+}
+
+.container {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0 20px;
+}
+
 /* 1. Thiết lập cho Mobile */
 @media (max-width: 600px) {
   /* Ẩn bớt cột trong bảng để tránh tràn */

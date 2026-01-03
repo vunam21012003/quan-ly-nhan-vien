@@ -7,13 +7,7 @@ import { layPhamViNguoiDung } from "../utils/pham-vi-nguoi-dung";
    LẤY DANH SÁCH PHỤ CẤP
 ============================================ */
 export const list = async (query: any) => {
-  const {
-    __phamvi, // ⭐ ĐÃ NHẬN TỪ CONTROLLER
-    thang: qThang,
-    nam: qNam,
-    nhan_vien_id: qNv,
-    mode: qMode,
-  } = query;
+  const { __phamvi, thang: qThang, nam: qNam, nhan_vien_id: qNv, mode: qMode } = query;
 
   const thang = Number(qThang);
   const nam = Number(qNam);
@@ -24,40 +18,35 @@ export const list = async (query: any) => {
   const params: any[] = [];
 
   /* ============================================================
-       ⭐⭐  PHÂN QUYỀN XEM DANH SÁCH  ⭐⭐
+               PHÂN QUYỀN XEM DANH SÁCH  
      ============================================================ */
   if (__phamvi) {
     const role = __phamvi.role;
-    const employeeId = __phamvi.employeeId ?? __phamvi.employee_id; // <-- thêm dòng này
+    const employeeId = __phamvi.employeeId ?? __phamvi.employee_id;
     const managedDepartmentIds = __phamvi.managedDepartmentIds || [];
     const isAccountingManager = __phamvi.isAccountingManager === true;
 
-    // 🔥 Employee → chỉ xem chính mình
+    // Employee → chỉ xem chính mình
     if (role === "employee") {
       where += " AND pct.nhan_vien_id = ?";
       params.push(employeeId);
     }
 
-    // 🔥 Manager thường → chỉ xem nhân viên thuộc phòng ban mình quản lý
+    // Manager thường → chỉ xem nhân viên thuộc phòng ban mình quản lý
     else if (role === "manager" && !isAccountingManager) {
       if (managedDepartmentIds.length > 0) {
         const placeholders = managedDepartmentIds.map(() => "?").join(",");
         where += ` AND nv.phong_ban_id IN (${placeholders})`;
         params.push(...managedDepartmentIds);
       } else {
-        // ❌ Manager không quản lý phòng ban nào → không được thấy ai
+        // Manager không quản lý phòng ban nào → không được thấy ai
         where += " AND 1=0";
       }
     }
-
-    // 🔥 Manager kế toán → xem tất cả
-    // Không giới hạn
-
-    // 🔥 Admin → xem tất cả
   }
 
   /* ============================================================
-       ⭐⭐  LỌC THEO NHÂN VIÊN (NẾU USER CHỌN)
+            LỌC THEO NHÂN VIÊN
      ============================================================ */
   if (!isNaN(nv) && nv) {
     where += " AND pct.nhan_vien_id = ?";
@@ -65,9 +54,12 @@ export const list = async (query: any) => {
   }
 
   /* ============================================================
-       ⭐⭐  MODE NORMAL / ALL
+            MODE NORMAL (MỚI SỬA) / ALL
      ============================================================ */
   if (mode === "normal") {
+    // Chế độ thường -> CHỈ LẤY phụ cấp theo tháng (ẩn cố định)
+    where += " AND pc.is_fixed = 0 ";
+
     if (!isNaN(thang) && thang) {
       where += " AND pct.thang = ?";
       params.push(thang);
@@ -77,19 +69,22 @@ export const list = async (query: any) => {
       params.push(nam);
     }
   } else if (mode === "all") {
-    // Lấy: cố định + đúng tháng/năm
+    //  Lấy Cố định HOẶC (Theo tháng & đúng thời gian)
     where += " AND ( pc.is_fixed = 1 ";
 
     if (!isNaN(thang) && thang && !isNaN(nam) && nam) {
       where += " OR (pc.is_fixed = 0 AND pct.thang = ? AND pct.nam = ?) ";
       params.push(thang, nam);
+    } else {
+      // Nếu không lọc tháng/năm mà chọn All -> Lấy tất cả (bao gồm cả tháng cũ)
+      where += " OR pc.is_fixed = 0 ";
     }
 
     where += ")";
   }
 
   /* ============================================================
-       ⭐⭐  QUERY CUỐI CÙNG
+            QUERY CUỐI CÙNG
      ============================================================ */
   const [rows] = await pool.query(
     `
@@ -315,77 +310,3 @@ export const remove = async (id: number, req: any) => {
   await pool.query("DELETE FROM phu_cap_chi_tiet WHERE id=?", [id]);
   return { ok: true };
 };
-
-// /* ============================================
-//    AUTO COPY TỪ THÁNG TRƯỚC —— (ĐÃ FIX CHUẨN)
-// ============================================ */
-// export const autoCopyFromLastMonth = async (thang: number, nam: number) => {
-//   if (!thang || !nam) {
-//     return { ok: false, error: "Cần tháng và năm!", copiedCount: 0 };
-//   }
-
-//   // Tính tháng trước
-//   let thangTruoc = thang - 1;
-//   let namTruoc = nam;
-//   if (thangTruoc < 1) {
-//     thangTruoc = 12;
-//     namTruoc -= 1;
-//   }
-
-//   // Lấy phụ cấp theo tháng của tháng trước
-//   const [prevRecords]: any = await pool.query(
-//     `
-//       SELECT pct.*, pc.is_fixed
-//       FROM phu_cap_chi_tiet pct
-//       JOIN phu_cap_loai pc ON pc.id = pct.loai_id
-//       WHERE pct.thang = ? AND pct.nam = ? AND pc.is_fixed = 0
-//     `,
-//     [thangTruoc, namTruoc]
-//   );
-
-//   if (!prevRecords || prevRecords.length === 0) {
-//     return {
-//       ok: false,
-//       error: `Không có phụ cấp theo tháng ở ${thangTruoc}/${namTruoc}!`,
-//       copiedCount: 0,
-//     };
-//   }
-
-//   let copiedCount = 0;
-
-//   for (const r of prevRecords) {
-//     // Kiểm tra xem record (nhan_vien_id + loai_id) đã tồn tại trong tháng hiện tại chưa
-//     const [exists]: any = await pool.query(
-//       `
-//         SELECT id FROM phu_cap_chi_tiet
-//         WHERE nhan_vien_id = ? AND loai_id = ? AND thang = ? AND nam = ?
-//         LIMIT 1
-//       `,
-//       [r.nhan_vien_id, r.loai_id, thang, nam]
-//     );
-
-//     if (exists.length > 0) {
-//       // Bỏ qua nếu đã có
-//       continue;
-//     }
-
-//     // Sao chép bản ghi chưa tồn tại
-//     await pool.query(
-//       `
-//         INSERT INTO phu_cap_chi_tiet
-//         (nhan_vien_id, hop_dong_id, loai_id, thang, nam, so_tien, ghi_chu)
-//         VALUES (?, ?, ?, ?, ?, ?, ?)
-//       `,
-//       [r.nhan_vien_id, r.hop_dong_id, r.loai_id, thang, nam, r.so_tien, r.ghi_chu]
-//     );
-
-//     copiedCount++;
-//   }
-
-//   return {
-//     ok: true,
-//     copiedCount,
-//     from: `${thangTruoc}/${namTruoc}`,
-//     to: `${thang}/${nam}`,
-//   };
-// };

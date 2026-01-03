@@ -1,3 +1,4 @@
+//phong-ban.js
 import {
   api,
   getUser,
@@ -69,15 +70,14 @@ function rowHtml(x) {
   const actionButtons = st.IS_ADMIN
     ? `<td>
           <button class="page-btn" data-act="edit" data-id="${x.id}">Sửa</button>
-          <button class="page-btn" data-act="del"  data-id="${x.id}">Xoá</button>
+          <button class="page-btn" data-act="del" data-id="${x.id}">Xoá</button>
       </td>`
-    : `<td>—</td>`; // Nếu không phải Admin thì ẩn nút thao tác
-
+    : `<td></td>`;
   return `<tr>
         <td>${esc(x.id)}</td>
         <td>${esc(x.ten_phong_ban)}</td>
         <td>${esc(x.mo_ta || '')}</td>
-        <td>${esc(x.manager_name || '')}</td>
+        <th>${esc(x.manager_name) || ''}</th>
         ${actionButtons}
     </tr>`;
 }
@@ -137,14 +137,22 @@ async function fetchList() {
   renderPagination();
 }
 
-async function loadManagers() {
-  const res = await api('/nhan-vien?limit=500').catch(() => ({ data: [] }));
+async function loadManagers(phongBanId) {
+  const qs = phongBanId
+    ? `?phong_ban_id=${encodeURIComponent(phongBanId)}`
+    : '';
+  const res = await api(`/tai-khoan/for-manager-select${qs}`).catch(() => ({
+    data: [],
+  }));
   const { items } = unwrap(res);
   st.managers = items;
+
   const list = document.getElementById('pb-manager-list');
-  list.innerHTML = items
-    .map((x) => `<option value="${esc(x.id)} - ${esc(x.ho_ten)}">`)
-    .join('');
+  list.innerHTML =
+    '<option value=""></option>' +
+    items
+      .map((x) => `<option value="${esc(x.tai_khoan_id)} - ${esc(x.ho_ten)}">`)
+      .join('');
 }
 
 // Ngăn chặn mở Modal nếu không phải Admin
@@ -159,14 +167,19 @@ function openModal(edit = null) {
   $('#pb-mo_ta').value = edit?.mo_ta ?? '';
   $('#pb-error').hidden = true;
 
-  if (edit?.manager_taikhoan_id) {
-    const manager = st.managers.find(
-      (m) => String(m.id) === String(edit.manager_taikhoan_id)
-    );
-    $('#pb-manager').value = manager ? `${manager.id} - ${manager.ho_ten}` : '';
-  } else {
-    $('#pb-manager').value = '';
-  }
+  // Load danh sách nhân viên thuộc phòng ban này
+  loadManagers(edit?.id).then(() => {
+    if (edit?.manager_taikhoan_id) {
+      const manager = st.managers.find(
+        (m) => String(m.tai_khoan_id) === String(edit.manager_taikhoan_id)
+      );
+      $('#pb-manager').value = manager
+        ? `${manager.tai_khoan_id} - ${manager.ho_ten}`
+        : '';
+    } else {
+      $('#pb-manager').value = '';
+    }
+  });
 
   $('#pb-modal').showModal();
 }
@@ -197,7 +210,12 @@ async function onSave(e) {
     // Ép kiểu ID thành số (manager_taikhoan_id)
     manager_taikhoan_id: idStr && !isNaN(Number(idStr)) ? Number(idStr) : null,
   };
-  if (!payload.ten) {
+
+  //-------------------------------------------------------
+  console.log('Gửi payload tạo/cập nhật phòng ban:', payload);
+  //--------------------------------------------------------
+
+  if (!payload.ten_phong_ban) {
     showErr('Vui lòng nhập tên');
     return;
   }
@@ -246,9 +264,17 @@ function bind() {
     if (act === 'edit') openModal(row);
 
     if (act === 'del') {
-      if (!confirm(`Xoá phòng ban #${id}?`)) return;
+      const departmentId = Number(id);
+
+      if (isNaN(departmentId) || departmentId <= 0) {
+        // Thay đổi: In ra id gốc để dễ debug (chuỗi rỗng) và departmentId (số 0)
+        console.error('Lỗi ID:', id, '-> departmentId:', departmentId);
+        alert(`Lỗi: ID phòng ban không hợp lệ. ID nhận được: ${id}.`);
+        return;
+      }
+      if (!confirm(`Xoá phòng ban #${departmentId}?`)) return;
       try {
-        await api(`/phong-ban/${id}`, { method: 'DELETE' });
+        await api(`/phong-ban/${departmentId}`, { method: 'DELETE' });
         await fetchList();
       } catch (err) {
         alert(err?.message || 'Không thể xoá');
@@ -256,7 +282,7 @@ function bind() {
     }
   });
 
-  // ✅ Đăng xuất
+  // Đăng xuất
   $('#logout-btn').addEventListener('click', () => {
     clearAuth();
     location.href = './dang-nhap.html';

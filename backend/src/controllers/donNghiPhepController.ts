@@ -1,3 +1,4 @@
+// src/controllers/donNghiPhepController.ts
 import { Request, Response } from "express";
 import * as service from "../services/donNghiPhepService";
 
@@ -40,11 +41,11 @@ export const getAll = async (req: Request, res: Response) => {
     }
 
     const { role, managedDepartmentIds, employeeId } = req.phamvi;
-    const safeUserId = employeeId ?? 0;
+    const nhanVienIdCurrent = employeeId ?? 0;
 
-    const filters: { trang_thai?: string; year?: number } = {};
+    const filters: { trang_thai?: string; year?: number; month?: number } = {};
 
-    if (typeof req.query.trang_thai === "string") {
+    if (typeof req.query.trang_thai === "string" && req.query.trang_thai) {
       filters.trang_thai = req.query.trang_thai;
     }
 
@@ -52,7 +53,16 @@ export const getAll = async (req: Request, res: Response) => {
       filters.year = Number(req.query.year);
     }
 
-    const list = await service.getListDonNghi(safeUserId, role, managedDepartmentIds, filters);
+    if (req.query.month) {
+      filters.month = Number(req.query.month);
+    }
+
+    const list = await service.getListDonNghi(
+      nhanVienIdCurrent,
+      role,
+      managedDepartmentIds,
+      filters
+    );
 
     res.json(list);
   } catch (error: any) {
@@ -67,15 +77,15 @@ export const getAll = async (req: Request, res: Response) => {
 export const approve = async (req: Request, res: Response) => {
   try {
     const donId = Number(req.params.id);
-    const managerId = getEmployeeIdFromUser(req);
+    const managerNhanVienId = getEmployeeIdFromUser(req);
 
-    if (!managerId) {
+    if (!managerNhanVienId) {
       return res
         .status(400)
         .json({ message: "Lỗi xác thực người duyệt (Không tìm thấy ID nhân viên)." });
     }
 
-    await service.approveDonNghi(donId, managerId);
+    await service.approveDonNghi(donId, managerNhanVienId);
     res.json({ message: "Đã duyệt đơn và cập nhật chấm công thành công." });
   } catch (error: any) {
     console.error("[DonNghiPhep] Approve Error:", error);
@@ -89,14 +99,14 @@ export const approve = async (req: Request, res: Response) => {
 export const reject = async (req: Request, res: Response) => {
   try {
     const donId = Number(req.params.id);
-    const managerId = getEmployeeIdFromUser(req);
+    const managerNhanVienId = getEmployeeIdFromUser(req);
     const { ly_do_tu_choi } = req.body;
 
-    if (!managerId) {
+    if (!managerNhanVienId) {
       return res.status(400).json({ message: "Lỗi xác thực người duyệt." });
     }
 
-    await service.rejectDonNghi(donId, managerId, ly_do_tu_choi || "Không có lý do");
+    await service.rejectDonNghi(donId, managerNhanVienId, ly_do_tu_choi || "Không có lý do");
     res.json({ message: "Đã từ chối đơn nghỉ." });
   } catch (error: any) {
     console.error("[DonNghiPhep] Reject Error:", error);
@@ -119,9 +129,9 @@ export const cancel = async (req: Request, res: Response) => {
     const success = await service.cancelDonNghi(donId, nhanVienId);
 
     if (!success) {
-      return res
-        .status(400)
-        .json({ message: "Không thể hủy đơn này (Đơn đã được duyệt/từ chối hoặc không tồn tại)." });
+      return res.status(400).json({
+        message: "Không thể hủy đơn này (Đơn đã được duyệt/từ chối hoặc không tồn tại).",
+      });
     }
 
     res.json({ message: "Đã hủy đơn thành công." });

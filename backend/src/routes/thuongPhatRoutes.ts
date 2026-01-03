@@ -5,6 +5,7 @@ import * as controller from "../controllers/thuongPhatController";
 
 const router = Router();
 
+router.get("/export-excel", requireAuth, requireRole(["admin", "manager"]), controller.exportExcel);
 router.get("/", requireAuth, requireRole(["admin", "manager", "employee"]), controller.list);
 router.get("/:id", requireAuth, requireRole(["admin", "manager", "employee"]), controller.detail);
 router.post("/", requireAuth, requireRole(["admin", "manager"]), controller.create);

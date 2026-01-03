@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Nhân viên - Quản lý nhân viên</title>
+
+    <link rel="stylesheet" href="./assets/fontawesome/css/all.min.css" />
     <link rel="stylesheet" href="./assets/css/styles.css" />
     <link rel="stylesheet" href="./assets/css/nhan-vien.css" />
   </head>
@@ -95,6 +97,25 @@
               </svg>
               Thêm mới
             </button>
+            <button
+              id="nv-btn-export"
+              class="btn btn-secondary btn-icon"
+              title="Xuất Excel"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Xuất Excel
+            </button>
           </div>
         </div>
       </div>
@@ -140,6 +161,15 @@
 
     <!-- Modal Styled -->
     <dialog id="nv-modal">
+      <div id="nv-overview-panel" class="nv-overview-panel">
+        <div class="nv-overview-header">
+          <span id="nv-overview-title">Tổng quan nhân viên</span>
+          <button id="nv-overview-close" class="btn-icon-only">x</button>
+        </div>
+        <div class="nv-overview-body">
+          <div id="nv-overview-content" class="nv-overview-content"></div>
+        </div>
+      </div>
       <form id="nv-form" method="" class="form">
         <div class="modal-header">
           <h3 id="nv-modal-title">Thêm nhân viên</h3>
@@ -148,7 +178,7 @@
           </p>
         </div>
 
-        <div class="modal-body-grid">
+        <div id="nv-form-body" class="modal-body-grid">
           <!-- Cột 1: Avatar & Thông tin cơ bản -->
           <div class="grid-col-left">
             <div class="avatar-upload-wrapper">
@@ -279,8 +309,75 @@
                 placeholder="Ghi chú thêm..."
               ></textarea>
             </div>
+            <div
+              id="nv-account-block"
+              class="account-block"
+              style="display: none; margin-top: 20px"
+            >
+              <div class="divider"><span>Thông tin tài khoản</span></div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Tên đăng nhập</label>
+                  <input id="nv-tk-username" readonly />
+                </div>
+              </div>
+
+              <div id="nv-password-section" style="display: none">
+                <div class="form-group">
+                  <label>Mật khẩu cũ</label>
+                  <input
+                    id="nv-old-pass"
+                    type="password"
+                    placeholder="Nhập mật khẩu hiện tại"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label>Mật khẩu mới</label>
+                  <input
+                    id="nv-new-pass"
+                    type="password"
+                    placeholder="Nhập mật khẩu mới"
+                  />
+                </div>
+
+                <button
+                  id="nv-btn-change-pass"
+                  type="button"
+                  class="btn btn-primary"
+                  style="margin-top: 8px"
+                >
+                  Đổi mật khẩu
+                </button>
+              </div>
+
+              <div
+                id="nv-pass-msg"
+                class="text-warn"
+                style="margin-top: 6px"
+              ></div>
+            </div>
 
             <div class="alert alert-error" id="nv-error" hidden></div>
+          </div>
+        </div>
+
+        <div
+          id="nv-overview-body"
+          class="modal-body-grid"
+          style="display: none"
+        >
+          <div class="grid-col-right" style="width: 100%">
+            <div class="divider">
+              <span>Tổng quan nhân viên</span>
+            </div>
+            <div
+              id="nv-overview-content-inside"
+              class="nv-overview-content-inside"
+            >
+              <!-- nội dung tổng quan -->
+            </div>
           </div>
         </div>
 
@@ -308,6 +405,14 @@
           </button>
         </div>
       </form>
+      <button
+        id="nv-overview-toggle"
+        class="nv-overview-toggle"
+        type="button"
+        style="display: none"
+      >
+        &raquo;
+      </button>
     </dialog>
 
     <footer class="footer">

@@ -46,14 +46,14 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
 }
 
 // ============================================================
-// 🔥 CHỈ ADMIN HOẶC MANAGER KẾ TOÁN (phòng Kế toán)
+// CHỈ ADMIN HOẶC MANAGER KẾ TOÁN (phòng Kế toán)
 // Dùng cho: tính lương
 // ============================================================
 export async function requireKetoanOrAdmin(req: Request, res: Response, next: NextFunction) {
   try {
     let phamvi = (req as any).phamvi;
 
-    // ⭐ Nếu chưa có phạm vi → Tự lấy
+    // Nếu chưa có phạm vi → Tự lấy
     if (!phamvi) {
       phamvi = await layPhamViNguoiDung(req);
       (req as any).phamvi = phamvi; // giữ nguyên logic cũ
@@ -61,13 +61,13 @@ export async function requireKetoanOrAdmin(req: Request, res: Response, next: Ne
 
     if (!phamvi) return res.status(401).json({ error: "Unauthorized" });
 
-    // ⭐ Admin có full quyền
+    // Admin có full quyền
     if (phamvi.role === "admin") return next();
 
-    // ⭐ Manager kế toán (Kế toán trưởng)
+    // Manager kế toán (Kế toán trưởng)
     if (phamvi.role === "manager" && phamvi.isAccountingManager) return next();
 
-    // ❌ Các role còn lại
+    // Các role còn lại
     return res.status(403).json({
       error: "Chỉ admin hoặc quản lý phòng kế toán được phép thực hiện",
     });
@@ -81,14 +81,24 @@ export function requireRole(roles: Array<"admin" | "manager" | "employee">) {
   return async (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) return res.status(401).json({ error: "Unauthorized" });
 
-    const phamvi = await layPhamViNguoiDung(req);
+    try {
+      const phamvi = await layPhamViNguoiDung(req);
 
-    if (!roles.includes(phamvi.role)) {
-      return res.status(403).json({ error: "Forbidden" });
+      if (!roles.includes(phamvi.role)) {
+        return res.status(403).json({
+          error: "Forbidden",
+          message: `Bạn cần role: ${roles.join(", ")}. Hiện tại: ${phamvi.role}`,
+          currentRole: phamvi.role,
+          requiredRoles: roles,
+        });
+      }
+
+      (req as any).phamvi = phamvi;
+      next();
+    } catch (err) {
+      console.error("requireRole error:", err);
+      return res.status(500).json({ error: "Server error" });
     }
-
-    (req as any).phamvi = phamvi;
-    next();
   };
 }
 

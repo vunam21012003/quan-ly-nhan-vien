@@ -4,7 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Quản lý Nghỉ phép</title>
-    <!-- Custom CSS -->
+
+    <link rel="stylesheet" href="./assets/fontawesome/css/all.min.css" />
     <link rel="stylesheet" href="./assets/css/styles.css" />
     <link rel="stylesheet" href="./assets/css/quan-ly-nghi-phep.css" />
   </head>
@@ -13,7 +14,10 @@
 
     <div class="container">
       <div class="header-flex">
-        <h2>📋 Quản lý Nghỉ phép</h2>
+        <h2>
+          <i class="fa-solid fa-clipboard" style="color: #858796"></i> Quản lý
+          Nghỉ phép
+        </h2>
         <button class="btn btn-primary" onclick="openModal('modalTaoDon')">
           <i class="fa-solid fa-plus"></i> Tạo đơn xin nghỉ
         </button>
@@ -79,7 +83,10 @@
     <div id="modalTaoDon" class="modal">
       <div class="modal-content">
         <div class="modal-header">
-          <h3>📝 Đơn xin nghỉ phép</h3>
+          <h3>
+            <i class="fa-solid fa-pen-to-square" style="color: #f6c23e"></i> Đơn
+            xin nghỉ phép
+          </h3>
           <button class="close-btn" onclick="closeModal('modalTaoDon')">
             &times;
           </button>

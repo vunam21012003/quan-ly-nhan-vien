@@ -18,6 +18,7 @@
   letter-spacing: -0.5px;
 }
 
+/* Toolbar chung (ngoài tab) */
 .toolbar {
   margin-bottom: 20px;
   padding: 16px;
@@ -45,7 +46,7 @@
 .toolbar input:focus,
 .toolbar select:focus {
   outline: none;
-  border-color: #007bff;
+  border-color: #4e8ed2;
   box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
 }
 
@@ -112,7 +113,10 @@
   padding: 16px;
 }
 
-/* ===== Modal ===== */
+/* ===========================
+   MODAL CHUNG (dialog)
+   =========================== */
+
 dialog {
   border: none;
   border-radius: 16px;
@@ -120,11 +124,13 @@ dialog {
   width: 520px;
   max-width: 90vw;
   max-height: 90vh;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+  background: #ffffff;
+  overflow: hidden;
 }
 
 dialog::backdrop {
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(4px);
 }
 
@@ -188,7 +194,7 @@ dialog::backdrop {
   box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
 }
 
-/* 🔥 Style cho multiple select */
+/* multiple select */
 .form-group select[multiple] {
   min-height: 140px;
   padding: 10px 12px;
@@ -234,6 +240,10 @@ dialog::backdrop {
   margin-bottom: 16px;
 }
 
+/* ===========================
+   BUTTONS
+   =========================== */
+
 .btn {
   padding: 10px 20px;
   border-radius: 8px;
@@ -259,15 +269,15 @@ dialog::backdrop {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  background: linear-gradient(135deg, #007bff 0%, #8fc3fa 100%);
   color: #fff;
-  border-color: #0056b3;
-  box-shadow: 0 2px 6px rgba(0, 123, 255, 0.2);
+  border-color: #005cbe;
+  box-shadow: 0 2px 6px rgba(137, 191, 249, 0.2);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
-  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+  background: linear-gradient(135deg, #3798ff 0%, #005cbe 100%);
+  box-shadow: 0 4px 12px rgba(60, 154, 254, 0.3);
 }
 
 .btn-warn {
@@ -311,7 +321,7 @@ dialog::backdrop {
 }
 
 .btn-del {
-  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  background: linear-gradient(135deg, #e47759 0%, #d23722 100%);
   color: white;
   border-color: #c82333;
 }
@@ -334,7 +344,7 @@ dialog::backdrop {
   font-style: italic;
 }
 
-/* Tab menu styling */
+/* Tab menu */
 .tab-menu {
   display: flex;
   gap: 8px;
@@ -390,6 +400,7 @@ dialog::backdrop {
   }
 }
 
+/* NV search popup */
 .nv-search-box {
   position: relative;
 }
@@ -417,7 +428,7 @@ dialog::backdrop {
   background: #f0f0f0;
 }
 
-/* Khóa nhưng vẫn hiển thị text đầy đủ */
+/* Khóa select */
 select.locked-select {
   background: #f3f4f6 !important;
   color: #1f2937 !important;
@@ -425,7 +436,6 @@ select.locked-select {
   cursor: not-allowed;
 }
 
-/* Fix hiển thị option khi select bị khóa */
 select.locked-select option,
 #thang-nv option {
   display: block !important;
@@ -435,13 +445,182 @@ select.locked-select option,
   min-height: 24px !important;
 }
 
-/* OVERWRITE rule mạnh hơn */
 .form-group select.locked-select:not([multiple]) {
   color: #1f2937 !important;
-  -webkit-text-fill-color: #1f2937 !important; /* ⬅ THÊM DÒNG CỰC QUAN TRỌNG */
+  -webkit-text-fill-color: #1f2937 !important;
 }
 
-/* Responsive */
+/* ===========================
+   MODAL LOẠI PHỤ CẤP ( #modal-loai )
+   =========================== */
+
+#modal-loai {
+  width: 420px;
+  max-width: 95vw;
+  max-height: 90vh;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.35);
+  background: #ffffff;
+  padding: 0;
+  overflow: hidden;
+}
+
+#modal-loai::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+}
+
+#modal-loai .form {
+  padding: 20px 22px 16px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+#modal-loai .form h3 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+#modal-loai .form-group {
+  margin-bottom: 14px;
+}
+
+#modal-loai .form-group label {
+  font-size: 13px;
+  color: #374151;
+  margin-bottom: 5px;
+}
+
+#modal-loai .form-group input,
+#modal-loai .form-group select,
+#modal-loai .form-group textarea {
+  padding: 8px 11px;
+  border-radius: 8px;
+  border: 1px solid #d1d9e3;
+  font-size: 13px;
+}
+
+#modal-loai .form-group textarea {
+  min-height: 70px;
+  resize: vertical;
+}
+
+#modal-loai #loai-mac-dinh {
+  max-width: 220px;
+}
+
+/* Checkbox "Tính BHXH" */
+#modal-loai .form-group label[style*='display: flex'] {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-weight: 600;
+  color: #374151;
+  font-size: 13px;
+}
+
+#modal-loai #loai-tinh-bhxh {
+  width: 16px;
+  height: 16px;
+}
+
+/* Alert lỗi trong modal loai */
+#modal-loai #loai-error {
+  margin-top: 4px;
+  margin-bottom: 10px;
+}
+
+/* Hàng nút Hủy / Lưu */
+#modal-loai div[style*='justify-content: flex-end'] {
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+  margin-top: 8px;
+}
+
+#modal-loai .btn {
+  padding: 8px 16px;
+  font-size: 13px;
+}
+
+/* ===========================
+   TOOLBAR RIÊNG CHO TAB THÁNG
+   =========================== */
+
+#thang-tab .toolbar {
+  /* giữ khung nền của .toolbar, chỉ tinh chỉnh flex */
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Input + select trong toolbar tab tháng */
+#thang-tab .toolbar select,
+#thang-tab .toolbar input[type='number'] {
+  height: 38px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #d1d9e3;
+  background: #ffffff;
+  font-size: 14px;
+  color: #1a2332;
+}
+
+/* Chiều rộng từng field cho gọn, trên 1 dòng */
+#filter-nv {
+  min-width: 200px;
+  max-width: 260px;
+}
+
+#filter-thang {
+  min-width: 200px;
+  max-width: 260px;
+}
+
+#filter-nam {
+  min-width: 200px;
+  max-width: 260px;
+}
+
+/* Nút trong toolbar tab tháng */
+#thang-tab .toolbar .btn {
+  height: 38px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+/* btn-info riêng nếu có */
+#thang-tab .toolbar .btn.btn-info {
+  background: #f9fdff;
+  border-color: #0dcaf0;
+  color: #0c5460;
+}
+
+/* Responsive: mobile cho full hàng */
+@media (max-width: 768px) {
+  #thang-tab .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #thang-tab .toolbar select,
+  #thang-tab .toolbar input[type='number'],
+  #thang-tab .toolbar .btn {
+    width: 100%;
+  }
+}
+
+/* ===========================
+   RESPONSIVE CHUNG
+   =========================== */
+
 @media (max-width: 768px) {
   .page-title {
     font-size: 24px;
@@ -463,5 +642,23 @@ select.locked-select option,
 
   .form {
     padding: 20px;
+  }
+
+  #modal-loai {
+    width: 95vw;
+  }
+
+  #modal-loai .form {
+    padding: 16px 14px 12px;
+  }
+
+  #modal-loai div[style*='justify-content: flex-end'] {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  #modal-loai .btn {
+    width: 100%;
+    justify-content: center;
   }
 }

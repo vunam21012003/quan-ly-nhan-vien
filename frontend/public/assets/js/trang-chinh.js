@@ -15,33 +15,71 @@ function getCurrentRole() {
 // ========= ẨN / HIỆN BLOCK THEO data-role =========
 function applyRoleVisibility(role) {
   $$('[data-role]').forEach((el) => {
-    const attr = el.getAttribute('data-role');
-    if (!attr) return;
+    const need = el.getAttribute('data-role');
+    if (!need) return;
 
-    if (attr === 'staff') {
-      el.hidden = false;
-      return;
-    }
-
-    const roles = attr
+    const roleList = need
       .split(',')
       .map((r) => r.trim())
       .filter(Boolean);
 
-    el.hidden = !roles.includes(role);
+    // Hiện nếu data-role chứa 'all' hoặc chứa đúng role hiện tại
+    el.hidden = !(roleList.includes('all') || roleList.includes(role));
   });
 }
 
-// ========= RENDER KPI CHUNG =========
-function renderKPIs(staff) {
-  $('#kpi-total') &&
-    ($('#kpi-total').textContent = (staff?.total ?? 0).toString());
-  $('#kpi-present') &&
-    ($('#kpi-present').textContent = (staff?.present ?? 0).toString());
-  $('#kpi-absent') &&
-    ($('#kpi-absent').textContent = (staff?.absent ?? 0).toString());
-  $('#kpi-unlawful') &&
-    ($('#kpi-unlawful').textContent = (staff?.unlawful ?? 0).toString());
+// ========= RENDER CẢNH BÁO =========
+function renderAlerts(alerts) {
+  const box = $('#alertSection');
+  if (!box) return;
+
+  // Nếu phần tử chỉ dành cho admin nhưng user hiện tại không phải admin thì ẩn luôn
+  const role = getCurrentRole();
+  const need = box.getAttribute('data-role') || '';
+  const roleList = need
+    .split(',')
+    .map((r) => r.trim())
+    .filter(Boolean);
+
+  if (!(roleList.includes('all') || roleList.includes(role))) {
+    box.style.display = 'none';
+    return;
+  }
+
+  if (!alerts || alerts.length === 0) {
+    box.style.display = 'none';
+    return;
+  }
+
+  box.style.display = 'block';
+  box.innerHTML = alerts
+    .map(
+      (a) =>
+        `<div style="margin-bottom:6px"><span class="warning-icon"></span> ${a}</div>`
+    )
+    .join('');
+}
+
+// ========= KPI EMPLOYEE =========
+function renderKPIEmployee(data) {
+  $('#emp-hours').textContent = (data?.hours ?? '--') + ' giờ';
+  $('#emp-days').textContent = data?.days ?? '--';
+  $('#emp-late').textContent = data?.late ?? '--';
+  $('#emp-leave').textContent = data?.leave ?? '--';
+}
+
+// ========= KPI MANAGER =========
+function renderKPImanager(data) {
+  $('#mgr-pending-leave').textContent = data?.pending_leave ?? '--';
+  $('#mgr-ot').textContent = (data?.ot ?? '--') + ' giờ';
+}
+
+// ========= KPI ADMIN =========
+function renderKPIAdmin(data) {
+  $('#adm-total').textContent = data?.total ?? '--';
+
+  const salary = Number(data?.salary || 0);
+  $('#adm-salary').textContent = salary.toLocaleString('vi-VN') + ' đ';
 }
 
 // ========= BIỂU ĐỒ LƯƠNG THEO PHÒNG BAN =========
@@ -53,8 +91,7 @@ function renderSalaryChart(salary) {
 
   const list = salary?.by_department || [];
   if (!list.length) {
-    container.innerHTML =
-      '<p class="text-muted">Chưa có dữ liệu lương tháng trước.</p>';
+    container.innerHTML = '<p class="text-muted">Chưa có dữ liệu lương.</p>';
     return;
   }
 
@@ -64,35 +101,19 @@ function renderSalaryChart(salary) {
     const total = Number(d.total_salary || 0);
     const height = (total / max) * 100;
 
-    // Format số tiền thành tỷ hoặc triệu
     let displayValue = '';
-    if (total >= 1000000000) {
-      displayValue = (total / 1000000000).toFixed(1) + 'B';
-    } else if (total >= 1000000) {
-      displayValue = (total / 1000000).toFixed(0) + 'M';
-    } else {
-      displayValue = total.toLocaleString('vi-VN');
-    }
+    if (total >= 1_000_000_000) displayValue = (total / 1e9).toFixed(1) + 'B';
+    else if (total >= 1_000_000) displayValue = (total / 1e6).toFixed(0) + 'M';
+    else displayValue = total.toLocaleString('vi-VN');
 
     const bar = document.createElement('div');
     bar.className = 'salary-bar';
 
-    const valueEl = document.createElement('div');
-    valueEl.className = 'salary-value';
-    valueEl.textContent = displayValue;
-
-    const innerEl = document.createElement('div');
-    innerEl.className = 'salary-bar-inner';
-    innerEl.style.height = `${height}%`;
-
-    const labelEl = document.createElement('div');
-    labelEl.className = 'salary-label';
-    labelEl.textContent = d.ten_phong_ban || 'Không rõ';
-    labelEl.title = d.ten_phong_ban; // Tooltip khi hover
-
-    bar.appendChild(valueEl);
-    bar.appendChild(innerEl);
-    bar.appendChild(labelEl);
+    bar.innerHTML = `
+      <div class="salary-value">${displayValue}</div>
+      <div class="salary-bar-inner" style="height:${height}%"></div>
+      <div class="salary-label">${d.ten_phong_ban}</div>
+    `;
 
     container.appendChild(bar);
   });
@@ -102,11 +123,11 @@ function renderSalaryChart(salary) {
 function renderRewardChart(rewards) {
   const container = $('#rewardChart');
   if (!container) return;
-
   container.innerHTML = '';
 
   const rewardTotal = Number(rewards?.reward_total || 0);
   const punishmentTotal = Number(rewards?.punishment_total || 0);
+
   const max = Math.max(rewardTotal, punishmentTotal, 1);
 
   const items = [
@@ -117,55 +138,40 @@ function renderRewardChart(rewards) {
   items.forEach((item) => {
     const height = (item.value / max) * 100;
 
-    // Format số tiền
     let displayValue = '';
-    if (item.value >= 1000000) {
-      displayValue = (item.value / 1000000).toFixed(1) + 'M';
-    } else if (item.value >= 1000) {
-      displayValue = (item.value / 1000).toFixed(0) + 'K';
-    } else {
-      displayValue = item.value.toLocaleString('vi-VN');
-    }
+    if (item.value >= 1_000_000)
+      displayValue = (item.value / 1e6).toFixed(1) + 'M';
+    else displayValue = item.value.toLocaleString('vi-VN');
 
     const bar = document.createElement('div');
     bar.className = 'reward-bar';
 
-    const valueEl = document.createElement('div');
-    valueEl.className = 'reward-value';
-    valueEl.textContent = displayValue;
-
-    const innerEl = document.createElement('div');
-    innerEl.className = `reward-bar-inner ${item.type}`;
-    innerEl.style.height = `${height}%`;
-
-    const labelEl = document.createElement('div');
-    labelEl.className = 'reward-label';
-    labelEl.textContent = item.label;
-
-    bar.appendChild(valueEl);
-    bar.appendChild(innerEl);
-    bar.appendChild(labelEl);
+    bar.innerHTML = `
+      <div class="reward-value">${displayValue}</div>
+      <div class="reward-bar-inner ${item.type}" style="height:${height}%"></div>
+      <div class="reward-label">${item.label}</div>
+    `;
 
     container.appendChild(bar);
   });
 }
 
-// ========= TOP NHÂN VIÊN (DANH SÁCH) =========
-function renderTopEmployees(employees) {
+// ========= DANH SÁCH TOP NHÂN VIÊN =========
+function renderTopEmployees(list) {
   const ul = $('#topEmployeesList');
   if (!ul) return;
 
   ul.innerHTML = '';
 
-  if (!employees || !employees.length) {
+  if (!list || !list.length) {
     ul.innerHTML =
       '<li class="text-muted" style="padding:6px 0;">Chưa có dữ liệu</li>';
     return;
   }
 
-  employees.slice(0, 5).forEach((e, idx) => {
+  list.slice(0, 5).forEach((e, idx) => {
     const net = Number(e.net_contribution_score || 0);
-    const isPositive = net >= 0;
+    const cls = net >= 0 ? 'score-positive' : 'score-negative';
 
     const li = document.createElement('li');
     li.className = 'top-item';
@@ -173,21 +179,17 @@ function renderTopEmployees(employees) {
       <div class="top-main">
         <span class="top-rank">${idx + 1}</span>
         <div class="top-info">
-          <span class="top-name">${e.ho_ten || 'Không rõ'}</span>
-          <span class="top-meta">${e.ten_phong_ban || ''}</span>
+          <span class="top-name">${e.ho_ten}</span>
+          <span class="top-meta">${e.ten_phong_ban}</span>
         </div>
       </div>
-      <span class="top-score ${
-        isPositive ? 'score-positive' : 'score-negative'
-      }">
-        ${isPositive ? '+' : ''}${net.toLocaleString('vi-VN')} đ
-      </span>
+      <span class="top-score ${cls}">${net.toLocaleString('vi-VN')} đ</span>
     `;
     ul.appendChild(li);
   });
 }
 
-// ========= BIỂU ĐỒ TOP NHÂN VIÊN (VERTICAL BAR) =========
+// ========= BIỂU ĐỒ TOP NHÂN VIÊN =========
 function renderTopEmployeesChart(employees) {
   const container = $('#topEmployeesChart');
   if (!container) return;
@@ -201,19 +203,16 @@ function renderTopEmployeesChart(employees) {
     return;
   }
 
-  // Chuẩn bị dữ liệu
   const scores = list.map((e) => Number(e.net_contribution_score || 0));
-  const maxScore = Math.max(...scores, 1);
-  const minScore = Math.min(...scores, 0);
-  const absMax = Math.max(Math.abs(maxScore), Math.abs(minScore)) || 1;
+  const absMax = Math.max(...scores.map((v) => Math.abs(v)), 1);
 
-  // Wrapper container với class
   const wrapper = document.createElement('div');
   wrapper.className = 'top-chart-container';
 
   list.forEach((e, idx) => {
     const net = Number(e.net_contribution_score || 0);
-    const relativeHeight = Math.abs(net / absMax) * 40;
+    const height = Math.abs(net / absMax) * 40;
+
     const isPositive = net >= 0;
 
     const bar = document.createElement('div');
@@ -221,21 +220,15 @@ function renderTopEmployeesChart(employees) {
       isPositive ? 'vertical-bar-positive' : 'vertical-bar-negative'
     }`;
 
-    const barValue = document.createElement('div');
-    barValue.className = `bar-value ${isPositive ? 'positive' : 'negative'}`;
-    barValue.textContent = net.toLocaleString('vi-VN');
-
-    const barInner = document.createElement('div');
-    barInner.className = `bar-inner ${isPositive ? 'positive' : 'negative'}`;
-    barInner.style.height = `${relativeHeight}%`;
-
-    const barLabel = document.createElement('div');
-    barLabel.className = 'bar-label';
-    barLabel.textContent = `Rank ${idx + 1}`;
-
-    bar.appendChild(barValue);
-    bar.appendChild(barInner);
-    bar.appendChild(barLabel);
+    bar.innerHTML = `
+      <div class="bar-value ${
+        isPositive ? 'positive' : 'negative'
+      }">${net.toLocaleString('vi-VN')}</div>
+      <div class="bar-inner ${
+        isPositive ? 'positive' : 'negative'
+      }" style="height:${height}%"></div>
+      <div class="bar-label">Rank ${idx + 1}</div>
+    `;
 
     wrapper.appendChild(bar);
   });
@@ -243,80 +236,107 @@ function renderTopEmployeesChart(employees) {
   container.appendChild(wrapper);
 }
 
-// ========= NGÀY LỄ =========
-function renderHolidays(holidays) {
-  const box = $('#holidaysList');
+// ========= PHÊ DUYỆT NHANH (MANAGER) =========
+function renderQuickApprove(list) {
+  const box = $('#quickApproveList');
   if (!box) return;
 
   box.innerHTML = '';
 
-  if (!holidays || !holidays.length) {
-    box.innerHTML =
-      '<li class="text-muted" style="padding:6px 0;">Không có ngày lễ sắp tới</li>';
+  if (!list || list.length === 0) {
+    box.innerHTML = `<p class="text-muted">Không có đơn chờ duyệt.</p>`;
     return;
   }
 
-  holidays.forEach((h) => {
-    const li = document.createElement('li');
-    li.className = 'holiday-item';
-    li.innerHTML = `
-      <div class="holiday-date">${h.ngay}</div>
-      <div class="holiday-info">
-        <div class="holiday-name">${h.ten_ngay}</div>
-        <div class="holiday-meta">${h.so_ngay_nghi} ngày nghỉ</div>
+  list.slice(0, 5).forEach((item) => {
+    const div = document.createElement('div');
+    div.className = 'approve-item';
+    div.innerHTML = `
+      <b>${item.ho_ten}</b> - ${item.loai_nghi}<br/>
+      ${item.ngay_bat_dau} → ${item.ngay_ket_thuc}<br/>
+      <div class="approve-actions">
+        <button class="btn btn-primary btn-sm">Duyệt</button>
+        <button class="btn btn-danger btn-sm">Từ chối</button>
       </div>
     `;
-    box.appendChild(li);
+    box.appendChild(div);
   });
 }
 
-// ========= BLOCK DÀNH CHO EMPLOYEE =========
-function renderEmployeeBlocks(role, data) {
-  if (role !== 'employee') return;
+// ========= THÔNG BÁO GẦN ĐÂY =========
+function renderNotifications(list) {
+  const ul = $('#notifyList');
+  if (!ul) return;
 
-  const hours = data.hours?.total_hours ?? 0;
-  const salaryTotal = data.salary?.current_total ?? 0;
+  ul.innerHTML = '';
 
-  $('#emp-hours') &&
-    ($('#emp-hours').textContent = hours.toLocaleString('vi-VN') + ' giờ');
+  if (!list || list.length === 0) {
+    ul.innerHTML =
+      '<li class="text-muted" style="padding:6px 0;">Không có thông báo</li>';
+    return;
+  }
 
-  $('#emp-salary') &&
-    ($('#emp-salary').textContent = salaryTotal.toLocaleString('vi-VN') + ' đ');
+  list.slice(0, 5).forEach((n) => {
+    const li = document.createElement('li');
+    li.className = 'top-item';
+    const created = new Date(n.created_at).toLocaleString('vi-VN');
+
+    li.innerHTML = `
+      <div class="top-main">
+        <div class="top-info">
+          <span class="top-name">${n.tieu_de}</span>
+          <span class="top-meta">${created}</span>
+          ${n.noi_dung ? `<span class="top-meta">${n.noi_dung}</span>` : ''}
+          ${
+            n.nguoi_tao
+              ? `<span class="top-meta">Người thực hiện: ${n.nguoi_tao}</span>`
+              : ''
+          }
+        </div>
+      </div>
+    `;
+    ul.appendChild(li);
+  });
 }
 
-// ========= INIT =========
+// ========= INIT DASHBOARD =========
 async function initDashboard() {
   const user = getUser();
   const role = getCurrentRole();
 
-  const helloEl = $('#helloName');
-  if (helloEl) {
-    helloEl.textContent = user?.ho_ten || user?.username || 'Bạn';
-  }
-  const todayEl = $('#today-date');
-  if (todayEl) {
-    todayEl.textContent = new Date().toLocaleDateString('vi-VN');
-  }
+  $('#helloName').textContent = user?.ho_ten || user?.username || 'Bạn';
+  $('#today-date').textContent = new Date().toLocaleDateString('vi-VN');
 
-  // Ẩn/hiện theo role
   applyRoleVisibility(role);
 
-  // Gọi API backend
   try {
     const data = await api('/api/trang-chinh/complete');
 
-    renderKPIs(data.staff);
+    // Cảnh báo
+    renderAlerts(data.alerts);
+
+    // KPI theo role
+    // KPI theo role
+    if (role === 'employee') renderKPIEmployee(data.kpi_employee);
+    if (role === 'manager' || role === 'admin')
+      renderKPImanager(data.kpi_manager);
+    if (role === 'admin') renderKPIAdmin(data.kpi_admin);
+
+    // Biểu đồ
     renderSalaryChart(data.salary);
     renderRewardChart(data.rewards);
 
-    // Gọi cả hai hàm để render danh sách và biểu đồ
-    renderTopEmployees(data.rewards?.by_employee || []);
-    renderTopEmployeesChart(data.rewards?.by_employee || []);
+    // Top employees
+    renderTopEmployees(data.topEmployees);
+    renderTopEmployeesChart(data.topEmployees);
 
-    renderHolidays(data.holidays || []);
-    renderEmployeeBlocks(role, data);
+    // Phê duyệt nhanh (manager)
+    if (role === 'manager') renderQuickApprove(data.quick_approve);
+
+    // Thông báo mới nhất
+    renderNotifications(data.notifications);
   } catch (err) {
-    console.error('Lỗi tải dữ liệu trang chính:', err);
+    console.error('Lỗi tải dashboard:', err);
   }
 }
 

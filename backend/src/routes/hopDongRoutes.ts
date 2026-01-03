@@ -1,3 +1,4 @@
+// src/routes/hopDongRoutes.ts
 import { Router } from "express";
 import multer from "multer";
 import * as controller from "../controllers/hopDongController";
@@ -7,11 +8,11 @@ import { layPhamViNguoiDung } from "../utils/pham-vi-nguoi-dung";
 const router = Router();
 const upload = multer({ dest: "uploads/" });
 
-/* ==================== DANH SÁCH ==================== */
+// Lưu ý: các route GET cụ thể đặt trước '/:id'
 router.get("/", requireAuth, controller.list);
-router.get("/:id", requireAuth, controller.detail);
+router.get("/salary-info/:nhanVienId", requireAuth, controller.getSalaryInfo);
+router.get("/phu-cap-loai", requireAuth, controller.getPhuCapLoai);
 
-/* ==================== QUYỀN HỢP ĐỒNG (CHO FE) ==================== */
 router.get(
   "/_permissions/me",
   requireAuth,
@@ -29,7 +30,6 @@ router.get(
   }
 );
 
-/* ==================== TẠO MỚI ==================== */
 router.post(
   "/",
   requireAuth,
@@ -38,7 +38,6 @@ router.post(
   controller.create
 );
 
-/* ==================== CẬP NHẬT ==================== */
 router.put(
   "/:id",
   requireAuth,
@@ -47,7 +46,8 @@ router.put(
   controller.update
 );
 
-/* ==================== XOÁ ==================== */
 router.delete("/:id", requireAuth, requireRole(["admin"]), controller.remove);
+
+router.get("/:id", requireAuth, controller.detail);
 
 export default router;

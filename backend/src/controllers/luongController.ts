@@ -30,7 +30,6 @@ export const getById = async (req: Request, res: Response) => {
     const row = await service.getById(req);
     if (!row) return res.status(404).json({ message: "Không tìm thấy" });
 
-    // 🟩 Bổ sung tự động P1, P2, P3 nếu thiếu (frontend cần)
     row.luong_p1 = row.luong_thoa_thuan ?? 0;
     row.luong_p2 = row.luong_p2 ?? 0;
     row.luong_p3 = row.luong_p3 ?? 0;
@@ -42,30 +41,30 @@ export const getById = async (req: Request, res: Response) => {
   }
 };
 
-// ===== TẠO =====
-export const create = async (req: Request, res: Response) => {
-  try {
-    const result = await service.create(req.body);
-    if (result.error) return res.status(400).json(result);
-    res.status(201).json(result);
-  } catch (err) {
-    console.error("[POST /luong] error:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-};
+// // ===== TẠO =====
+// export const create = async (req: Request, res: Response) => {
+//   try {
+//     const result = await service.create(req.body);
+//     if (result.error) return res.status(400).json(result);
+//     res.status(201).json(result);
+//   } catch (err) {
+//     console.error("[POST /luong] error:", err);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// };
 
-// ===== CẬP NHẬT =====
-export const update = async (req: Request, res: Response) => {
-  try {
-    const id = Number(req.params.id);
-    const result = await service.update(id, req.body);
-    if (result.error) return res.status(400).json(result);
-    res.json({ ok: true });
-  } catch (err) {
-    console.error("[PUT /luong/:id] error:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-};
+// // ===== CẬP NHẬT =====
+// export const update = async (req: Request, res: Response) => {
+//   try {
+//     const id = Number(req.params.id);
+//     const result = await service.update(id, req.body);
+//     if (result.error) return res.status(400).json(result);
+//     res.json({ ok: true });
+//   } catch (err) {
+//     console.error("[PUT /luong/:id] error:", err);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// };
 
 // ===== XOÁ =====
 export const remove = async (req: Request, res: Response) => {

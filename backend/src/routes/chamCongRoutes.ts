@@ -1,4 +1,4 @@
-//chamCongRoutes
+// chamCongRoutes
 import { Router } from "express";
 import { pool } from "../db";
 import multer from "multer";
@@ -10,22 +10,22 @@ const router = Router();
 // Cấu hình upload file
 const upload = multer({ dest: "uploads/" });
 
+// ================== CÁC ROUTE CHÍNH ==================
+// Lấy danh sách
 router.get(
   "/",
   requireAuth,
   requireRole(["admin", "manager", "employee"]),
   chamCongController.list
 );
+// Tạo mới
 router.post("/", requireAuth, requireRole(["admin", "manager"]), chamCongController.create);
-router.put("/:id", requireAuth, requireRole(["admin"]), chamCongController.update);
-router.delete(
-  "/:id",
-  requireAuth,
-  requireRole(["admin", "manager", "employee"]), // để controller tự xử lý phân quyền chi tiết
-  chamCongController.remove
-);
+// Cập nhật
+router.put("/:id", requireAuth, requireRole(["admin", "manager"]), chamCongController.update);
+// Xóa
+router.delete("/:id", requireAuth, requireRole(["admin", "manager"]), chamCongController.remove);
 
-// 👉 Route mới: upload Excel
+// ================== ROUTE EXCEL ==================
 router.post(
   "/import-excel",
   requireAuth,
@@ -33,7 +33,7 @@ router.post(
   upload.single("file"),
   chamCongController.importExcel
 );
-// Route xuất Excel
+
 router.get(
   "/export",
   requireAuth,
@@ -41,24 +41,7 @@ router.get(
   chamCongController.exportExcel
 );
 
-// ✅ Thêm dòng này cho import Excel
-router.post(
-  "/import-excel",
-  requireAuth,
-  requireRole(["admin", "manager"]),
-  upload.single("file"), // 👈 middleware multer xử lý file upload
-  chamCongController.importExcel
-);
-
-// ✅ Xuất Excel
-router.get(
-  "/export",
-  requireAuth,
-  requireRole(["admin", "manager"]),
-  chamCongController.exportExcel
-);
-
-// ================== API PHỤ: PHÒNG BAN ==================
+// ================== API PHỤ: PHÒNG BAN (GIỮ NGUYÊN) ==================
 router.get(
   "/phong-ban/list",
   requireAuth,
@@ -75,5 +58,8 @@ router.get(
     }
   }
 );
+
+// ================== ROUTE XỬ LÝ TỰ ĐỘNG ==================
+router.post("/auto-process", requireAuth, requireRole(["admin"]), chamCongController.autoProcess);
 
 export default router;

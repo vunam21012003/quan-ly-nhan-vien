@@ -17,14 +17,10 @@ let state = {
   editingId: null,
 };
 
-// ===== FIX: Thêm 4 dòng lấy ROLE để tránh lỗi ROLE is not defined =====
 let CURRENT_USER = JSON.parse(localStorage.getItem('hr_user') || '{}');
 const ROLE = (CURRENT_USER.role || 'employee').toLowerCase();
-// ======================================================================
 
-// ============================
 // LOAD LOẠI PHỤ CẤP
-// ============================
 async function loadLoai() {
   const res = await api('/phu-cap-loai').catch(() => ({ data: [] }));
 
@@ -36,9 +32,7 @@ async function loadLoai() {
   renderLoai();
 }
 
-// ============================
 // HIỂN THỊ TABLE
-// ============================
 function renderLoai() {
   const body = $('#loai-body');
 
@@ -68,8 +62,8 @@ function renderLoai() {
           ${
             ROLE === 'admin'
               ? `
-                <button class="btn btn-sm btn-edit" data-id="${x.id}">✏️</button>
-                <button class="btn btn-sm btn-del" data-id="${x.id}">🗑️</button>
+                <button class="btn btn-sm btn-edit" data-id="${x.id}"><i class="fa-solid fa-pen" style="color:#3ef69d"></i></button>
+                <button class="btn btn-sm btn-del" data-id="${x.id}"><i class="fa-solid fa-trash" style="color:#e4b721"></i></button>
               `
               : ``
           }
@@ -80,9 +74,7 @@ function renderLoai() {
     .join('');
 }
 
-// ============================
 // MỞ MODAL
-// ============================
 function openLoaiModal(item = null) {
   if (ROLE !== 'admin') {
     alert('Bạn không có quyền thao tác loại phụ cấp!');
@@ -109,9 +101,7 @@ function closeLoaiModal() {
   $('#modal-loai').close();
 }
 
-// ============================
 // LƯU
-// ============================
 async function saveLoai(e) {
   e.preventDefault();
   $('#loai-error').hidden = true;
@@ -148,18 +138,14 @@ async function saveLoai(e) {
   }
 }
 
-// ============================
 // XOÁ
-// ============================
 async function deleteLoai(id) {
   if (!confirm(`Bạn chắc chắn muốn xóa loại phụ cấp #${id}?`)) return;
   await api(`/phu-cap-loai/${id}`, { method: 'DELETE' });
   await loadLoai();
 }
 
-// ============================
 // BIND
-// ============================
 function bindLoaiEvents() {
   if (ROLE !== 'admin') {
     $('#btn-add-loai').style.display = 'none';
@@ -187,9 +173,7 @@ function bindLoaiEvents() {
   });
 }
 
-// ============================
 // INIT
-// ============================
 async function init() {
   requireAuthOrRedirect('./dang-nhap.html');
   if (!getToken()) return;

@@ -13,4 +13,12 @@ router.post(
   controller.pay
 );
 
+router.post(
+  "/pay-all",
+  requireAuth,
+  requireRole(["admin", "manager"]),
+  requireKetoanOrAdmin,
+  controller.payAll
+);
+
 export default router;

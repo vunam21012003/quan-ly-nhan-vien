@@ -361,3 +361,85 @@
     display: none;
   }
 }
+
+.nv-overview-panel {
+  position: fixed;
+  top: 60px;
+  right: 0;
+  width: 380px;
+  max-width: 90vw;
+  height: calc(100vh - 80px);
+  background: #fff;
+  border-left: 1px solid #ddd;
+  box-shadow: -2px 0 6px rgba(0, 0, 0, 0.08);
+  transform: translateX(100%);
+  transition: transform 0.2s ease;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+}
+.nv-overview-panel.open {
+  transform: translateX(0);
+}
+.nv-overview-header {
+  padding: 8px 12px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.nv-overview-body {
+  padding: 8px 12px;
+  overflow-y: auto;
+}
+.nv-overview-section-title {
+  font-weight: 600;
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+.nv-overview-empty {
+  font-size: 12px;
+  color: #999;
+}
+
+.nv-overview-content-inside {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.nv-overview-section-title {
+  font-weight: 600;
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+
+.nv-overview-empty {
+  font-size: 12px;
+  color: #999;
+}
+
+#nv-overview-toggle.nv-overview-toggle {
+  position: fixed;
+  top: 50%;
+  right: 40px; /* dịch ra ngoài modal một chút */
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: #ffffff;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.25);
+  font-size: 28px;
+  line-height: 1;
+  color: #1a73e8; /* xanh nổi bật */
+  display: none; /* sẽ set = block trong JS */
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1001; /* cao hơn nền mờ, thấp hơn dialog nếu cần */
+}
+
+#nv-overview-toggle.nv-overview-toggle:hover {
+  transform: translateY(-50%) scale(1.05);
+}

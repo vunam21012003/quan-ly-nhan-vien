@@ -1,613 +1,430 @@
 // src/services/trangChinhService.ts
 import { pool } from "../db";
-import {
-  StaffSummary,
-  SalaryByDepartment,
-  HoursSummary,
-  RewardsSummary,
-  HolidayItem,
-  DashboardResponse,
-} from "../models/trangChinh";
-import { PhepPhamVi } from "../utils/pham-vi-nguoi-dung";
 
-export const dashboardService = {
-  // ============================================
-  // 1) Tổng quan nhân sự + chấm công hôm nay
-  // ============================================
-  async getStaffSummary(phamvi: PhepPhamVi): Promise<StaffSummary> {
-    const { role, employeeId, managedDepartmentIds } = phamvi;
+export type VaiTro = "admin" | "manager" | "employee";
 
-    // -------------------------------
-    // 🟢 EMPLOYEE → chỉ xem của chính mình
-    // -------------------------------
-    if (role === "employee") {
-      const today = new Date().toISOString().slice(0, 10);
+export type PhamVi = {
+  employeeId: number | null;
+  managedDepartmentIds: number[];
+  role: VaiTro;
+  isAccountingManager?: boolean;
+};
 
-      const [[cc]]: any = await pool.query(
-        `
-        SELECT trang_thai
-        FROM cham_cong
-        WHERE ngay_lam = ? AND nhan_vien_id = ?
-        LIMIT 1
-      `,
-        [today, employeeId]
-      );
+export type DashboardResponse = {
+  alerts: string[];
+  kpi_employee: { hours: number; days: number; late: number; leave: number } | null;
+  kpi_manager: { pending_leave: number; ot: number } | null;
+  kpi_admin: { total: number; salary: number } | null;
+  salary: { by_department: Array<{ ten_phong_ban: string; total_salary: number }> };
+  rewards: { reward_total: number; punishment_total: number };
+  topEmployees: Array<{
+    id: number;
+    ho_ten: string;
+    ten_phong_ban: string | null;
+    net_contribution_score: number;
+  }>;
+  quick_approve: Array<{
+    id: number;
+    ho_ten: string;
+    loai_nghi: string;
+    ngay_bat_dau: string;
+    ngay_ket_thuc: string;
+  }>;
+  notifications: Array<{
+    id: number;
+    tieu_de: string;
+    noi_dung: string | null;
+    nguoi_tao: string | null;
+    created_at: string;
+  }>;
+};
 
-      const present = cc?.trang_thai?.startsWith("di") ? 1 : 0;
-      const leave = cc?.trang_thai === "nghi_phep" ? 1 : 0;
-      const unlawful = cc?.trang_thai === "nghi_khong_phep" ? 1 : 0;
-      const absent = cc ? 0 : 1;
+function getMonthRange(date = new Date()) {
+  const y = date.getUTCFullYear();
+  const m = date.getUTCMonth();
+  const start = new Date(Date.UTC(y, m, 1));
+  const end = new Date(Date.UTC(y, m + 1, 0));
+  return {
+    year: y,
+    month: m + 1,
+    startDate: start.toISOString().slice(0, 10),
+    endDate: end.toISOString().slice(0, 10),
+  };
+}
 
-      return {
-        total: 1,
-        active: 1,
-        present,
-        leave,
-        unlawful,
-        absent,
-        by_department: [],
-      };
-    }
+// Điều chỉnh nếu DB của bạn đặt tên trạng thái khác
+const WORK_STATUSES = ["di_lam", "di_muon", "ve_som", "di_muon_ve_som"];
 
-    // -------------------------------
-    // 🔵 MANAGER → chỉ xem các phòng ban mình quản lý
-    // -------------------------------
-    if (role === "manager") {
-      if (!managedDepartmentIds.length) {
-        return {
-          total: 0,
-          active: 0,
-          present: 0,
-          leave: 0,
-          unlawful: 0,
-          absent: 0,
-          by_department: [],
-        };
-      }
+async function kpiEmployee(employeeId: number | null) {
+  if (!employeeId) return { hours: 0, days: 0, late: 0, leave: 0 };
 
-      const today = new Date().toISOString().slice(0, 10);
-      const placeholders = managedDepartmentIds.map(() => "?").join(",");
+  const { year, month, startDate, endDate } = getMonthRange();
 
-      const params: any[] = [today, ...managedDepartmentIds];
+  // 1. Lấy từ phan_tich_cong
+  const [ptcRows]: any = await pool.query(
+    `SELECT tong_gio, so_ngay_cong, so_ngay_nghi_phep
+     FROM phan_tich_cong
+     WHERE nhan_vien_id = ? AND thang = ? AND nam = ?
+     LIMIT 1`,
+    [employeeId, month, year]
+  );
 
-      const [rows]: any = await pool.query(
-        `
-        SELECT 
-          pb.id AS phong_ban_id,
-          pb.ten_phong_ban,
-          COUNT(nv.id) AS total_staff,
-          0 AS avg_salary,
-          SUM(cc.trang_thai IN ('di_lam','di_muon','ve_som','di_muon_ve_som')) AS present,
-          SUM(cc.trang_thai = 'nghi_phep') AS leave_count,
-          SUM(cc.trang_thai = 'nghi_khong_phep') AS unlawful,
-          SUM(cc.trang_thai IS NULL) AS absent
-        FROM phong_ban pb
-        LEFT JOIN nhan_vien nv ON nv.phong_ban_id = pb.id
-        LEFT JOIN cham_cong cc 
-          ON cc.nhan_vien_id = nv.id
-         AND cc.ngay_lam = ?
-        WHERE pb.id IN (${placeholders})
-        GROUP BY pb.id, pb.ten_phong_ban
-      `,
-        params
-      );
+  let hours = Number(ptcRows?.[0]?.tong_gio ?? 0);
+  let days = Number(ptcRows?.[0]?.so_ngay_cong ?? 0);
+  let leave = Number(ptcRows?.[0]?.so_ngay_nghi_phep ?? 0);
 
-      let total = 0;
-      let present = 0;
-      let leave = 0;
-      let unlawful = 0;
-      let absent = 0;
-
-      rows.forEach((r: any) => {
-        total += r.total_staff;
-        present += r.present;
-        leave += r.leave_count;
-        unlawful += r.unlawful;
-        absent += r.absent;
-      });
-
-      return {
-        total,
-        active: total,
-        present,
-        leave,
-        unlawful,
-        absent,
-        by_department: rows,
-      };
-    }
-
-    // -------------------------------
-    // 🔴 ADMIN → full công ty
-    // -------------------------------
-    return this._staffSummaryCompany();
-  },
-
-  // Tổng quan công ty cho admin
-  async _staffSummaryCompany(): Promise<StaffSummary> {
-    const [[nv]]: any = await pool.query(
-      "SELECT COUNT(*) AS total FROM nhan_vien WHERE trang_thai = 'dang_lam'"
+  // 2. Fallback: nếu chưa có bản ghi phân tích công → tổng hợp từ chấm công
+  if (!ptcRows?.length) {
+    const [aggRows]: any = await pool.query(
+      `SELECT 
+          COALESCE(SUM(tong_gio), 0) AS h,
+          SUM(CASE WHEN trang_thai IN (${WORK_STATUSES.map(() => "?").join(",")}) THEN 1 ELSE 0 END) AS d,
+          SUM(CASE WHEN trang_thai = 'nghi_phep' THEN 1 ELSE 0 END) AS leave_days
+       FROM cham_cong
+       WHERE nhan_vien_id = ?
+         AND ngay_lam BETWEEN ? AND ?`,
+      [...WORK_STATUSES, employeeId, startDate, endDate]
     );
+    hours = Number(aggRows?.[0]?.h ?? 0);
+    days = Number(aggRows?.[0]?.d ?? 0);
+    leave = Number(aggRows?.[0]?.leave_days ?? 0);
+  }
 
-    const today = new Date().toISOString().slice(0, 10);
+  // 3. số lần đi muộn
+  const [lateRows]: any = await pool.query(
+    `SELECT COUNT(*) AS c
+     FROM cham_cong
+     WHERE nhan_vien_id = ?
+       AND ngay_lam BETWEEN ? AND ?
+       AND trang_thai IN ('di_muon','di_muon_ve_som')`,
+    [employeeId, startDate, endDate]
+  );
 
-    const [[cc]]: any = await pool.query(
-      `
-      SELECT 
-        COUNT(CASE WHEN trang_thai LIKE 'di%' THEN 1 END) AS present,
-        COUNT(CASE WHEN trang_thai = 'nghi_phep' THEN 1 END) AS on_leave,
-        COUNT(CASE WHEN trang_thai = 'nghi_khong_phep' THEN 1 END) AS unlawful
-      FROM cham_cong
-      WHERE ngay_lam = ?
-    `,
-      [today]
+  return {
+    hours: Number(hours.toFixed(2)),
+    days,
+    late: Number(lateRows?.[0]?.c ?? 0),
+    leave,
+  };
+}
+
+async function getManagerContext(managedDepartmentIds: number[]) {
+  if (!managedDepartmentIds?.length) return { deptIds: [], empIds: [] };
+  const placeholders = managedDepartmentIds.map(() => "?").join(",");
+  const [empRows]: any = await pool.query(
+    `SELECT id FROM nhan_vien WHERE phong_ban_id IN (${placeholders})`,
+    managedDepartmentIds
+  );
+  return {
+    deptIds: managedDepartmentIds,
+    empIds: empRows.map((r: any) => r.id) as number[],
+  };
+}
+
+async function kpiManager(managedDepartmentIds: number[]) {
+  const { deptIds, empIds } = await getManagerContext(managedDepartmentIds);
+  if (!deptIds.length) return { pending_leave: 0, ot: 0 };
+
+  const { year, month } = getMonthRange();
+
+  // Đơn nghỉ phép đang chờ duyệt cho nhân viên trong các phòng manager quản lý
+  const placeholdersDept = deptIds.map(() => "?").join(",");
+  const [pendRows]: any = await pool.query(
+    `SELECT COUNT(*) AS c
+     FROM don_nghi_phep d
+     JOIN nhan_vien nv ON nv.id = d.nhan_vien_id
+     WHERE d.trang_thai = 'cho_duyet'
+       AND nv.phong_ban_id IN (${placeholdersDept})`,
+    deptIds
+  );
+  const pending = Number(pendRows?.[0]?.c ?? 0);
+
+  // Tổng giờ tăng ca tháng này
+  let ot = 0;
+  if (empIds.length) {
+    const placeholdersEmp = empIds.map(() => "?").join(",");
+    const [otRows]: any = await pool.query(
+      `SELECT COALESCE(SUM(gio_tang_ca),0) AS s
+       FROM phan_tich_cong
+       WHERE thang = ? AND nam = ?
+         AND nhan_vien_id IN (${placeholdersEmp})`,
+      [month, year, ...empIds]
     );
+    ot = Number(otRows?.[0]?.s ?? 0);
+  }
 
-    const [dept]: any = await pool.query(`
-      SELECT 
-        pb.id AS phong_ban_id,
-        pb.ten_phong_ban,
-        COUNT(nv.id) AS total_staff,
-        COALESCE(AVG(hd.luong_thoa_thuan), 0) AS avg_salary
-      FROM phong_ban pb
-      LEFT JOIN nhan_vien nv ON nv.phong_ban_id = pb.id
-      LEFT JOIN hop_dong hd 
-        ON hd.nhan_vien_id = nv.id 
-       AND hd.trang_thai = 'con_hieu_luc'
-      GROUP BY pb.id, pb.ten_phong_ban
-    `);
+  return {
+    pending_leave: pending,
+    ot: Number(ot.toFixed(2)),
+  };
+}
 
-    return {
-      total: nv.total,
-      active: nv.total,
-      present: cc.present || 0,
-      leave: cc.on_leave || 0,
-      unlawful: cc.unlawful || 0,
-      absent: nv.total - (cc.present || 0),
-      by_department: dept,
-    };
-  },
+async function kpiAdmin() {
+  // ===== XÁC ĐỊNH THÁNG TRƯỚC =====
+  const now = new Date();
 
-  // ============================================
-  // 2) Lương tháng trước theo phòng ban
-  // ============================================
-  async getSalaryByDepartment(phamvi: PhepPhamVi): Promise<SalaryByDepartment> {
-    const { role, employeeId, managedDepartmentIds } = phamvi;
+  // tháng hiện tại (1–12)
+  const currentMonth = now.getUTCMonth() + 1;
+  const currentYear = now.getUTCFullYear();
 
-    const now = new Date();
-    let month = now.getMonth(); // 0-11 → tháng trước
-    let year = now.getFullYear();
+  // tính tháng trước
+  const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+  const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
 
-    if (month === 0) {
-      month = 12;
-      year -= 1;
-    }
+  // Log ra để kiểm tra
+  console.log("KPI ADMIN prevMonth/prevYear =", prevMonth, prevYear);
 
-    // EMPLOYEE → chỉ lương của chính mình
-    if (role === "employee") {
-      const [rows]: any = await pool.query(
-        `
-        SELECT 
-          pb.id AS phong_ban_id,
-          pb.ten_phong_ban,
-          l.luong_thuc_nhan AS total_salary,
-          l.luong_thuc_nhan AS avg_salary,
-          1 AS employee_count
-        FROM nhan_vien nv
-        LEFT JOIN phong_ban pb ON pb.id = nv.phong_ban_id
-        LEFT JOIN luong l 
-          ON l.nhan_vien_id = nv.id 
-         AND l.thang = ? 
-         AND l.nam = ?
-        WHERE nv.id = ?
-      `,
-        [month, year, employeeId]
-      );
+  // ===== TỔNG NHÂN VIÊN ĐANG LÀM =====
+  const [totalRows]: any = await pool.query(
+    `SELECT COUNT(*) AS c
+     FROM nhan_vien
+     WHERE trang_thai = 'dang_lam'`
+  );
 
-      const total = rows[0]?.total_salary || 0;
+  // ===== QUỸ LƯƠNG THÁNG TRƯỚC TỪ BẢNG LUONG =====
+  const [salaryRows]: any = await pool.query(
+    `SELECT COALESCE(SUM(luong_thuc_nhan),0) AS s
+     FROM luong
+     WHERE thang = ? AND nam = ?
+       AND trang_thai_duyet = 'da_duyet'`,
+    [prevMonth, prevYear]
+  );
 
-      return {
-        current_total: total,
-        by_department: rows,
-      };
-    }
+  const total = Number(totalRows?.[0]?.c ?? 0);
+  const salary = Number(salaryRows?.[0]?.s ?? 0);
 
-    // MANAGER → chỉ phòng ban mình quản lý
-    if (role === "manager") {
-      if (!managedDepartmentIds.length) {
-        return {
-          current_total: 0,
-          by_department: [],
-        };
-      }
+  console.log("KPI ADMIN salary =", salary);
 
-      const placeholders = managedDepartmentIds.map(() => "?").join(",");
-      const params: any[] = [month, year, ...managedDepartmentIds];
+  return { total, salary };
+}
 
-      const [rows]: any = await pool.query(
-        `
-        SELECT 
-          pb.id AS phong_ban_id,
-          pb.ten_phong_ban,
-          SUM(l.luong_thuc_nhan) AS total_salary,
-          AVG(l.luong_thuc_nhan) AS avg_salary,
-          COUNT(l.id) AS employee_count
-        FROM phong_ban pb
-        LEFT JOIN nhan_vien nv ON nv.phong_ban_id = pb.id
-        LEFT JOIN luong l 
-          ON l.nhan_vien_id = nv.id 
-         AND l.thang = ? 
-         AND l.nam = ?
-        WHERE pb.id IN (${placeholders})
-        GROUP BY pb.id, pb.ten_phong_ban
-      `,
-        params
-      );
+async function salaryByDepartment() {
+  const { year, month } = getMonthRange();
+  const [rows]: any = await pool.query(
+    `SELECT pb.ten_phong_ban,
+            COALESCE(SUM(l.luong_thuc_nhan),0) AS total_salary
+     FROM phong_ban pb
+     LEFT JOIN nhan_vien nv ON nv.phong_ban_id = pb.id
+     LEFT JOIN luong l ON l.nhan_vien_id = nv.id AND l.thang = ? AND l.nam = ?
+     GROUP BY pb.id, pb.ten_phong_ban
+     ORDER BY total_salary DESC`,
+    [month, year]
+  );
+  return {
+    by_department: rows.map((r: any) => ({
+      ten_phong_ban: r.ten_phong_ban,
+      total_salary: Number(r.total_salary ?? 0),
+    })),
+  };
+}
 
-      const total = rows.reduce((sum: number, r: any) => sum + (r.total_salary || 0), 0);
+async function rewardsTotals() {
+  const { year, month } = getMonthRange();
+  const [rows]: any = await pool.query(
+    `SELECT UPPER(loai) AS loai, COALESCE(SUM(so_tien),0) AS s
+     FROM thuong_phat
+     WHERE thang = ? AND nam = ?
+     GROUP BY UPPER(loai)`,
+    [month, year]
+  );
+  const reward_total = Number(rows.find((r: any) => r.loai === "THUONG")?.s ?? 0);
+  const punishment_total = Number(rows.find((r: any) => r.loai === "PHAT")?.s ?? 0);
+  return { reward_total, punishment_total };
+}
 
-      return {
-        current_total: total,
-        by_department: rows,
-      };
-    }
+async function topEmployees() {
+  const { year, month } = getMonthRange();
+  const [rows]: any = await pool.query(
+    `SELECT nv.id,
+            nv.ho_ten,
+            pb.ten_phong_ban,
+            COALESCE(SUM(CASE WHEN UPPER(tp.loai)='THUONG' THEN tp.so_tien ELSE 0 END),0)
+            - COALESCE(SUM(CASE WHEN UPPER(tp.loai)='PHAT'   THEN tp.so_tien ELSE 0 END),0)
+            AS net_contribution_score
+     FROM nhan_vien nv
+     LEFT JOIN phong_ban pb ON pb.id = nv.phong_ban_id
+     LEFT JOIN thuong_phat tp ON tp.nhan_vien_id = nv.id
+         AND tp.thang = ? AND tp.nam = ?
+     GROUP BY nv.id, nv.ho_ten, pb.ten_phong_ban
+     ORDER BY net_contribution_score DESC
+     LIMIT 5`,
+    [month, year]
+  );
+  return rows.map((r: any) => ({
+    id: r.id,
+    ho_ten: r.ho_ten,
+    ten_phong_ban: r.ten_phong_ban ?? null,
+    net_contribution_score: Number(r.net_contribution_score ?? 0),
+  }));
+}
 
-    // ADMIN → full công ty
-    return this._salaryByCompany(month, year);
-  },
+async function quickApprove(managedDepartmentIds: number[]) {
+  if (!managedDepartmentIds?.length) return [];
+  const placeholders = managedDepartmentIds.map(() => "?").join(",");
+  const [rows]: any = await pool.query(
+    `SELECT d.id, nv.ho_ten, d.loai_nghi, d.ngay_bat_dau, d.ngay_ket_thuc
+     FROM don_nghi_phep d
+     JOIN nhan_vien nv ON nv.id = d.nhan_vien_id
+     WHERE d.trang_thai = 'cho_duyet'
+       AND nv.phong_ban_id IN (${placeholders})
+     ORDER BY d.created_at DESC
+     LIMIT 5`,
+    managedDepartmentIds
+  );
+  return rows.map((r: any) => ({
+    id: r.id,
+    ho_ten: r.ho_ten,
+    loai_nghi: r.loai_nghi,
+    ngay_bat_dau: r.ngay_bat_dau,
+    ngay_ket_thuc: r.ngay_ket_thuc,
+  }));
+}
 
-  async _salaryByCompany(month: number, year: number): Promise<SalaryByDepartment> {
-    const [rows]: any = await pool.query(
-      `
-      SELECT 
-        pb.id AS phong_ban_id,
-        pb.ten_phong_ban,
-        SUM(l.luong_thuc_nhan) AS total_salary,
-        AVG(l.luong_thuc_nhan) AS avg_salary,
-        COUNT(l.id) AS employee_count
-      FROM phong_ban pb
-      LEFT JOIN nhan_vien nv ON nv.phong_ban_id = pb.id
-      LEFT JOIN luong l 
-        ON l.nhan_vien_id = nv.id 
-       AND l.thang = ? 
-       AND l.nam = ?
-      GROUP BY pb.id, pb.ten_phong_ban
-      ORDER BY total_salary DESC
-    `,
-      [month, year]
+async function notificationsForEmployee(employeeId: number | null) {
+  if (!employeeId) return [];
+
+  const [rows]: any = await pool.query(
+    `SELECT tb.id,
+            tb.tieu_de,
+            tb.noi_dung,
+            tb.created_at,
+            nv.ho_ten AS nguoi_tao_ho_ten
+     FROM thong_bao tb
+     LEFT JOIN nhan_vien nv ON nv.id = tb.nguoi_tao_id
+     WHERE tb.nguoi_nhan_id = ?
+        OR tb.nguoi_nhan_id IS NULL
+     ORDER BY tb.created_at DESC
+     LIMIT 15`,
+    [employeeId]
+  );
+
+  return rows.map((r: any) => ({
+    id: r.id,
+    tieu_de: r.tieu_de,
+    noi_dung: r.noi_dung,
+    nguoi_tao: r.nguoi_tao_ho_ten || null,
+    created_at: r.created_at,
+  }));
+}
+
+async function alerts(role: VaiTro, managedDepartmentIds: number[]) {
+  const notes: string[] = [];
+  const { year, month } = getMonthRange();
+
+  // Hợp đồng hết hạn
+  const [expired]: any = await pool.query(
+    `SELECT COUNT(*) AS c 
+   FROM hop_dong 
+   WHERE trang_thai = 'het_han'
+     AND ngay_ket_thuc = CURDATE()`
+  );
+  if (Number(expired?.[0]?.c ?? 0) > 0) {
+    notes.push(`Có ${expired[0].c} hợp đồng đã hết hạn.`);
+  }
+
+  // Hợp đồng sắp hết hạn 30 ngày
+  const [soon]: any = await pool.query(
+    `SELECT COUNT(*) AS c FROM hop_dong
+     WHERE trang_thai = 'con_hieu_luc'
+       AND ngay_ket_thuc IS NOT NULL
+       AND ngay_ket_thuc BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)`
+  );
+  if (Number(soon?.[0]?.c ?? 0) > 0) {
+    notes.push(`Có ${soon[0].c} hợp đồng sắp hết hạn trong ngày.`);
+  }
+
+  // Bảng lương chưa duyệt tháng này
+  const [pay]: any = await pool.query(
+    `SELECT COUNT(*) AS c FROM luong
+     WHERE thang = ? AND nam = ? AND trang_thai_duyet = 'chua_duyet'`,
+    [month, year]
+  );
+  if (Number(pay?.[0]?.c ?? 0) > 0) {
+    notes.push(`Có ${pay[0].c} bảng lương chưa duyệt tháng này.`);
+  }
+
+  // Đơn nghỉ phép chờ duyệt cho manager
+  if (role === "manager" && managedDepartmentIds?.length) {
+    const placeholders = managedDepartmentIds.map(() => "?").join(",");
+    const [pend]: any = await pool.query(
+      `SELECT COUNT(*) AS c
+       FROM don_nghi_phep d
+       JOIN nhan_vien nv ON nv.id = d.nhan_vien_id
+       WHERE d.trang_thai = 'cho_duyet'
+         AND nv.phong_ban_id IN (${placeholders})`,
+      managedDepartmentIds
     );
-
-    const current_total = rows.reduce((sum: number, r: any) => sum + (r.total_salary || 0), 0);
-
-    return {
-      current_total,
-      by_department: rows,
-    };
-  },
-
-  // ============================================
-  // 3) Tổng giờ làm tháng này (role-based)
-  // ============================================
-  async getHoursSummary(phamvi: PhepPhamVi): Promise<HoursSummary> {
-    const { role, employeeId, managedDepartmentIds } = phamvi;
-
-    const now = new Date();
-    const month = now.getMonth() + 1;
-    const year = now.getFullYear();
-
-    // EMPLOYEE → chỉ giờ của chính mình
-    if (role === "employee") {
-      const [[row]]: any = await pool.query(
-        `
-        SELECT 
-          SUM(tong_gio) AS total_hours,
-          AVG(tong_gio) AS avg_hours_per_employee,
-          0 AS overtime_hours
-        FROM cham_cong
-        WHERE nhan_vien_id = ? 
-          AND MONTH(ngay_lam) = ? 
-          AND YEAR(ngay_lam) = ?
-      `,
-        [employeeId, month, year]
-      );
-
-      return {
-        current_month: month,
-        current_year: year,
-        total_hours: row?.total_hours || 0,
-        avg_hours_per_employee: row?.avg_hours_per_employee || 0,
-        overtime_hours: row?.overtime_hours || 0,
-      };
+    if (Number(pend?.[0]?.c ?? 0) > 0) {
+      notes.push(`Có ${pend[0].c} đơn nghỉ phép chờ duyệt.`);
     }
+  }
 
-    // MANAGER → nhân viên thuộc các phòng ban mình quản lý
-    if (role === "manager") {
-      if (!managedDepartmentIds.length) {
-        return {
-          current_month: month,
-          current_year: year,
-          total_hours: 0,
-          avg_hours_per_employee: 0,
-          overtime_hours: 0,
-        };
-      }
+  return notes;
+}
 
-      const placeholders = managedDepartmentIds.map(() => "?").join(",");
-      const params: any[] = [...managedDepartmentIds, month, year];
+// Đơn nghỉ phép đang chờ admin duyệt (manager gửi cho admin)
+async function pendingLeaveForAdmin(adminEmployeeId: number | null) {
+  if (!adminEmployeeId) return 0;
 
-      const [[row]]: any = await pool.query(
-        `
-        SELECT 
-          SUM(cc.tong_gio) AS total_hours,
-          AVG(cc.tong_gio) AS avg_hours_per_employee,
-          0 AS overtime_hours
-        FROM cham_cong cc
-        JOIN nhan_vien nv ON nv.id = cc.nhan_vien_id
-        WHERE nv.phong_ban_id IN (${placeholders})
-          AND MONTH(cc.ngay_lam) = ?
-          AND YEAR(cc.ngay_lam) = ?
-      `,
-        params
-      );
+  const [rows]: any = await pool.query(
+    `SELECT COUNT(*) AS c
+     FROM don_nghi_phep
+     WHERE trang_thai = 'cho_duyet'
+       AND nguoi_duyet_id = ?`,
+    [adminEmployeeId]
+  );
 
-      return {
-        current_month: month,
-        current_year: year,
-        total_hours: row?.total_hours || 0,
-        avg_hours_per_employee: row?.avg_hours_per_employee || 0,
-        overtime_hours: row?.overtime_hours || 0,
-      };
-    }
+  return Number(rows?.[0]?.c ?? 0);
+}
 
-    // ADMIN → toàn công ty
-    const [[row]]: any = await pool.query(
-      `
-      SELECT 
-        SUM(tong_gio) AS total_hours,
-        AVG(tong_gio) AS avg_hours_per_employee,
-        0 AS overtime_hours
-      FROM cham_cong
-      WHERE MONTH(ngay_lam)=? AND YEAR(ngay_lam)=?
-    `,
-      [month, year]
-    );
+export async function getCompleteDashboard(input: {
+  accountId: number;
+  phamvi: PhamVi;
+}): Promise<DashboardResponse> {
+  const { accountId, phamvi } = input;
+  const role = phamvi.role;
 
-    return {
-      current_month: month,
-      current_year: year,
-      total_hours: row?.total_hours || 0,
-      avg_hours_per_employee: row?.avg_hours_per_employee || 0,
-      overtime_hours: row?.overtime_hours || 0,
-    };
-  },
-
-  // ============================================
-  // 4) Thưởng + Phạt (role-based)
-  // ============================================
-  async getRewardsSummary(phamvi: PhepPhamVi): Promise<RewardsSummary> {
-    const { role, employeeId, managedDepartmentIds } = phamvi;
-    const now = new Date();
-    const month = now.getMonth() + 1;
-    const year = now.getFullYear();
-
-    // Định nghĩa Giờ làm chuẩn và Đơn giá quy đổi
-    const STANDARD_HOURS_PER_DAY = 8;
-    const OVERTIME_RATE_PER_HOUR = 10000;
-
-    // Chuỗi tính toán Điểm Đóng Góp Ròng (Net Contribution Score)
-    const NET_CONTRIBUTION_SCORE_FORMULA = `
-        (
-            SUM(CASE WHEN cc.tong_gio > ${STANDARD_HOURS_PER_DAY} THEN cc.tong_gio - ${STANDARD_HOURS_PER_DAY} ELSE 0 END) * ${OVERTIME_RATE_PER_HOUR} 
-            + 
-            SUM(CASE WHEN tp.loai='THUONG' THEN tp.so_tien ELSE 0 END) 
-            - 
-            SUM(CASE WHEN tp.loai='PHAT' THEN tp.so_tien ELSE 0 END)
-        )
-    `;
-
-    // ========== EMPLOYEE ==========
-    if (role === "employee") {
-      const [[sum]]: any = await pool.query(
-        `
-            SELECT 
-              SUM(CASE WHEN loai='THUONG' THEN so_tien ELSE 0 END) AS reward_total,
-              SUM(CASE WHEN loai='PHAT' THEN so_tien ELSE 0 END) AS punishment_total,
-              COUNT(CASE WHEN loai='THUONG' THEN 1 END) AS rewards,
-              COUNT(CASE WHEN loai='PHAT' THEN 1 END) AS punishments
-            FROM thuong_phat
-            WHERE thang = ? AND nam = ? AND nhan_vien_id = ?
-          `,
-        [month, year, employeeId]
-      );
-
-      const [detail]: any = await pool.query(
-        `
-            SELECT 
-              nv.id AS nhan_vien_id,
-              nv.ho_ten,
-              pb.ten_phong_ban,
-              SUM(CASE WHEN tp.loai='THUONG' THEN tp.so_tien ELSE 0 END) AS reward_total,
-              SUM(CASE WHEN tp.loai='PHAT' THEN tp.so_tien ELSE 0 END) AS punishment_total,
-              SUM(cc.tong_gio) AS total_hours,
-              ${NET_CONTRIBUTION_SCORE_FORMULA} AS net_contribution_score
-            FROM nhan_vien nv
-            LEFT JOIN phong_ban pb ON pb.id = nv.phong_ban_id
-            LEFT JOIN thuong_phat tp 
-              ON tp.nhan_vien_id = nv.id 
-              AND tp.thang = ? AND tp.nam = ?
-            LEFT JOIN cham_cong cc 
-              ON cc.nhan_vien_id = nv.id
-              AND MONTH(cc.ngay_lam) = ? AND YEAR(cc.ngay_lam) = ?
-            WHERE nv.id = ?
-            GROUP BY nv.id, nv.ho_ten, pb.ten_phong_ban
-          `,
-        [month, year, month, year, employeeId]
-      );
-
-      return {
-        rewards: sum?.rewards || 0,
-        punishments: sum?.punishments || 0,
-        reward_total: sum?.reward_total || 0,
-        punishment_total: sum?.punishment_total || 0,
-        by_employee: detail || [],
-      };
-    }
-
-    // ========== MANAGER ==========
-    if (role === "manager") {
-      if (!managedDepartmentIds.length) {
-        return {
-          rewards: 0,
-          punishments: 0,
-          reward_total: 0,
-          punishment_total: 0,
-          by_employee: [],
-        };
-      }
-
-      const placeholders = managedDepartmentIds.map(() => "?").join(",");
-      const baseParams: any[] = [...managedDepartmentIds, month, year];
-
-      // Tổng theo phòng ban manager quản lý
-      const [[sum]]: any = await pool.query(
-        `
-            SELECT 
-              SUM(CASE WHEN tp.loai='THUONG' THEN tp.so_tien ELSE 0 END) AS reward_total,
-              SUM(CASE WHEN tp.loai='PHAT' THEN tp.so_tien ELSE 0 END) AS punishment_total,
-              COUNT(CASE WHEN tp.loai='THUONG' THEN 1 END) AS rewards,
-              COUNT(CASE WHEN tp.loai='PHAT' THEN 1 END) AS punishments
-            FROM thuong_phat tp
-            JOIN nhan_vien nv ON nv.id = tp.nhan_vien_id
-            WHERE nv.phong_ban_id IN (${placeholders})
-              AND tp.thang = ? AND tp.nam = ?
-          `,
-        baseParams
-      );
-
-      // Chi tiết theo nhân viên
-      const detailParams: any[] = [month, year, month, year, ...managedDepartmentIds];
-
-      const [detail]: any = await pool.query(
-        `
-            SELECT
-              nv.id AS nhan_vien_id,
-              nv.ho_ten,
-              pb.ten_phong_ban,
-              SUM(CASE WHEN tp.loai='THUONG' THEN tp.so_tien ELSE 0 END) AS reward_total,
-              SUM(CASE WHEN tp.loai='PHAT' THEN tp.so_tien ELSE 0 END) AS punishment_total,
-              SUM(cc.tong_gio) AS total_hours,
-              ${NET_CONTRIBUTION_SCORE_FORMULA} AS net_contribution_score
-            FROM nhan_vien nv
-            LEFT JOIN phong_ban pb ON pb.id = nv.phong_ban_id
-            LEFT JOIN thuong_phat tp 
-              ON tp.nhan_vien_id = nv.id 
-              AND tp.thang = ? AND tp.nam = ?
-            LEFT JOIN cham_cong cc 
-              ON cc.nhan_vien_id = nv.id
-              AND MONTH(cc.ngay_lam) = ? AND YEAR(cc.ngay_lam) = ?
-            WHERE nv.phong_ban_id IN (${placeholders})
-            GROUP BY nv.id, nv.ho_ten, pb.ten_phong_ban
-            ORDER BY net_contribution_score DESC
-            LIMIT 10
-          `,
-        detailParams
-      );
-
-      return {
-        rewards: sum?.rewards || 0,
-        punishments: sum?.punishments || 0,
-        reward_total: sum?.reward_total || 0,
-        punishment_total: sum?.punishment_total || 0,
-        by_employee: detail || [],
-      };
-    }
-
-    // ========== ADMIN ==========
-    const [[sum]]: any = await pool.query(
-      `
-        SELECT 
-          SUM(CASE WHEN loai='THUONG' THEN so_tien ELSE 0 END) AS reward_total,
-          SUM(CASE WHEN loai='PHAT' THEN so_tien ELSE 0 END) AS punishment_total,
-          COUNT(CASE WHEN loai='THUONG' THEN 1 END) AS rewards,
-          COUNT(CASE WHEN loai='PHAT' THEN 1 END) AS punishments
-        FROM thuong_phat
-        WHERE thang = ? AND nam = ?
-      `,
-      [month, year]
-    );
-
-    const [detail]: any = await pool.query(
-      `
-        SELECT 
-          nv.id AS nhan_vien_id,
-          nv.ho_ten,
-          pb.ten_phong_ban,
-          SUM(CASE WHEN tp.loai='THUONG' THEN tp.so_tien ELSE 0 END) AS reward_total,
-          SUM(CASE WHEN tp.loai='PHAT' THEN tp.so_tien ELSE 0 END) AS punishment_total,
-          SUM(cc.tong_gio) AS total_hours,
-          ${NET_CONTRIBUTION_SCORE_FORMULA} AS net_contribution_score
-        FROM nhan_vien nv
-        LEFT JOIN phong_ban pb ON pb.id = nv.phong_ban_id
-        LEFT JOIN thuong_phat tp 
-          ON tp.nhan_vien_id = nv.id 
-          AND tp.thang = ? AND tp.nam = ?
-        LEFT JOIN cham_cong cc 
-          ON cc.nhan_vien_id = nv.id
-          AND MONTH(cc.ngay_lam) = ? AND YEAR(cc.ngay_lam) = ?
-        GROUP BY nv.id, nv.ho_ten, pb.ten_phong_ban
-        ORDER BY net_contribution_score DESC
-        LIMIT 10
-      `,
-      [month, year, month, year]
-    );
-
-    return {
-      rewards: sum?.rewards || 0,
-      punishments: sum?.punishments || 0,
-      reward_total: sum?.reward_total || 0,
-      punishment_total: sum?.punishment_total || 0,
-      by_employee: detail || [],
-    };
-  },
-
-  // ============================================
-  // 5) Ngày lễ (ai cũng xem được)
-  // ============================================
-  async getUpcomingHolidays(): Promise<HolidayItem[]> {
-    const today = new Date().toISOString().slice(0, 10);
-
-    const [rows]: any = await pool.query(
-      `
-      SELECT id, ngay, ten_ngay, loai, mo_ta, so_ngay_nghi
-      FROM ngay_le
-      WHERE ngay >= ?
-      ORDER BY ngay ASC
-      LIMIT 5
-    `,
-      [today]
-    );
-
-    return rows;
-  },
-
-  // ============================================
-  // 6) Dữ liệu hoàn chỉnh Dashboard (role-based)
-  // ============================================
-  async getCompleteDashboardData(phamvi: PhepPhamVi): Promise<DashboardResponse> {
-    const [staff, salary, hours, holidays, rewards] = await Promise.all([
-      this.getStaffSummary(phamvi),
-      this.getSalaryByDepartment(phamvi),
-      this.getHoursSummary(phamvi),
-      this.getUpcomingHolidays(),
-      this.getRewardsSummary(phamvi),
+  // với admin: ta vẫn gọi kpiManager để có OT (dùng toàn công ty),
+  // nhưng pending_leave lấy từ pendingLeaveForAdmin
+  const [kpiEmp, kpiMgrBase, kpiAdm, salary, rewards, top, qa, noti, alr, pendingAdmin] =
+    await Promise.all([
+      kpiEmployee(phamvi.employeeId),
+      // dùng kpiManager cho cả admin & manager để lấy OT (cần managedDepartmentIds
+      // nếu admin không có managedDepartmentIds, hàm sẽ trả pending=0, ot=0)
+      kpiManager(phamvi.managedDepartmentIds || []),
+      role === "admin" ? kpiAdmin() : Promise.resolve(null),
+      salaryByDepartment(),
+      rewardsTotals(),
+      topEmployees(),
+      role === "manager" ? quickApprove(phamvi.managedDepartmentIds) : Promise.resolve([]),
+      notificationsForEmployee(phamvi.employeeId),
+      alerts(role, phamvi.managedDepartmentIds),
+      // pending cho admin
+      role === "admin" ? pendingLeaveForAdmin(phamvi.employeeId) : Promise.resolve(0),
     ]);
 
-    return {
-      staff,
-      salary,
-      hours,
-      holidays,
-      rewards,
+  let kpi_manager: DashboardResponse["kpi_manager"] = null;
+
+  if (role === "manager") {
+    // manager: dùng pending & ot theo phòng ban quản lý
+    kpi_manager = kpiMgrBase;
+  } else if (role === "admin") {
+    // admin: pending lấy theo nguoi_duyet_id, OT dùng từ kpiMgrBase (hoặc 0 nếu không có managedDepartmentIds)
+    kpi_manager = {
+      pending_leave: pendingAdmin,
+      ot: kpiMgrBase?.ot ?? 0,
     };
-  },
-};
+  }
+
+  return {
+    alerts: alr,
+    kpi_employee: role === "employee" ? kpiEmp : null,
+    kpi_manager,
+    kpi_admin: role === "admin" ? kpiAdm : null,
+    salary,
+    rewards,
+    topEmployees: top,
+    quick_approve: role === "manager" ? qa : [],
+    notifications: noti,
+  };
+}

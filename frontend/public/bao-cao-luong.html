@@ -4,7 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Báo cáo lương - Quản lý nhân viên</title>
+
+    <link rel="stylesheet" href="./assets/fontawesome/css/all.min.css" />
     <link rel="stylesheet" href="./assets/css/styles.css" />
+    <link rel="stylesheet" href="./assets/css/bao-cao-luong.css" />
     <style>
       .cards {
         display: grid;
@@ -36,6 +39,12 @@
         background: var(--primary);
         transition: width 0.3s ease;
       }
+      .nguoi-duyet {
+        max-width: 120px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
     </style>
   </head>
   <body class="bg">
@@ -44,26 +53,46 @@
     <main class="container">
       <div class="page-header">
         <h1 class="page-title">Báo cáo lương</h1>
-        <div class="toolbar">
-          <select id="thang">
+      </div>
+
+      <div class="toolbar-wrapper">
+        <div class="toolbar-filters">
+          <select id="thang" class="form-control">
             <option value="">Tháng</option>
             <script>
-              for (let i = 1; i <= 12; i++)
-                document.write(`<option value="${i}">${i}</option>`);
+              for (let i = 1; i <= 12; i++) {
+                document.write(`<option value="${i}">Tháng ${i}</option>`);
+              }
             </script>
           </select>
 
-          <select id="nam"></select>
+          <select id="nam" class="form-control">
+            <option value="">Năm</option>
+          </select>
 
-          <!-- ✔ THÊM FILTER PHÒNG BAN -->
           <select id="phong_ban">
             <option value="">Phòng ban</option>
           </select>
 
+          <select id="nguoi_duyet">
+            <option value="">Người duyệt</option>
+          </select>
+        </div>
+
+        <div class="toolbar-actions">
           <input id="search" placeholder="Tìm theo tên hoặc ID nhân viên" />
 
-          <button id="btn-run" class="btn btn-primary">Xem báo cáo</button>
-          <button id="btn-export" class="btn btn-success">⬇️ Xuất Excel</button>
+          <button id="btn-export" class="btn btn-success">
+            <i class="fa-solid fa-download" style="color: #2bf0e6"></i> Xuất
+            Excel
+          </button>
+          <button
+            id="btn-pay-all"
+            class="page-btn-all"
+            style="background-color: #28a745; color: white"
+          >
+            Trả tất cả cho danh sách này
+          </button>
         </div>
       </div>
 
@@ -71,9 +100,16 @@
         <!-- KPIs render here -->
       </div>
       <div class="tab-group" id="statusTabs">
-        <button class="tab-btn active" data-status="">📋 Tất cả</button>
-        <button class="tab-btn" data-status="da_thanh_toan">✓ Đã trả</button>
-        <button class="tab-btn" data-status="cho_xu_ly">⏳ Chờ xử lý</button>
+        <button class="tab-btn active" data-status="">
+          <i class="fa-solid fa-clipboard" style="color: #858796"></i> Tất cả
+        </button>
+        <button class="tab-btn" data-status="da_thanh_toan">
+          <i class="fa-solid fa-check" style="color: #1cc88a"></i> Đã trả
+        </button>
+        <button class="tab-btn" data-status="cho_xu_ly">
+          <i class="fa-solid fa-hourglass-half" style="color: #f6c23e"></i> Chưa
+          trả
+        </button>
         <button class="tab-btn" data-status="con_no">Còn nợ</button>
       </div>
 
@@ -90,6 +126,7 @@
               <th style="text-align: right">Đã trả</th>
               <th>Ngày trả</th>
               <th>Trạng thái</th>
+              <th>Người duyệt</th>
             </tr>
           </thead>
 
@@ -106,7 +143,7 @@
 
     <!-- Modal chi tiết -->
     <dialog id="modal" class="modal-box">
-      <div style="padding: 10px 2px">
+      <div style="padding: 10px 2px" class="modal-form">
         <h3 id="m-title" style="margin: 0 0 8px 0">Chi tiết lương</h3>
         <div id="m-body" class="text-muted">Đang tải…</div>
         <div style="display: flex; justify-content: flex-end; margin-top: 12px">

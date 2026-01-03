@@ -9,6 +9,7 @@
 }
 
 /* -------------------- KPI Cards CSS -------------------- */
+
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -79,6 +80,10 @@
   font-weight: 700;
 }
 
+.page-btn-all {
+  width: 250px;
+  height: 30px;
+}
 /* -------------------- Status Badge CSS -------------------- */
 .badge-status {
   display: inline-block;
@@ -135,7 +140,7 @@
 dialog.modal-box {
   border: none;
   border-radius: 8px;
-  padding: 0;
+  padding: 10px 14px;
   max-width: 720px;
   width: 90%;
 }
@@ -148,4 +153,206 @@ dialog::backdrop {
   padding: 20px;
   max-height: 80vh;
   overflow-y: auto;
+}
+
+/* =========================================
+ TOOLBAR - PHẦN LỌC (ĐÃ TỐI ƯU HÓA LẠI)
+========================================= */
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.page-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #111827;
+  margin-top: 30px;
+}
+
+/* 1. Wrapper chứa cả Filters và Actions */
+.toolbar-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+  background-color: #ffffff;
+  padding: 12px 16px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* 2. Nhóm các bộ lọc (Tháng, Năm, Phòng ban,...) */
+.toolbar-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: center;
+}
+
+/* 3. Nhóm hành động (Tìm kiếm, Xuất Excel) */
+.toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+/* 4. Style chung cho Select và Input */
+.toolbar-filters select,
+.toolbar-actions input[type='text'],
+.toolbar-actions input[type='number'],
+.toolbar-actions input#search {
+  height: 38px;
+  padding: 8px 12px;
+  border-radius: 6px;
+
+  border: 1px solid #d1d5db;
+  background-color: #ffffff;
+  font-size: 0.9rem;
+  color: #374151;
+  outline: none;
+
+  transition: all 0.2s ease;
+  flex: 0 0 auto;
+  appearance: none;
+}
+
+/* Focus State */
+.toolbar-filters select:focus,
+.toolbar-actions input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+/* Chiều rộng cố định cho các Select */
+#thang {
+  width: 160px;
+}
+#nam {
+  width: 170px;
+}
+#phong_ban {
+  width: 220px;
+}
+#nguoi_duyet {
+  width: 220px;
+}
+#search {
+  /* Cho thanh search co dãn nhưng có max-width */
+  flex-grow: 1;
+  max-width: 250px;
+}
+
+/* 5. Style cho Button */
+.toolbar-actions button {
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border: none;
+  white-space: nowrap;
+}
+
+/* Đảm bảo btn-success hoạt động tốt */
+.btn-success {
+  background-color: var(--success) !important;
+  color: #ffffff !important;
+}
+.btn-success:hover {
+  background-color: #1e7e34 !important; /* Màu hover tối hơn */
+}
+
+/* Media Queries cho thiết bị nhỏ */
+@media (max-width: 920px) {
+  .toolbar-wrapper {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 16px;
+  }
+
+  .toolbar-filters {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  #search {
+    max-width: 824px;
+  }
+
+  .toolbar-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  #search {
+    max-width: none;
+    flex-grow: 1;
+  }
+
+  /* Loại bỏ width cố định khi màn hình nhỏ */
+  #thang,
+  #nam,
+  #phong_ban,
+  #nguoi_duyet {
+    width: 200px;
+  }
+
+  @media (max-width: 780px) {
+    /*   Đảm bảo các select chiếm 100% chiều rộng (1 cột) */
+    .toolbar-filters select {
+      flex-basis: 100%;
+      width: 100% !important;
+      max-width: none;
+    }
+
+    #thang,
+    #nam,
+    #phong_ban,
+    #nguoi_duyet {
+      width: 180px;
+    }
+  }
+
+  /* Trên màn hình rất nhỏ (dưới 600px), search và button xuống hàng */
+  @media (max-width: 600px) {
+    .toolbar-actions {
+      flex-direction: column;
+    }
+    .toolbar-actions input#search,
+    .toolbar-actions button {
+      width: 100%;
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .toolbar-filters select,
+  .toolbar-actions input#search,
+  .toolbar-actions button {
+    width: 100%;
+    max-width: none;
+  }
+
+  /* Đảm bảo các select nằm trên 1 hàng khi có đủ không gian */
+  .toolbar-filters {
+    gap: 8px;
+    justify-content: space-around;
+  }
+  #thang,
+  #nam,
+  #phong_ban,
+  #nguoi_duyet {
+    flex-basis: calc(50% - 4px); /* Chia thành 2 cột */
+    width: auto; /* Cho flexbox kiểm soát */
+  }
 }

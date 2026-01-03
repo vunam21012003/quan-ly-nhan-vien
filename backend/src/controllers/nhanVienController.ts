@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import * as service from "../services/nhanVienService";
-import * as phanCongLamBuService from "../services/phanCongLamBuService";
 
 export const list = async (req: Request, res: Response) => {
   try {
@@ -22,6 +21,18 @@ export const getById = async (req: Request, res: Response) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ status: false, message: "Server error" });
+  }
+};
+
+export const exportExcel = async (req: Request, res: Response) => {
+  try {
+    // Hàm service.exportExcel tự ghi file vào res và end()
+    await service.exportExcel(req as any, res as any);
+  } catch (e) {
+    console.error(e);
+    if (!res.headersSent) {
+      res.status(500).json({ status: false, message: "Server error" });
+    }
   }
 };
 
@@ -72,8 +83,6 @@ export const getByChucVu = async (req: Request, res: Response) => {
   }
 };
 
-// ⭐ THÊM MỚI: Cập nhật số người phụ thuộc
-// ⭐ THÊM MỚI Ở CUỐI FILE
 export const updateNguoiPhuThuoc = async (req: any, res: any, next: any) => {
   try {
     const id = Number(req.params.id);
@@ -88,5 +97,21 @@ export const updateNguoiPhuThuoc = async (req: any, res: any, next: any) => {
     return res.json({ message: "Cập nhật số người phụ thuộc thành công", ...result });
   } catch (e) {
     next(e);
+  }
+};
+
+export const getOverview = async (req: any, res: any) => {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "ID không hợp lệ" });
+
+    const result = await service.getOverviewByNhanVienId(req, id);
+    if ((result as any).error) {
+      return res.status(400).json(result);
+    }
+    res.json({ data: result });
+  } catch (e) {
+    console.error("ERROR getOverview:", e);
+    res.status(500).json({ error: "Server error" });
   }
 };

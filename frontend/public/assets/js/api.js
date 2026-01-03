@@ -50,7 +50,7 @@ export async function api(
     headers: finalHeaders,
   };
 
-  // ⭐ FIX CHÍNH: KHÔNG BAO GIỜ set body trong GET hoặc HEAD
+  // FIX CHÍNH: KHÔNG BAO GIỜ set body trong GET hoặc HEAD
   if (method !== 'GET' && method !== 'HEAD') {
     if (body) {
       options.body = isFormData ? body : JSON.stringify(body);
@@ -93,10 +93,10 @@ export async function requireAuthOrRedirect(to = './dang-nhap.html') {
     return;
   }
 
-  // ⭐ Gọi /auth/me để lấy quyền mới nhất
+  // Gọi /auth/me để lấy quyền mới nhất
   try {
     const me = await api('/auth/me');
-    saveUser(me); // ⭐ lưu lại user mới nhất (có isAccountingManager)
+    saveUser(me);
   } catch (err) {
     clearAuth();
     location.href = to;

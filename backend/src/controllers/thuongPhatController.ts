@@ -105,3 +105,8 @@ export const remove = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+// Xuất Excel
+export const exportExcel = async (req: Request, res: Response) => {
+  await service.exportExcel(req, res);
+};

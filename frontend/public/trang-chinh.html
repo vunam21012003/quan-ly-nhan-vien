@@ -5,51 +5,157 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Dashboard - Quản lý nhân viên</title>
 
+    <link rel="stylesheet" href="./assets/fontawesome/css/all.min.css" />
     <link rel="stylesheet" href="./assets/css/styles.css" />
     <link rel="stylesheet" href="./assets/css/trang-chinh.css" />
+
+    <!-- Style bổ sung cho dashboard -->
+    <style>
+      .alert-box {
+        background: #fff3cd;
+        border: 1px solid #ffeeba;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 16px;
+      }
+
+      .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+      }
+
+      .quick-btn {
+        padding: 14px;
+        border-radius: 10px;
+        border: 1px solid #ddd;
+        cursor: pointer;
+        background: white;
+        text-align: center;
+        transition: 0.2s;
+      }
+      .quick-btn:hover {
+        background: #f7f7f7;
+      }
+
+      /* Phê duyệt nhanh */
+      .quick-approve-card {
+        padding: 16px;
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: var(--shadow);
+        margin-bottom: 20px;
+      }
+      .approve-item {
+        padding: 12px 10px;
+        border-bottom: 1px solid #eee;
+      }
+      .approve-actions {
+        margin-top: 8px;
+        display: flex;
+        gap: 8px;
+      }
+    </style>
   </head>
 
   <body>
     <div id="menuContainer"></div>
 
     <main class="dashboard-page">
+      <!-- HEADER -->
       <header class="dashboard-header">
-        <h1>Xin chào, <span id="helloName">...</span> 👋</h1>
-        <p id="today-date"></p>
+        <h1 style="margin-bottom: 10px">
+          Xin chào, <span id="helloName">...</span>
+          <i class="fa-regular fa-hand" style="color: #f6c23e"></i>
+        </h1>
+        <p id="today-date" style="margin-top: 0px"></p>
       </header>
 
-      <!-- KPI DÙNG CHUNG CHO TẤT CẢ -->
-      <section class="kpi-grid" data-role="staff">
-        <div class="kpi-card">
-          <p class="kpi-label">Tổng Nhân Viên</p>
-          <p id="kpi-total" class="kpi-value">--</p>
+      <!-- A. CẢNH BÁO QUAN TRỌNG -->
+      <section id="alertSection" class="alert-box" data-role="admin">
+        <!-- JS sẽ render cảnh báo -->
+      </section>
+
+      <!-- ========================================================= -->
+      <!-- B. KHỐI KPI  + KHỐI THƯỞNG/PHẠT  -->
+      <!-- ========================================================= -->
+      <section class="kpi-reward-wrapper">
+        <!-- Cột trái: KPI -->
+        <div class="kpi-block">
+          <!-- KPI NHÂN VIÊN -->
+          <section class="kpi-grid" data-role="employee,manager">
+            <div class="kpi-card">
+              <p class="kpi-label">Giờ làm tháng này</p>
+              <p id="emp-hours" class="kpi-value">--</p>
+            </div>
+
+            <div class="kpi-card">
+              <p class="kpi-label">Số ngày công</p>
+              <p id="emp-days" class="kpi-value">--</p>
+            </div>
+
+            <div class="kpi-card">
+              <p class="kpi-label">Đi muộn</p>
+              <p id="emp-late" class="kpi-value">--</p>
+            </div>
+
+            <div class="kpi-card">
+              <p class="kpi-label">Nghỉ phép</p>
+              <p id="emp-leave" class="kpi-value">--</p>
+            </div>
+          </section>
+
+          <!-- KPI QUẢN LÝ (PHÒNG BAN) -->
+          <section class="kpi-grid" data-role="admin,manager">
+            <div class="kpi-card">
+              <p class="kpi-label">Đơn chờ duyệt</p>
+              <p id="mgr-pending-leave" class="kpi-value">--</p>
+            </div>
+
+            <div class="kpi-card">
+              <p class="kpi-label">Tổng giờ làm thêm tháng này</p>
+              <p id="mgr-ot" class="kpi-value">--</p>
+            </div>
+          </section>
+
+          <!-- KPI ADMIN -->
+          <section class="kpi-grid" data-role="admin">
+            <div class="kpi-card">
+              <p class="kpi-label">Tổng Nhân Viên</p>
+              <p id="adm-total" class="kpi-value">--</p>
+            </div>
+
+            <!-- ĐÃ BỎ: Đang đi làm, Nghỉ không phép -->
+
+            <div class="kpi-card">
+              <p class="kpi-label">Quỹ lương tháng trước</p>
+              <p id="adm-salary" class="kpi-value">--</p>
+            </div>
+          </section>
         </div>
 
-        <div class="kpi-card">
-          <p class="kpi-label">Đi làm hôm nay</p>
-          <p id="kpi-present" class="kpi-value">--</p>
-        </div>
-
-        <div class="kpi-card">
-          <p class="kpi-label">Vắng hôm nay</p>
-          <p id="kpi-absent" class="kpi-value">--</p>
-        </div>
-
-        <div class="kpi-card">
-          <p class="kpi-label">Nghỉ không phép</p>
-          <p id="kpi-unlawful" class="kpi-value">--</p>
+        <!-- Cột phải: Thưởng / Phạt -->
+        <div class="reward-block" data-role="admin,manager">
+          <section class="dash-card reward-card">
+            <h2 class="section-title">Thưởng / Phạt tháng này</h2>
+            <div id="rewardChart" class="chart"></div>
+          </section>
         </div>
       </section>
 
-      <!-- BIỂU ĐỒ LƯƠNG: CHỈ ADMIN + MANAGER -->
+      <!-- ========================================================= -->
+      <!--   C. CÁC PHẦN CÒN LẠI GIỮ NGUYÊN                          -->
+      <!-- ========================================================= -->
+
+      <!-- BIỂU ĐỒ LƯƠNG THEO PHÒNG BAN -->
       <section class="dash-card" data-role="admin,manager">
-        <h2 class="section-title">Lương tháng trước theo phòng ban</h2>
+        <h2 class="section-title">Lương theo phòng ban</h2>
         <div id="salaryChart" class="chart"></div>
       </section>
 
-      <!-- TOP NHÂN VIÊN: CHỈ ADMIN + MANAGER -->
+      <!-- TOP NHÂN VIÊN -->
       <section class="dash-card" data-role="admin,manager">
-        <h2 class="section-title">Top 5 Nhân Viên Đóng Góp Ròng</h2>
+        <h2 class="section-title">Top nhân viên đóng góp</h2>
         <div class="top-employees-split">
           <div class="top-list-container">
             <ul id="topEmployeesList" class="top-list"></ul>
@@ -60,28 +166,79 @@
         </div>
       </section>
 
-      <!-- BIỂU ĐỒ THƯỞNG PHẠT: CHỈ ADMIN + MANAGER -->
-      <section class="dash-card" data-role="admin,manager">
-        <h2 class="section-title">Thưởng / Phạt tháng này</h2>
-        <div id="rewardChart" class="chart"></div>
+      <!-- PHÊ DUYỆT NHANH -->
+      <section class="quick-approve-card" data-role="manager">
+        <h2 style="margin-bottom: 12px">📥 Phê duyệt nhanh</h2>
+        <div id="quickApproveList"></div>
       </section>
 
-      <!-- NGÀY LỄ: AI CŨNG XEM ĐƯỢC -->
-      <section class="dash-card" data-role="staff">
-        <h2 class="section-title">Ngày lễ sắp tới</h2>
-        <ul id="holidaysList" class="holiday-list"></ul>
+      <!-- THÔNG BÁO GẦN ĐÂY -->
+      <section id="dashboard-notify-section" class="dash-card" data-role="all">
+        <h2 class="section-title">Thông báo gần đây</h2>
+        <ul id="notifyList" class="top-list"></ul>
       </section>
 
-      <!-- THỐNG KÊ GIỜ LÀM: CHỈ EMPLOYEE -->
+      <!-- THAO TÁC NHANH - EMPLOYEE -->
       <section class="dash-card" data-role="employee">
-        <h2 class="section-title">Tổng giờ làm tháng này</h2>
-        <p class="big-number" id="emp-hours">--</p>
+        <h2 class="section-title">Thao tác nhanh</h2>
+        <div class="quick-actions">
+          <div
+            class="quick-btn"
+            onclick="location.href='quan-ly-nghi-phep.html'"
+          >
+            Xin nghỉ phép
+          </div>
+          <div class="quick-btn" onclick="location.href='cham-cong.html'">
+            Xem chấm công
+          </div>
+          <div class="quick-btn" onclick="location.href='luong.html'">
+            Xem phiếu lương
+          </div>
+          <div class="quick-btn" onclick="location.href='ho-so.html'">
+            Cập nhật hồ sơ
+          </div>
+        </div>
       </section>
 
-      <!-- THỐNG KÊ LƯƠNG EMPLOYEE -->
-      <section class="dash-card" data-role="employee">
-        <h2 class="section-title">Lương gần nhất</h2>
-        <p class="big-number" id="emp-salary">--</p>
+      <!-- THAO TÁC NHANH - MANAGER -->
+      <section class="dash-card" data-role="manager">
+        <h2 class="section-title">Thao tác nhanh</h2>
+        <div class="quick-actions">
+          <div
+            class="quick-btn"
+            onclick="location.href='quan-ly-nghi-phep.html'"
+          >
+            Duyệt nghỉ phép
+          </div>
+          <div class="quick-btn" onclick="location.href='cham-cong.html'">
+            Chấm công phòng
+          </div>
+          <div class="quick-btn" onclick="location.href='luong.html'">
+            Lương phòng
+          </div>
+          <div class="quick-btn" onclick="location.href='nhan-vien.html'">
+            Nhân sự phòng
+          </div>
+        </div>
+      </section>
+
+      <!-- THAO TÁC NHANH - ADMIN -->
+      <section class="dash-card" data-role="admin">
+        <h2 class="section-title">Thao tác nhanh</h2>
+        <div class="quick-actions">
+          <div class="quick-btn" onclick="location.href='tai-khoan.html'">
+            Quản lý tài khoản
+          </div>
+          <div class="quick-btn" onclick="location.href='hop-dong.html'">
+            Quản lý hợp đồng
+          </div>
+          <div class="quick-btn" onclick="location.href='cham-cong.html'">
+            Import chấm công
+          </div>
+          <div class="quick-btn" onclick="location.href='luong.html'">
+            Tính lương
+          </div>
+        </div>
       </section>
     </main>
 
